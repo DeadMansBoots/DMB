@@ -907,7 +907,7 @@ jobs:
           gh release upload "$TAG" "$asset" --clobber
         else
           gh release create "$TAG" "$asset" --verify-tag --title "Dead Man's Boots $version" \
-            --notes "Windows: download $asset below and run it. The launcher asks for your own Heroes of Might and Magic III files the first time it starts."
+            --notes "Windows: download $asset below and run it. The installer is new and unsigned, so Windows may say it protected your PC: choose More info, then Run anyway. The launcher asks for your own Heroes of Might and Magic III files the first time it starts."
         fi
 
   validate-code:
