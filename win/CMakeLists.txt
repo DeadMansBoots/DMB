@@ -12,6 +12,10 @@ if(WIN32)
 		vcmi_deploy_qt(windeployqt "--no-compiler-runtime ${targetBinary}")
 	endforeach()
 
+	# DMB: the GPL text travels with the programs, not only on the installer's license page. It is the
+	# license of VCMI, of DMB's changes and of OmniAI; Node's and the generator's are in mapgen\.
+	install(FILES "${CMAKE_SOURCE_DIR}/license.txt" DESTINATION "${BIN_DIR}")
+
 	# DMB: the map generator ships beside the programs in mapgen\ (MapGen's layout, 2026-09-26): its
 	# src\ from the mapgen submodule, the official node.exe with Node's license in mapgen\node\, and
 	# generate.cmd, the MapGen tab's default command. CI downloads Node and passes DMB_NODE_DIR; a
