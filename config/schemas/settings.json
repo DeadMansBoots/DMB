@@ -830,7 +830,7 @@
 				},
 				"defaultRepositoryURL" : {
 					"type" : "string",
-					"default" : "https://raw.githubusercontent.com/DeadMansBoots/dmb-catalog/main/dmb-1.7.json"
+					"default" : "https://raw.githubusercontent.com/DeadMansBoots/DMB-Mods-Repository/main/dmb-1.7.json"
 				},
 				"extraRepositoryEnabled" : {
 					"type" : "boolean",
@@ -862,7 +862,7 @@
 				},
 				"updateConfigUrl" : {
 					"type" : "string",
-					"default" : "https://raw.githubusercontent.com/DeadMansBoots/dmb-catalog/main/dmb-updates.json"
+					"default" : "https://raw.githubusercontent.com/DeadMansBoots/DMB-Mods-Repository/main/dmb-updates.json"
 				},
 				"dmbHomepage" : {
 					// DMB's repository page: the launcher's GitHub, homepage, bug-report and download
