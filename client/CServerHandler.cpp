@@ -605,11 +605,16 @@ void CServerHandler::sendGuiAction(ui8 action) const
 
 void CServerHandler::sendRestartGame() const
 {
-	if(si->campState && !si->campState->getLoadingBackground().empty())
-		if(ENGINE) ENGINE->windows().createAndPushWindow<CLoadingScreen>(si->campState->getLoadingBackground());
-	else
-		if(ENGINE) ENGINE->windows().createAndPushWindow<CLoadingScreen>();
-	
+	// DMB: one ENGINE check around VCMI's if/else. An if(ENGINE) in front of each branch bound the
+	// else to the inner if, so a game without a campaign background got no loading screen.
+	if(ENGINE)
+	{
+		if(si->campState && !si->campState->getLoadingBackground().empty())
+			ENGINE->windows().createAndPushWindow<CLoadingScreen>(si->campState->getLoadingBackground());
+		else
+			ENGINE->windows().createAndPushWindow<CLoadingScreen>();
+	}
+
 	LobbyRestartGame endGame;
 	sendLobbyPack(endGame);
 }
@@ -647,12 +652,12 @@ void CServerHandler::sendStartGame(bool allowOnlyAI, bool verify) const
 	if(verify)
 		verifyStateBeforeStart(allowOnlyAI ? true : settings["session"]["onlyai"].Bool());
 
-	if(!settings["session"]["headless"].Bool())
+	if(!settings["session"]["headless"].Bool() && ENGINE) // DMB: one ENGINE check, see sendRestartGame
 	{
 		if(si->campState && !si->campState->getLoadingBackground().empty())
-			if(ENGINE) ENGINE->windows().createAndPushWindow<CLoadingScreen>(si->campState->getLoadingBackground());
+			ENGINE->windows().createAndPushWindow<CLoadingScreen>(si->campState->getLoadingBackground());
 		else
-			if(ENGINE) ENGINE->windows().createAndPushWindow<CLoadingScreen>();
+			ENGINE->windows().createAndPushWindow<CLoadingScreen>();
 	}
 	
 	LobbyPrepareStartGame lpsg;

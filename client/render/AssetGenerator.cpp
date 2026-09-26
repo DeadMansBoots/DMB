@@ -1140,10 +1140,12 @@ AssetGenerator::AnimationLayoutMap AssetGenerator::createMapGenButton(int width)
 	// left/right edge cap plus a tiled real middle slice reads as authentic
 	// at any width instead of stretching or inventing pixels.
 	auto baseImg = ENGINE->renderHandler().loadAnimation(AnimationPath::builtin("GSPBUT2"), EImageBlitMode::OPAQUE);
-	const int capW = 4;
-	const int srcW = 128;
-	const int srcH = 20;
-	const int tileW = 16;
+	// static: the lambda below uses them without capturing, which clang's -Werror requires (it
+	// refuses a needless capture) and MSVC accepts
+	static constexpr int capW = 4;
+	static constexpr int srcW = 128;
+	static constexpr int srcH = 20;
+	static constexpr int tileW = 16;
 	const int midW = width - 2 * capW;
 
 	AnimationLayoutMap layout;
@@ -1151,7 +1153,7 @@ AssetGenerator::AnimationLayoutMap AssetGenerator::createMapGenButton(int width)
 	{
 		ImagePath spriteName = ImagePath::builtin("MapGenButton" + std::to_string(width) + "_" + std::to_string(i) + ".png");
 
-		imageFiles[spriteName] = [baseImg, i, width, capW, srcW, srcH, tileW, midW](){
+		imageFiles[spriteName] = [baseImg, i, width, midW](){
 			auto frame = baseImg->getImage(i);
 			auto newImg = ENGINE->renderHandler().createImage(Point(width, srcH), CanvasScalingPolicy::IGNORE);
 			auto canvas = newImg->getCanvas();
