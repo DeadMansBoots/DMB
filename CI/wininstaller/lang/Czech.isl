@@ -403,7 +403,7 @@ AddonHostProgramNotFound=Aplikace %1 nebyla ve Vámi zvolené složce nalezena.%
 
 ; VCMI Custom Messages
 SelectSetupInstallModeTitle=Vyberte režim instalace
-SelectSetupInstallModeDesc=VCMI může být nainstalováno pro všechny uživatele nebo pouze pro vás.
+SelectSetupInstallModeDesc=Dead Man's Boots může být nainstalováno pro všechny uživatele nebo pouze pro vás.
 SelectSetupInstallModeSubTitle=Vyberte preferovaný režim instalace:
 InstallForAllUsers=Nainstalovat pro všechny uživatele
 InstallForAllUsers1=Vyžaduje administrátorská práva
@@ -415,10 +415,10 @@ CreateDesktopShortcuts=Vytvořit zástupce na ploše
 CreateStartMenuShortcuts=Vytvořit zástupce v nabídce Start
 AssociateH3MFiles=Asociovat .h3m soubory s editorem map VCMI
 AssociateVCMIMapFiles=Asociovat .vmap a .vcmp soubory s editorem map VCMI
-VCMISettings=Konfigurace VCMI
-AddFirewallRules=Přidat pravidla brány firewall pro VCMI
-CopyH3Files=Automaticky zkopírovat požadované soubory Heroes III do VCMI
-RunVCMILauncherAfterInstall=Spustit VCMI Launcher
+VCMISettings=Konfigurace Dead Man's Boots
+AddFirewallRules=Přidat pravidla brány firewall pro Dead Man's Boots
+CopyH3Files=Automaticky zkopírovat požadované soubory Heroes III do Dead Man's Boots
+RunVCMILauncherAfterInstall=Spustit Dead Man's Boots Launcher
 ShortcutMapEditor=Editor map VCMI
 ShortcutLauncher=VCMI Launcher
 ShortcutWebPage=VCMI Web

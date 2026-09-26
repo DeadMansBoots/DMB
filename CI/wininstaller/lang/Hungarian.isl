@@ -411,7 +411,7 @@ AddonHostProgramNotFound=A(z) %1 nem található a kiválasztott könyvtárban.%
 
 ; VCMI Custom Messages
 SelectSetupInstallModeTitle=Wählen Sie den Installationsmodus
-SelectSetupInstallModeDesc=VCMI kann für alle Benutzer oder nur für Sie installiert werden.
+SelectSetupInstallModeDesc=Dead Man's Boots kann für alle Benutzer oder nur für Sie installiert werden.
 SelectSetupInstallModeSubTitle=Wählen Sie den bevorzugten Installationsmodus:
 InstallForAllUsers=Für alle Benutzer installieren
 InstallForAllUsers1=Erfordert Administratorrechte
@@ -423,10 +423,10 @@ CreateDesktopShortcuts=Desktop-Verknüpfungen erstellen
 CreateStartMenuShortcuts=Verknüpfungen im Startmenü erstellen
 AssociateH3MFiles=.h3m-Dateien mit dem VCMI-Karteneditor verknüpfen
 AssociateVCMIMapFiles=.vmap- und .vcmp-Dateien mit dem VCMI-Karteneditor verknüpfen
-VCMISettings=VCMI-Konfiguration
-AddFirewallRules=Firewall-Regeln für VCMI hinzufügen
-CopyH3Files=Erforderliche Heroes-III-Dateien automatisch in VCMI kopieren
-RunVCMILauncherAfterInstall=VCMI Launcher starten
+VCMISettings=Dead Man's Boots-Konfiguration
+AddFirewallRules=Firewall-Regeln für Dead Man's Boots hinzufügen
+CopyH3Files=Erforderliche Heroes-III-Dateien automatisch in Dead Man's Boots kopieren
+RunVCMILauncherAfterInstall=Dead Man's Boots Launcher starten
 ShortcutMapEditor=VCMI Karteneditor
 ShortcutLauncher=VCMI Launcher
 ShortcutWebPage=VCMI Webseite

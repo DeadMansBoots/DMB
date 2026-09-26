@@ -416,7 +416,7 @@ AddonHostProgramNotFound=%1 kunde inte hittas i katalogen du valde.%n%nVill du f
 
 ; VCMI Custom Messages
 SelectSetupInstallModeTitle=Välj installationsläge
-SelectSetupInstallModeDesc=VCMI kan installeras för alla användare eller bara för dig.
+SelectSetupInstallModeDesc=Dead Man's Boots kan installeras för alla användare eller bara för dig.
 SelectSetupInstallModeSubTitle=Välj önskat installationsläge:
 InstallForAllUsers=Installera för alla användare
 InstallForAllUsers1=Kräver administratörsbehörigheter
@@ -428,10 +428,10 @@ CreateDesktopShortcuts=Skapa genvägar på skrivbordet
 CreateStartMenuShortcuts=Skapa genvägar i Start-menyn
 AssociateH3MFiles=Associera .h3m-filer med VCMI Kartredigeraren
 AssociateVCMIMapFiles=Associera .vmap- och .vcmp-filer med VCMI Kartredigeraren
-VCMISettings=VCMI-konfiguration
-AddFirewallRules=Lägg till brandväggsregler för VCMI
-CopyH3Files=Kopiera automatiskt nödvändiga Heroes III-filer till VCMI
-RunVCMILauncherAfterInstall=Starta VCMI Launcher
+VCMISettings=Dead Man's Boots-konfiguration
+AddFirewallRules=Lägg till brandväggsregler för Dead Man's Boots
+CopyH3Files=Kopiera automatiskt nödvändiga Heroes III-filer till Dead Man's Boots
+RunVCMILauncherAfterInstall=Starta Dead Man's Boots Launcher
 ShortcutMapEditor=VCMI Kartredigerare
 ShortcutLauncher=VCMI Launcher
 ShortcutWebPage=VCMI Webbplats

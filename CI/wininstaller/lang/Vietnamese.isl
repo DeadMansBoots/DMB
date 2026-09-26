@@ -385,7 +385,7 @@ AddonHostProgramNotFound=%1 không thể được xác định trong thư mục 
 
 ; VCMI Custom Messages
 SelectSetupInstallModeTitle=Chọn Chế độ Cài đặt
-SelectSetupInstallModeDesc=VCMI có thể được cài đặt cho tất cả người dùng hoặc chỉ dành cho bạn.
+SelectSetupInstallModeDesc=Dead Man's Boots có thể được cài đặt cho tất cả người dùng hoặc chỉ dành cho bạn.
 SelectSetupInstallModeSubTitle=Chọn chế độ cài đặt bạn muốn:
 InstallForAllUsers=Cài đặt cho tất cả người dùng
 InstallForAllUsers1=Yêu cầu quyền quản trị
@@ -397,10 +397,10 @@ CreateDesktopShortcuts=Tạo phím tắt trên màn hình
 CreateStartMenuShortcuts=Tạo phím tắt trong menu Bắt đầu
 AssociateH3MFiles=Liên kết các tệp .h3m với Trình chỉnh sửa Bản đồ VCMI
 AssociateVCMIMapFiles=Liên kết các tệp .vmap và .vcmp với Trình chỉnh sửa Bản đồ VCMI
-VCMISettings=Cấu hình VCMI
-AddFirewallRules=Thêm quy tắc tường lửa cho VCMI
-CopyH3Files=Tự động sao chép các tệp cần thiết của Heroes III vào VCMI
-RunVCMILauncherAfterInstall=Khởi chạy VCMI Launcher
+VCMISettings=Cấu hình Dead Man's Boots
+AddFirewallRules=Thêm quy tắc tường lửa cho Dead Man's Boots
+CopyH3Files=Tự động sao chép các tệp cần thiết của Heroes III vào Dead Man's Boots
+RunVCMILauncherAfterInstall=Khởi chạy Dead Man's Boots Launcher
 ShortcutMapEditor=Trình chỉnh sửa Bản đồ VCMI
 ShortcutLauncher=VCMI Launcher
 ShortcutWebPage=Trang web chính thức của VCMI

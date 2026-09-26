@@ -409,7 +409,7 @@ AddonHostProgramNotFound=O %1 não pôde ser localizado na pasta que você selec
 
 ; VCMI Custom Messages
 SelectSetupInstallModeTitle=Escolha o Modo de Instalação
-SelectSetupInstallModeDesc=VCMI pode ser instalado para todos os usuários ou apenas para você.
+SelectSetupInstallModeDesc=Dead Man's Boots pode ser instalado para todos os usuários ou apenas para você.
 SelectSetupInstallModeSubTitle=Selecione o modo de instalação preferido:
 InstallForAllUsers=Instalar para todos os usuários
 InstallForAllUsers1=Requer privilégios administrativos
@@ -421,10 +421,10 @@ CreateDesktopShortcuts=Criar atalhos na área de trabalho
 CreateStartMenuShortcuts=Criar atalhos no menu Iniciar
 AssociateH3MFiles=Associar arquivos .h3m ao Editor de Mapas VCMI
 AssociateVCMIMapFiles=Associar arquivos .vmap e .vcmp ao Editor de Mapas VCMI
-VCMISettings=Configuração do VCMI
-AddFirewallRules=Adicionar regras de firewall para VCMI
-CopyH3Files=Copiar automaticamente os arquivos necessários do Heroes III para o VCMI
-RunVCMILauncherAfterInstall=Iniciar o Launcher do VCMI
+VCMISettings=Configuração do Dead Man's Boots
+AddFirewallRules=Adicionar regras de firewall para Dead Man's Boots
+CopyH3Files=Copiar automaticamente os arquivos necessários do Heroes III para o Dead Man's Boots
+RunVCMILauncherAfterInstall=Iniciar o Launcher do Dead Man's Boots
 ShortcutMapEditor=Editor de Mapas VCMI
 ShortcutLauncher=Launcher do VCMI
 ShortcutWebPage=Site Oficial do VCMI

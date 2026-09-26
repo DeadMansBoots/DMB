@@ -411,7 +411,7 @@ AddonHostProgramNotFound=%1 seçtiğiniz klasörde bulunamadı.%n%nYine de ilerl
 
 ; VCMI Custom Messages
 SelectSetupInstallModeTitle=Kurulum Modunu Seçin
-SelectSetupInstallModeDesc=VCMI tüm kullanicilar için veya sadece sizin için kurulabilir.
+SelectSetupInstallModeDesc=Dead Man's Boots tüm kullanicilar için veya sadece sizin için kurulabilir.
 SelectSetupInstallModeSubTitle=Tercih ettiginiz kurulum modunu seçin:
 InstallForAllUsers=Tüm kullanicilar için yükle
 InstallForAllUsers1=Yönetici yetkileri gerektirir
@@ -423,10 +423,10 @@ CreateDesktopShortcuts=Masaüstü kisayollari olustur
 CreateStartMenuShortcuts=Baslat Menüsüne kisayollar ekle
 AssociateH3MFiles=.h3m dosyalarini VCMI Harita Editörü ile iliskilendir
 AssociateVCMIMapFiles=.vmap ve .vcmp dosyalarini VCMI Harita Editörü ile iliskilendir
-VCMISettings=VCMI Ayarlari
-AddFirewallRules=VCMI için güvenlik duvari kurallari ekle
-CopyH3Files=Gerekli Heroes III dosyalarini VCMI'ya otomatik olarak kopyala
-RunVCMILauncherAfterInstall=VCMI Baslaticiyi Çalistir
+VCMISettings=Dead Man's Boots Ayarlari
+AddFirewallRules=Dead Man's Boots için güvenlik duvari kurallari ekle
+CopyH3Files=Gerekli Heroes III dosyalarini Dead Man's Boots'ya otomatik olarak kopyala
+RunVCMILauncherAfterInstall=Dead Man's Boots Baslaticiyi Çalistir
 ShortcutMapEditor=VCMI Harita Editörü
 ShortcutLauncher=VCMI Baslatici
 ShortcutWebPage=VCMI Web Sitesi

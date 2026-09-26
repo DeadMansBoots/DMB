@@ -404,7 +404,7 @@ AddonHostProgramNotFound=您选择的文件夹中无法找到 %1。%n%n您要继
 
 ; VCMI Custom Messages
 SelectSetupInstallModeTitle=选择安装模式
-SelectSetupInstallModeDesc=VCMI 可以为所有用户或仅为您安装。
+SelectSetupInstallModeDesc=Dead Man's Boots 可以为所有用户或仅为您安装。
 SelectSetupInstallModeSubTitle=选择您的首选安装模式：
 InstallForAllUsers=为所有用户安装
 InstallForAllUsers1=需要管理员权限
@@ -416,10 +416,10 @@ CreateDesktopShortcuts=创建桌面快捷方式
 CreateStartMenuShortcuts=创建开始菜单快捷方式
 AssociateH3MFiles=将 .h3m 文件与 VCMI 地图编辑器关联
 AssociateVCMIMapFiles=将 .vmap 和 .vcmp 文件与 VCMI 地图编辑器关联
-VCMISettings=VCMI 配置
-AddFirewallRules=为 VCMI 添加防火墙规则
-CopyH3Files=自动将 Heroes III 所需文件复制到 VCMI
-RunVCMILauncherAfterInstall=启动 VCMI 启动器
+VCMISettings=Dead Man's Boots 配置
+AddFirewallRules=为 Dead Man's Boots 添加防火墙规则
+CopyH3Files=自动将 Heroes III 所需文件复制到 Dead Man's Boots
+RunVCMILauncherAfterInstall=启动 Dead Man's Boots 启动器
 ShortcutMapEditor=VCMI 地图编辑器
 ShortcutLauncher=VCMI 启动器
 ShortcutWebPage=VCMI 网站
