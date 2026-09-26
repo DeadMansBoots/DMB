@@ -222,6 +222,21 @@ int main(int argc, char * argv[])
 	logConfigurator.configureDefault();
 	logGlobal->info("Starting client of '%s'", GameConstants::VCMI_VERSION);
 	logGlobal->info("Creating console and configuring logger: %d ms", pomtime.getDiff());
+
+	// DMB: OmniAI keeps its decision logs and learning memory in OMNIAI_DIR, and without it in stock
+	// VCMI's Documents\My Games\vcmi. DMB keeps its own user folder beside stock VCMI's, so OmniAI's
+	// files go into DMB's, unless something set OMNIAI_DIR already (the isolation launch plan,
+	// OmniAI's own tools). The AIs load in this process, and a server it starts inherits it.
+	if(!std::getenv("OMNIAI_DIR"))
+	{
+		const boost::filesystem::path omniDir = VCMIDirs::get().userDataPath() / "OmniAI";
+#ifdef VCMI_WINDOWS
+		_wputenv_s(L"OMNIAI_DIR", omniDir.wstring().c_str());
+#else
+		setenv("OMNIAI_DIR", omniDir.string().c_str(), 0);
+#endif
+		logGlobal->info("OmniAI's folder: %s", omniDir.string());
+	}
 	logGlobal->info("The log file will be saved to %s", logPath);
 
 	// Init filesystem and settings
