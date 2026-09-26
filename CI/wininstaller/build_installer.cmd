@@ -18,6 +18,9 @@ if not "%~4"=="" set "VCMIFolder=%~4"
 if not "%~5"=="" set "InstallerName=%~5"
 if not "%~6"=="" set "SourceFilesPath=%~6"
 if not "%~7"=="" set "UCRTFilesPath=%~7"
+REM DMB: the repository page for the installer's links (optional)
+set "DMBHomeArg="
+if not "%~8"=="" set "DMBHomeArg=/DDMBHome=%~8"
 
 if not "%InstallerArch%" == "arm64" (
     set "AllowedArch=%InstallerArch%compatible"
@@ -128,6 +131,7 @@ REM Call Inno Setup Compiler
     /DLicenseFile="%LicenseFile%" ^
     /DIconFile="%IconFile%" ^
     /DSmallLogo="%SmallLogo%" ^
-    /DWizardLogo="%WizardLogo%"
+    /DWizardLogo="%WizardLogo%" ^
+    %DMBHomeArg%
 
 goto :eof

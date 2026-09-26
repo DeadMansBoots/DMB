@@ -84,14 +84,20 @@
 ; #define SmallLogo "C:\_VCMI_Source\CI\wininstaller\vcmismalllogo.bmp"
 ; #define WizardLogo "C:\_VCMI_Source\CI\wininstaller\vcmilogo.bmp"
 
-#define VCMIFilesFolder "My Games\vcmi"
+; DMB: its own user folder, so an install never touches stock VCMI's (the uninstaller's "delete user
+; data" option removes this folder)
+#define VCMIFilesFolder "My Games\DMB"
 
-#define AppComment "VCMI is an open-source engine for Heroes III, offering new and extended possibilities."
-#define VCMITeam "VCMI Team"
-#define VCMICopyright "Copyright © VCMI Team. All rights reserved."
+#define AppComment "Dead Man's Boots, built on VCMI, the open-source engine for Heroes III."
+#define VCMITeam "Dead Man's Boots"
+#define VCMICopyright "Copyright © VCMI Team and the Dead Man's Boots contributors."
 
-#define VCMIHome "https://vcmi.eu/"
-#define VCMIContact "https://discord.gg/chBT42V"
+; DMB's repository page; the workflow passes /DDMBHome with the real address
+#ifndef DMBHome
+  #define DMBHome "https://github.com/"
+#endif
+#define VCMIHome DMBHome
+#define VCMIContact DMBHome
 
 
 [Setup]
@@ -111,7 +117,7 @@ PrivilegesRequiredOverridesAllowed=commandline dialog
 ShowLanguageDialog=yes
 DisableWelcomePage=no
 DisableProgramGroupPage=yes
-ChangesAssociations=yes
+ChangesAssociations=no
 UsePreviousLanguage=yes
 DirExistsWarning=no
 UsePreviousAppDir=yes
@@ -166,19 +172,17 @@ Source: "{#UCRTFilesPath}\{#InstallerArch}\*"; DestDir: "{app}"; Flags: ignoreve
 
 
 [Icons]
-Name: "{group}\{cm:ShortcutLauncher}{code:GetBranchSuffix}"; Filename: "{app}\VCMI_launcher.exe"; Comment: "{cm:ShortcutLauncherComment}{code:GetBranchSuffix}";  Tasks: startmenu
-Name: "{group}\{cm:ShortcutMapEditor}{code:GetBranchSuffix}"; Filename: "{app}\VCMI_mapeditor.exe"; Comment: "{cm:ShortcutMapEditorComment}{code:GetBranchSuffix}";  Tasks: startmenu
-Name: "{group}\{cm:ShortcutWebPage}"; Filename: "{#VCMIHome}"; Comment: "{cm:ShortcutWebPageComment}";  Tasks: startmenu
-Name: "{group}\{cm:ShortcutDiscord}"; Filename: "{#VCMIContact}"; Comment: "{cm:ShortcutDiscordComment}";  Tasks: startmenu
+; DMB: named for the product (the translated names say VCMI); the map editor only when a build ships it
+Name: "{group}\Dead Man's Boots{code:GetBranchSuffix}"; Filename: "{app}\VCMI_launcher.exe"; Comment: "Dead Man's Boots{code:GetBranchSuffix}";  Tasks: startmenu
+Name: "{group}\Dead Man's Boots Map Editor{code:GetBranchSuffix}"; Filename: "{app}\VCMI_mapeditor.exe"; Comment: "Dead Man's Boots Map Editor{code:GetBranchSuffix}";  Tasks: startmenu; Check: MapEditorInstalled
 
-Name: "{code:GetUserDesktopFolder}\{cm:ShortcutLauncher}{code:GetBranchSuffix}"; Filename: "{app}\VCMI_launcher.exe"; Comment: "{cm:ShortcutLauncherComment}{code:GetBranchSuffix}"; Tasks: desktop
+Name: "{code:GetUserDesktopFolder}\Dead Man's Boots{code:GetBranchSuffix}"; Filename: "{app}\VCMI_launcher.exe"; Comment: "Dead Man's Boots{code:GetBranchSuffix}"; Tasks: desktop
 
 
 [Tasks]
 Name: "desktop"; Description: "{cm:CreateDesktopShortcuts}"; GroupDescription: "{cm:SystemIntegration}"; Check: not IsPRInstaller
 Name: "startmenu"; Description: "{cm:CreateStartMenuShortcuts}"; GroupDescription: "{cm:SystemIntegration}"; Check: not IsPRInstaller
-Name: "fileassociation_h3m"; Description: "{cm:AssociateH3MFiles}"; GroupDescription: "{cm:SystemIntegration}"; Flags: unchecked; Check: not IsPRInstaller
-Name: "fileassociation_vcmimap"; Description: "{cm:AssociateVCMIMapFiles}"; GroupDescription: "{cm:SystemIntegration}"; Check: not IsPRInstaller
+; DMB: no file associations; .h3m, .vmap and .vcmp stay with whatever the player already uses
 
 Name: "firewallrules"; Description: "{cm:AddFirewallRules}"; GroupDescription: "{cm:VCMISettings}"; Check: not IsPRInstaller and IsAdminInstallMode
 Name: "h3copyfiles"; Description: "{cm:CopyH3Files}"; GroupDescription: "{cm:VCMISettings}"; Check: not IsPRInstaller and IsHeroes3Installed and IsCopyFilesNeeded
@@ -186,36 +190,22 @@ Name: "h3copyfiles"; Description: "{cm:CopyH3Files}"; GroupDescription: "{cm:VCM
 [Registry]
 Root: HKCU; Subkey: "Software\{#VCMIFolder}"; ValueType: string; ValueName: "InstallPath"; ValueData: "{app}"; Flags: uninsdeletekey
 
-Root: HKCU; Subkey: "Software\Classes\.vmap"; ValueType: string; ValueName: ""; ValueData: "VCMI.vmap"; Flags: uninsdeletevalue; Tasks: fileassociation_vcmimap
-Root: HKCU; Subkey: "Software\Classes\VCMI.vmap"; ValueType: string; ValueName: ""; ValueData: "{cm:VMAPDescription}"; Flags: uninsdeletekey; Tasks: fileassociation_vcmimap
-Root: HKCU; Subkey: "Software\Classes\VCMI.vmap\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\VCMI_mapeditor.exe"" ""%1"""; Tasks: fileassociation_vcmimap
-
-Root: HKCU; Subkey: "Software\Classes\.vcmp"; ValueType: string; ValueName: ""; ValueData: "VCMI.vcmp"; Flags: uninsdeletevalue; Tasks: fileassociation_vcmimap
-Root: HKCU; Subkey: "Software\Classes\VCMI.vcmp"; ValueType: string; ValueName: ""; ValueData: "{cm:VCMPDescription}"; Flags: uninsdeletekey; Tasks: fileassociation_vcmimap
-Root: HKCU; Subkey: "Software\Classes\VCMI.vcmp\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\VCMI_mapeditor.exe"" ""%1"""; Tasks: fileassociation_vcmimap
-
-Root: HKCU; Subkey: "Software\Classes\.h3m"; ValueType: string; ValueName: ""; ValueData: "VCMI.h3m"; Flags: uninsdeletevalue; Tasks: fileassociation_h3m
-Root: HKCU; Subkey: "Software\Classes\VCMI.h3m"; ValueType: string; ValueName: ""; ValueData: "{cm:H3MDescription}"; Flags: uninsdeletekey; Tasks: fileassociation_h3m
-Root: HKCU; Subkey: "Software\Classes\VCMI.h3m\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\VCMI_mapeditor.exe"" ""%1"""; Tasks: fileassociation_h3m
 
 
 [Run]
-Filename: "netsh.exe"; Parameters: "advfirewall firewall add rule name=vcmi_server dir=in action=allow program=""{app}\vcmi_server.exe"" enable=yes profile=public,private"; Flags: runhidden; Tasks: firewallrules; Check: IsAdmin
-Filename: "netsh.exe"; Parameters: "advfirewall firewall add rule name=vcmi_client dir=in action=allow program=""{app}\vcmi_client.exe"" enable=yes profile=public,private"; Flags: runhidden; Tasks: firewallrules; Check: IsAdmin
+Filename: "netsh.exe"; Parameters: "advfirewall firewall add rule name=dmb_server dir=in action=allow program=""{app}\vcmi_server.exe"" enable=yes profile=public,private"; Flags: runhidden; Tasks: firewallrules; Check: IsAdmin
+Filename: "netsh.exe"; Parameters: "advfirewall firewall add rule name=dmb_client dir=in action=allow program=""{app}\vcmi_client.exe"" enable=yes profile=public,private"; Flags: runhidden; Tasks: firewallrules; Check: IsAdmin
 
 Filename: "{app}\VCMI_launcher.exe"; Description: "{cm:RunVCMILauncherAfterInstall}"; Flags: nowait postinstall; Check: ShouldRunLauncher
 
 
 [UninstallRun]
-; Kill VCMI processes
-Filename: "taskkill.exe"; Parameters: "/F /IM VCMI_client.exe"; Flags: runhidden; RunOnceId: "KillVCMIClient"
-Filename: "taskkill.exe"; Parameters: "/F /IM VCMI_server.exe"; Flags: runhidden; RunOnceId: "KillVCMIServer"
-Filename: "taskkill.exe"; Parameters: "/F /IM VCMI_launcher.exe"; Flags: runhidden; RunOnceId: "KillVCMILauncher"
-Filename: "taskkill.exe"; Parameters: "/F /IM VCMI_mapeditor.exe"; Flags: runhidden; RunOnceId: "KillVCMIMapEditor"
+; DMB: no taskkill by program name here. DMB's programs share stock VCMI's file names, so that
+; would end a running stock VCMI game too; files still in use make the uninstaller ask instead.
 
 ; Remove firewall rules
-Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=vcmi_server"; Flags: runhidden; Check: IsAdmin; RunOnceId: "RemoveFirewallVCMIServer"
-Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=vcmi_client"; Flags: runhidden; Check: IsAdmin; RunOnceId: "RemoveFirewallVCMIClient"
+Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=dmb_server"; Flags: runhidden; Check: IsAdmin; RunOnceId: "RemoveFirewallDMBServer"
+Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=dmb_client"; Flags: runhidden; Check: IsAdmin; RunOnceId: "RemoveFirewallDMBClient"
 
 
 [Code]
@@ -713,48 +703,10 @@ begin
   Result := True;
 end;
 
-function TryReadUninstallExeFromHKLM(const SubKey: String; var UninstallerPath: String): Boolean;
+function MapEditorInstalled(): Boolean;
 begin
-  Result := RegQueryStringValue(HKLM, SubKey, 'UninstallString', UninstallerPath);
-  if (not Result) or (Trim(UninstallerPath) = '') then
-  begin
-    UninstallerPath := '';
-    Result := False;
-  end;
-
-  UninstallerPath := RemoveQuotes(Trim(UninstallerPath));
-end;
-
-function GetLegacyUninstallerPath(var UninstallerPath: String): Boolean;
-begin
-  Result := TryReadUninstallExeFromHKLM('SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\VCMI', UninstallerPath) or TryReadUninstallExeFromHKLM('SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\VCMI', UninstallerPath);
-end;
-
-
-procedure RemoveLegacyInstaller();
-var
-  AppFolder: String;
-  UninstallerPath: String;
-  ResultCode: Integer;
-begin
-  AppFolder := ExpandConstant('{app}');
-  UninstallerPath := '';
-
-  // 1) Prefer uninstall path from registry (full path)
-  if not GetLegacyUninstallerPath(UninstallerPath) then
-  begin
-    // 2) Fallback: uninstall.exe in current target dir
-    UninstallerPath := AppFolder + '\Uninstall.exe';
-  end;
-
-  if (UninstallerPath <> '') and FileExists(UninstallerPath) then
-  begin
-    Exec(UninstallerPath, '/S', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-
-    // Clean leftovers only if uninstall.exe is in current {app} folder
-    if DirExists(AppFolder) and (CompareText(ExtractFileDir(UninstallerPath), AppFolder) = 0) then
-      DelTree(AppFolder, True, True, False);
-  end;
+  // DMB's builds may leave the map editor out; its shortcut appears only when it was installed
+  Result := FileExists(ExpandConstant('{app}\VCMI_mapeditor.exe'));
 end;
 
 
@@ -821,8 +773,8 @@ end;
 
 procedure RunPreInstallTasks();
 begin
-  // Remove Legacy installer when needed
-  RemoveLegacyInstaller();
+  // DMB: never runs another installer's uninstaller. Stock VCMI's installer removes a legacy VCMI
+  // install silently here; DMB installs beside whatever VCMI the player has.
   // Copy H3 files when needed
   PerformHeroes3FileCopy();
   // Create default language JSON - for future use
