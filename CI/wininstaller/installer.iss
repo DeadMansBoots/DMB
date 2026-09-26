@@ -414,14 +414,16 @@ begin
 end;
 
 
+function GetUserProgramsFolder: String; forward;
+
 function GetDefaultDir(Default: String): String;
 begin
   if IsAdmin then
     // Default to Program Files for admins
     Result := GetCommonProgramFilesDir + '\{#VCMIFolder}'
   else
-    // Default to User AppData for non-admin users
-    Result := GlobalUserAppdataFolder + '\{#VCMIFolder}';
+    // DMB: the user's own programs folder for non-admin users
+    Result := GetUserProgramsFolder + '\{#VCMIFolder}';
 end;
 
 
@@ -477,6 +479,14 @@ end;
 function GetUserAppdataFolder: String;
 begin
   Result := GetUserFolderPath('{userappdata}');
+end;
+
+
+// DMB: a per-user install goes where Windows keeps per-user programs (AppData\Local\Programs),
+// not into the roaming profile (AppData\Roaming), which can be copied between computers
+function GetUserProgramsFolder: String;
+begin
+  Result := GetUserFolderPath('{userpf}');
 end;
 
 
@@ -708,7 +718,7 @@ begin
     if InstallModePage.SelectedValueIndex = 0 then
       WizardForm.DirEdit.Text := GetCommonProgramFilesDir + '\{#VCMIFolder}'
     else
-      WizardForm.DirEdit.Text := GlobalUserAppdataFolder + '\{#VCMIFolder}';
+      WizardForm.DirEdit.Text := GetUserProgramsFolder + '\{#VCMIFolder}';
   end;
 
   Result := True;
