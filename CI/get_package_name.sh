@@ -10,7 +10,13 @@ VCMI_PACKAGE_FILE_NAME="${TMP_JOBID}-vcmi"
 VCMI_PACKAGE_BUILD="${TMP_COMMIT}"
 VCMI_PACKAGE_NAME_SUFFIX=""
 VCMI_PACKAGE_GOLDMASTER="OFF"
-if [ -z "$TMP_PRID" ] || [ "$TMP_PRID" == "false" ]
+if [ "${GITHUB_REF#refs/tags/}" != "$GITHUB_REF" ]
+then
+	# DMB: a release tag (v0.1.0) is named for the release and built in public release mode, the
+	# way VCMI builds its own releases from master
+	VCMI_PACKAGE_FILE_NAME="${VCMI_PACKAGE_FILE_NAME}-release-${GITHUB_REF#refs/tags/}-${TMP_COMMIT}"
+	VCMI_PACKAGE_GOLDMASTER="ON"
+elif [ -z "$TMP_PRID" ] || [ "$TMP_PRID" == "false" ]
 then
 	branch_name=$(echo "$TMP_BRANCH" | sed 's/[^[:alnum:]]\+/_/g')
 	VCMI_PACKAGE_FILE_NAME="${VCMI_PACKAGE_FILE_NAME}-branch-${branch_name}-${TMP_COMMIT}"

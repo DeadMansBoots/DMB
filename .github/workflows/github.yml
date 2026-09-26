@@ -7,6 +7,9 @@ on:
       - master
       - develop
       - dmb
+    # DMB: a release tag (v0.1.0) builds everything and puts the Windows installer on the release
+    tags:
+      - "v*"
   pull_request:
   workflow_dispatch:
 
@@ -851,6 +854,61 @@ jobs:
       with:
         name: partial-json-${{ matrix.platform }}-installer
         path: .summary/installer-${{ matrix.platform }}.json
+
+  # DMB: a release tag (v0.1.0) puts the 64-bit Windows installer on the tag's GitHub release,
+  # which anyone can download without a GitHub account (a run's artifacts need one). The tag must
+  # match DMB_VERSION in cmake_modules/VersionDefinition.cmake. This is the only job that can
+  # write to the repository, and it runs nothing but the GitHub CLI. The x86 installer has no map
+  # generator and the arm64 one is untested, so neither is published yet.
+  release-windows:
+    name: Publish Windows Installer
+    needs: windows-installer
+    if: ${{ !cancelled() && github.ref_type == 'tag' && needs.windows-installer.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Download the 64-bit installer
+      uses: actions/download-artifact@v7
+      with:
+        # the installer, not "partial-json-msvc-x64-installer"
+        pattern: "*-vcmi-*-msvc-x64-installer"
+        path: installer
+
+    - name: Publish the release
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        TAG: ${{ github.ref_name }}
+      run: |
+        version=$(grep -m 1 "set(DMB_VERSION" cmake_modules/VersionDefinition.cmake | grep -o "[0-9][0-9.]*" || true)
+        if [ "$TAG" != "v$version" ]; then
+          echo "::error::The tag $TAG does not match DMB_VERSION ($version) in cmake_modules/VersionDefinition.cmake"
+          exit 1
+        fi
+
+        shopt -s nullglob globstar
+        installers=(installer/**/*.exe)
+        if [ "${#installers[@]}" != 1 ]; then
+          echo "::error::Expected one 64-bit installer, found ${#installers[@]}"
+          exit 1
+        fi
+        asset="Dead-Mans-Boots-$version-Setup-x64.exe"
+        cp "${installers[0]}" "$asset"
+
+        if gh release view "$TAG" > /dev/null 2>&1; then
+          gh release upload "$TAG" "$asset" --clobber
+        else
+          gh release create "$TAG" "$asset" --verify-tag --title "Dead Man's Boots $version" \
+            --notes "Windows: download $asset below and run it. The launcher asks for your own Heroes of Might and Magic III files the first time it starts."
+        fi
 
   validate-code:
     name: Validate Code
