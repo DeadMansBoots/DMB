@@ -35,7 +35,8 @@ UpdateDialog::UpdateDialog(bool calledManually, QWidget *parent):
 	if(settings["launcher"]["updateOnStartup"].Bool())
 		ui->checkOnStartup->setCheckState(Qt::CheckState::Checked);
 	
-	currentVersion = GameConstants::VCMI_VERSION;
+	// DMB's own number: the update feed lists DMB releases, which all run on the same VCMI version
+	currentVersion = "DMB " DMB_VERSION_STRING;
 	
 	setWindowTitle(QString::fromStdString(currentVersion));
 	

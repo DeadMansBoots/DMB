@@ -141,7 +141,7 @@ ${rccQmFiles}
 endif()
 
 if(WIN32)
-	set(VCMI_FILE_DESCRIPTION "VCMI Launcher")
+	set(VCMI_FILE_DESCRIPTION "Dead Man's Boots Launcher")
 	set(VCMI_ORIGINAL_FILENAME "VCMI_launcher.exe")
 	set(VCMI_ICON_RESOURCE "IDI_ICON1 ICON \"${CMAKE_CURRENT_SOURCE_DIR}/VCMI_launcher.ico\"")
 	set(launcher_ICON "${CMAKE_CURRENT_BINARY_DIR}/VCMI_launcher_versioninfo.rc")

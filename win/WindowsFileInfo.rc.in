@@ -25,8 +25,8 @@ BEGIN
             VALUE "InternalName", "@VCMI_ORIGINAL_FILENAME@"
             VALUE "LegalCopyright", "Copyright \xA9 VCMI Team. All rights reserved."
             VALUE "OriginalFilename", "@VCMI_ORIGINAL_FILENAME@"
-            VALUE "ProductName", "VCMI"
-            VALUE "ProductVersion", "@VCMI_VERSION_STRING@"
+            VALUE "ProductName", "Dead Man's Boots"
+            VALUE "ProductVersion", "@DMB_VERSION@"
         END
     END
     BLOCK "VarFileInfo"

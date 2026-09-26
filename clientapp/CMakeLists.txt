@@ -48,7 +48,7 @@ target_include_directories(vcmiclient
 )
 
 if(WIN32)
-	set(VCMI_FILE_DESCRIPTION "VCMI Client")
+	set(VCMI_FILE_DESCRIPTION "Dead Man's Boots")
 	set(VCMI_ORIGINAL_FILENAME "VCMI_client.exe")
 	set(VCMI_ICON_RESOURCE "IDI_ICON1 ICON \"${CMAKE_CURRENT_SOURCE_DIR}/icons/vcmi.ico\"")
 	set(client_VERSIONINFO_RC "${CMAKE_CURRENT_BINARY_DIR}/VCMI_client_versioninfo.rc")

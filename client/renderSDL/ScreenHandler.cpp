@@ -449,7 +449,7 @@ SDL_Window * ScreenHandler::createWindowImpl(Point dimensions, int flags, bool c
 	int positionFlags = center ? SDL_WINDOWPOS_CENTERED_DISPLAY(displayIndex) : SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayIndex);
 
 	// The window keeps VCMI's version for bug reports; the name is Dead Man's Boots
-	const std::string title = "Dead Man's Boots (" + GameConstants::VCMI_VERSION + ")";
+	const std::string title = "Dead Man's Boots " DMB_VERSION_STRING " (" + GameConstants::VCMI_VERSION + ")";
 	return SDL_CreateWindow(title.c_str(), positionFlags, positionFlags, dimensions.x, dimensions.y, flags);
 }
 

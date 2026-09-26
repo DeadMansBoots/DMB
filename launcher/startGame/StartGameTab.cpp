@@ -199,7 +199,7 @@ void StartGameTab::refreshUpdateStatus(EGameUpdateStatus status)
 {
 	QString availableVersion; // TODO
 
-	ui->labelTitleEngine->setText("Dead Man's Boots (VCMI " VCMI_VERSION_STRING ")");
+	ui->labelTitleEngine->setText("Dead Man's Boots " DMB_VERSION_STRING " (VCMI " VCMI_VERSION_STRING ")");
 	// no update feed configured (DMB's own is not published yet): nothing to check against
 	const bool hasUpdateFeed = !settings["launcher"]["updateConfigUrl"].String().empty();
 	ui->buttonUpdateCheck->setVisible(status == EGameUpdateStatus::NOT_CHECKED && hasUpdateFeed);
