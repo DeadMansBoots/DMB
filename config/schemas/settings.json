@@ -231,7 +231,8 @@
 				"downscalingFilter",
 				"allowPortrait",
 				"asyncUpscaling",
-				"useHdTextures"
+				"useHdTextures",
+				"darkInterface"
 			],
 			"properties" : {
 				"resolution" : {
@@ -337,6 +338,10 @@
 				"useHdTextures" : {
 					"type" : "boolean",
 					"default" : true
+				},
+				"darkInterface" : {
+					"type" : "boolean",
+					"default" : false
 				}
 			}
 		},

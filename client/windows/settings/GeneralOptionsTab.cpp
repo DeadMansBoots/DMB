@@ -202,7 +202,17 @@ GeneralOptionsTab::GeneralOptionsTab()
 		setBoolSetting("gameTweaks", "compactTownCreatureInfo", value);
 	});
 
+	// DMB: black in place of the leather; loaded images are cached, so it applies after a restart
+	addCallback("darkInterfaceChanged", [](bool value)
+	{
+		setBoolSetting("video", "darkInterface", value);
+	});
+
 	build(config);
+
+	std::shared_ptr<CToggleButton> darkInterfaceCheckbox = widget<CToggleButton>("darkInterfaceCheckbox");
+	if (darkInterfaceCheckbox)
+		darkInterfaceCheckbox->setSelected(settings["video"]["darkInterface"].Bool());
 
 	std::shared_ptr<CLabel> scalingLabel = widget<CLabel>("scalingLabel");
 	scalingLabel->setText(scalingToLabelString(ENGINE->screenHandler().getInterfaceScalingPercentage()));

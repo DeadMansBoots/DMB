@@ -430,6 +430,13 @@ std::shared_ptr<IImage> RenderHandler::loadImage(const ImageLocator & locator)
 		}
 	}
 
+	// DMB's dark interface: the leather fill of windows and dialogs (DiBoxBck, the player's own
+	// Heroes III art) becomes DMB's black texture. Every window, and every background the asset
+	// generator composes from the leather, loads it through here.
+	if(adjustedLocator.image && settings["video"]["darkInterface"].Bool()
+		&& boost::iequals(adjustedLocator.image->getName(), "DIBOXBCK"))
+		adjustedLocator.image = ImagePath::builtin("DmbDarkBck");
+
 	std::shared_ptr<ScalableImageInstance> result;
 
 	if (adjustedLocator.scalingFactor == 0)

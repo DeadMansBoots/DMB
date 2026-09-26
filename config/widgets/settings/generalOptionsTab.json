@@ -250,6 +250,34 @@
 				}
 			]
 		},
+/////////////////////////////////////// Right section, below audio - DMB's own settings
+		{
+			"type" : "labelTitle",
+			"position": {"x": 380, "y": 265},
+			"text": "vcmi.dmb.optionsGroup"
+		},
+		{
+			"type" : "verticalLayout",
+			"customType" : "labelDescription",
+			"position" : {"x": 415, "y": 297},
+			"items" : [
+				{
+					"text": "vcmi.dmb.darkInterface.hover"
+				}
+			]
+		},
+		{
+			"type" : "verticalLayout",
+			"customType" : "checkbox",
+			"position" : {"x": 380, "y": 295},
+			"items" : [
+				{
+					"name": "darkInterfaceCheckbox",
+					"help": "vcmi.dmb.darkInterface",
+					"callback": "darkInterfaceChanged"
+				}
+			]
+		},
 /////////////////////////////////////// Bottom section - Towns Settings
 		{
 			"type" : "verticalLayout",
