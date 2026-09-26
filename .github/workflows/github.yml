@@ -721,7 +721,10 @@ jobs:
 
   windows-installer:
     needs: build
-    if: ${{ needs.build.result == 'success' }}
+    # DMB: Windows is what DMB ships, so a failed build on another platform must not hold its
+    # installer back. A Windows build that failed leaves no package, and this job's download step
+    # fails for that architecture instead.
+    if: ${{ !cancelled() && needs.build.result != 'skipped' }}
     name: Create Windows Installer (${{ matrix.arch }})
     strategy:
       matrix:
