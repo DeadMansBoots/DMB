@@ -340,12 +340,31 @@ jobs:
           androidOptions+=("-DCMAKE_C_COMPILER_LAUNCHER=ccache" "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache")
         fi
         cmake -DENABLE_CCACHE:BOOL=ON "${androidOptions[@]}" --preset ${{ matrix.preset }}
+    # DMB: the official Node.js build the map generator runs on, shipped in mapgen\node\ beside
+    # generate.cmd (win/CMakeLists.txt). The version and SHA-256 are pinned from nodejs.org's
+    # SHASUMS256.txt. Node 24 has no 32-bit Windows build, so the x86 package goes without the
+    # generator, and its MapGen tab says no generator is configured.
+    - name: Download Node.js for the map generator
+      if: ${{ matrix.platform == 'msvc-x64' || matrix.platform == 'msvc-arm64' }}
+      run: |
+        case "${{ matrix.platform }}" in
+          msvc-x64) arch=x64; sum=158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541 ;;
+          msvc-arm64) arch=arm64; sum=8779b1bde1d39f8d420e3b57aa657b39891af434d3de44a919044cec06785921 ;;
+        esac
+        name="node-v24.21.0-win-$arch"
+        cd "$(cygpath -u "$RUNNER_TEMP")"
+        curl -fsSL -o "$name.zip" "https://nodejs.org/dist/v24.21.0/$name.zip"
+        echo "$sum  $name.zip" | sha256sum -c -
+        unzip -q "$name.zip" "$name/node.exe" "$name/LICENSE"
+        echo "DMB_NODE_DIR=$(cygpath -m "$PWD/$name")" >> "$GITHUB_ENV"
+
     - name: Configure (MSVC)
       if: ${{ startsWith(matrix.platform, 'msvc') }}
       run: |
         & $env:CONANRUN_PWSH_SCRIPT
 
-        cmake --preset ${{ matrix.preset }}
+        # DMB: DMB_NODE_DIR is empty where no Node was downloaded, and the package then has no generator
+        cmake --preset ${{ matrix.preset }} "-DDMB_NODE_DIR=$env:DMB_NODE_DIR"
       shell: pwsh
 
     - name: Build
