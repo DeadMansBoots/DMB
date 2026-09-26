@@ -830,7 +830,7 @@
 				},
 				"defaultRepositoryURL" : {
 					"type" : "string",
-					"default" : "https://raw.githubusercontent.com/vcmi/vcmi-mods-repository/develop/vcmi-1.7.json"
+					"default" : "https://raw.githubusercontent.com/DeadMansBoots/dmb-catalog/main/dmb-1.7.json"
 				},
 				"extraRepositoryEnabled" : {
 					"type" : "boolean",
@@ -858,17 +858,17 @@
 				},
 				"updateOnStartup" : {
 					"type" : "boolean",
-					"default" : false
+					"default" : true
 				},
 				"updateConfigUrl" : {
 					"type" : "string",
-					"default" : ""
+					"default" : "https://raw.githubusercontent.com/DeadMansBoots/dmb-catalog/main/dmb-updates.json"
 				},
 				"dmbHomepage" : {
 					// DMB's repository page: the launcher's GitHub, homepage, bug-report and download
 					// links. Empty until the repository exists; the links stay hidden until then.
 					"type" : "string",
-					"default" : ""
+					"default" : "https://github.com/DeadMansBoots/DMB"
 				},
 				"trackClipboardState" : {
 					"type" : "boolean",
