@@ -52,7 +52,7 @@ then
 	echo " --convertMP3     " "Convert all mp3 files into ogg/vorbis"
 	echo "                  " "Requires ffmpeg or avconv"
 	echo
-	echo " --dest DIRECTORY " "Path where resulting data will be placed. Default is ~/.local/share/vcmi"
+	echo " --dest DIRECTORY " "Path where resulting data will be placed. Default is ~/.local/share/dmb"
 	echo
 	echo " --validate       " "Run basic validness checks"
 	exit 0
@@ -156,14 +156,15 @@ fi
 
 if [[ -z "$dest_dir" ]]
 then
+	# DMB: its own user folders (lib/VCMIDirs.cpp: "DMB" on macOS, "dmb" in the XDG folders)
 	if [[ "$(uname)" == Darwin ]]
 	then
-		dest_dir="$HOME/Library/Application Support/vcmi"
+		dest_dir="$HOME/Library/Application Support/DMB"
 	elif [[ -z "$XDG_DATA_HOME" ]]
 	then
-		dest_dir="$HOME/.local/share/vcmi"
+		dest_dir="$HOME/.local/share/dmb"
 	else
-		dest_dir="$XDG_DATA_HOME/vcmi"
+		dest_dir="$XDG_DATA_HOME/dmb"
 	fi
 fi
 
