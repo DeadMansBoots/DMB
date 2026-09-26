@@ -727,7 +727,7 @@
 			"properties": {
 				"externalGenerator": {
 					"type": "string",
-					"default": "C:\\VCMI\\vcmi-external-generator.cmd"
+					"default": "mapgen\\generate.cmd"
 				}
 			}
 		},

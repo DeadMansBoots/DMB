@@ -213,6 +213,20 @@ void MapGenTab::generate()
 	std::string command = settings["mapGen"]["externalGenerator"].String();
 	if(command.empty() && persistentStorage["mapGen"]["externalGenerator"].isString())
 		command = persistentStorage["mapGen"]["externalGenerator"].String();
+	// A relative path names a file in VCMI's binary folder (on Windows the
+	// working directory, which is also where VCMI finds its own data): DMB
+	// ships the generator as mapgen\generate.cmd next to the client, which is
+	// the schema default. A generator that is not there counts as not
+	// configured, so a build without the package's mapgen folder says so
+	// plainly instead of failing to start a script.
+	if(!command.empty())
+	{
+		boost::filesystem::path commandPath(command);
+		if(commandPath.is_relative())
+			commandPath = VCMIDirs::get().binaryPath() / commandPath;
+		boost::system::error_code existsEc;
+		command = boost::filesystem::exists(commandPath, existsEc) ? commandPath.string() : std::string();
+	}
 	if(command.empty())
 	{
 		auto window = CInfoWindow::create(LIBRARY->generaltexth->translate("vcmi.mapGen.generate.notConfigured"), PlayerColor(0), {});
