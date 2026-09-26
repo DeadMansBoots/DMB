@@ -1,0 +1,131 @@
+# DMB: a form rather than a blank box, so every report arrives with the same fields in the same
+# order. GitHub turns each field into a "### <label>" section of the issue, which a program reads
+# before a person does; keep the labels stable when editing.
+name: Bug report
+description: Something in Dead Man's Boots does not work as it should
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please answer each box on its own; "unknown" is a fine answer.
+        One problem per report.
+
+  - type: input
+    id: dmb-version
+    attributes:
+      label: Dead Man's Boots version
+      description: The launcher's Help page, the "Game version" line.
+      placeholder: Dead Man's Boots 0.1.0 (VCMI 1.7.5.abc1234)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows (64-bit)
+        - Windows (ARM)
+        - Windows (32-bit)
+        - Android
+        - Linux
+        - macOS
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: Operating system version
+      description: The launcher's Help page, the "Operating System" line.
+      placeholder: Windows 11 24H2
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where it happened
+      options:
+        - Launcher
+        - Installer or update
+        - Game, adventure map
+        - Game, battle
+        - Game, town or hero screens
+        - Game, menus or lobby
+        - Map generator (MapGen tab)
+        - Computer players (OmniAI)
+        - Map editor
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What went wrong
+      description: One or two sentences.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered, starting from opening the launcher.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often
+      options:
+        - Every time
+        - Sometimes
+        - Once
+    validations:
+      required: true
+
+  - type: textarea
+    id: log-excerpt
+    attributes:
+      label: Log excerpt
+      description: >
+        The lines around the problem, pasted as text, from VCMI_Client_log.txt, VCMI_Server_log.txt or
+        VCMI_Launcher_log.txt in the folder the launcher's Help page shows as "Log files directory".
+        The whole set can go under "Anything else" as the zip from Help, "Export logs".
+      render: text
+
+  - type: textarea
+    id: game-context
+    attributes:
+      label: Map, save and mods
+      description: >
+        The map's name; for a generated map, its MapGen settings or seed; whether a save shows the
+        problem; the mods that were on.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots, the exported logs, whether it worked in an earlier version, whether stock VCMI does the same.

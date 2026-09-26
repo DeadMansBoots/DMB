@@ -1,0 +1,42 @@
+# DMB: the same form approach as bug_report.yml; keep the labels stable when editing.
+name: Idea or request
+description: Something Dead Man's Boots could do or do better
+title: "[Idea] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What should Dead Man's Boots do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it would help
+      description: The situation where you missed it.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Part of the game
+      options:
+        - Launcher
+        - Installer or update
+        - Game
+        - Map generator (MapGen tab)
+        - Computer players (OmniAI)
+        - Map editor
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots, examples from other games or mods.
