@@ -22,6 +22,11 @@ VCMI_LIB_NAMESPACE_BEGIN
 
 namespace bfs = boost::filesystem;
 
+// Dead Man's Boots keeps its own user folders beside stock VCMI's, so the two never share settings,
+// mods or saves (stock VCMI drops every setting its schema does not list).
+static const char * const USER_DIR_NAME = "DMB"; // Windows (Documents\My Games) and macOS
+static const char * const USER_DIR_NAME_XDG = "dmb"; // Linux, lower case like the XDG folders around it
+
 bfs::path IVCMIDirs::userLogsPath() const { return userCachePath(); }
 
 bfs::path IVCMIDirs::userSavePath() const { return userDataPath() / "Saves"; }
@@ -167,7 +172,7 @@ bfs::path VCMIDirsWIN32::getDefaultUserDataPath() const
 {
 	wchar_t profileDir[MAX_PATH];
 	if (SHGetSpecialFolderPathW(nullptr, profileDir, CSIDL_MYDOCUMENTS, FALSE) != FALSE)
-		return bfs::path(profileDir) / "My Games" / "vcmi";
+		return bfs::path(profileDir) / "My Games" / USER_DIR_NAME;
 	return bfs::path(".");
 }
 
@@ -357,7 +362,7 @@ bfs::path VCMIDirsOSX::userDataPath() const
 	const char* homeDir = getenv("HOME"); // Should be std::getenv?
 	if (homeDir == nullptr)
 		homeDir = ".";
-	return bfs::path(homeDir) / "Library" / "Application Support" / "vcmi";
+	return bfs::path(homeDir) / "Library" / "Application Support" / USER_DIR_NAME;
 }
 bfs::path VCMIDirsOSX::userCachePath() const { return userDataPath(); }
 
@@ -365,7 +370,7 @@ bfs::path VCMIDirsOSX::userLogsPath() const
 {
 	// TODO: use proper objc code from Foundation framework
 	if(const auto homeDir = std::getenv("HOME"))
-		return bfs::path{homeDir} / "Library" / "Logs" / "vcmi";
+		return bfs::path{homeDir} / "Library" / "Logs" / USER_DIR_NAME;
 	return IVCMIDirsUNIX::userLogsPath();
 }
 
@@ -543,9 +548,9 @@ bfs::path VCMIDirsXDG::userDataPath() const
 	// $XDG_DATA_HOME, default: $HOME/.local/share
 	const char* homeDir;
 	if((homeDir = getenv("XDG_DATA_HOME")))
-		return bfs::path(homeDir) / "vcmi";
+		return bfs::path(homeDir) / USER_DIR_NAME_XDG;
 	else if((homeDir = getenv("HOME")))
-		return bfs::path(homeDir) / ".local" / "share" / "vcmi";
+		return bfs::path(homeDir) / ".local" / "share" / USER_DIR_NAME_XDG;
 	else
 		return ".";
 }
@@ -554,9 +559,9 @@ bfs::path VCMIDirsXDG::userCachePath() const
 	// $XDG_CACHE_HOME, default: $HOME/.cache
 	const char * tempResult;
 	if ((tempResult = getenv("XDG_CACHE_HOME")))
-		return bfs::path(tempResult) / "vcmi";
+		return bfs::path(tempResult) / USER_DIR_NAME_XDG;
 	else if ((tempResult = getenv("HOME")))
-		return bfs::path(tempResult) / ".cache" / "vcmi";
+		return bfs::path(tempResult) / ".cache" / USER_DIR_NAME_XDG;
 	else
 		return ".";
 }
@@ -565,11 +570,11 @@ bfs::path VCMIDirsXDG::userConfigPath() const
 	// $XDG_CONFIG_HOME, default: $HOME/.config
 	const char * tempResult = getenv("XDG_CONFIG_HOME");
 	if (tempResult)
-		return bfs::path(tempResult) / "vcmi";
+		return bfs::path(tempResult) / USER_DIR_NAME_XDG;
 
 	tempResult = getenv("HOME");
 	if (tempResult)
-		return bfs::path(tempResult) / ".config" / "vcmi";
+		return bfs::path(tempResult) / ".config" / USER_DIR_NAME_XDG;
 
 	return ".";
 }

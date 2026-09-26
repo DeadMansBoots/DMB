@@ -852,11 +852,11 @@
 				},
 				"updateOnStartup" : {
 					"type" : "boolean",
-					"default" : true
+					"default" : false
 				},
 				"updateConfigUrl" : {
 					"type" : "string",
-					"default" : "https://raw.githubusercontent.com/vcmi/vcmi-updates/master/vcmi-updates.json"
+					"default" : ""
 				},
 				"trackClipboardState" : {
 					"type" : "boolean",
