@@ -33,7 +33,7 @@
      <item row="3" column="0">
       <widget class="QPushButton" name="pushButtonGithub">
        <property name="text">
-        <string>VCMI on Github</string>
+        <string>Dead Man's Boots on GitHub</string>
        </property>
       </widget>
      </item>

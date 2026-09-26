@@ -363,4 +363,12 @@ void sendFileToApp(QString path)
 #endif
 }
 
+QString dmbHomepage()
+{
+	QString url = QString::fromStdString(settings["launcher"]["dmbHomepage"].String());
+	while(url.endsWith('/'))
+		url.chop(1);
+	return url;
+}
+
 }

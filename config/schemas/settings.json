@@ -820,7 +820,8 @@
 				"ignoreSslErrors",
 				"updateOnStartup",
 				"updateConfigUrl",
-				"trackClipboardState"
+				"trackClipboardState",
+				"dmbHomepage"
 			],
 			"properties" : {
 				"defaultRepositoryEnabled" : {
@@ -860,6 +861,12 @@
 					"default" : false
 				},
 				"updateConfigUrl" : {
+					"type" : "string",
+					"default" : ""
+				},
+				"dmbHomepage" : {
+					// DMB's repository page: the launcher's GitHub, homepage, bug-report and download
+					// links. Empty until the repository exists; the links stay hidden until then.
 					"type" : "string",
 					"default" : ""
 				},

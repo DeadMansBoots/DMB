@@ -21,6 +21,7 @@
 #include "../updatedialog_moc.h"
 #include "../helper.h"
 
+#include "../../lib/CConfigHandler.h"
 #include "../../lib/GameConstants.h"
 #include "../../lib/VCMIDirs.h"
 #include "../../lib/filesystem/CZipSaver.h"
@@ -51,8 +52,20 @@ AboutProjectView::AboutProjectView(QWidget * parent)
 	ui->lineEditGameDir->setText(pathToQString(VCMIDirs::get().binaryPath()));
 	ui->lineEditTempDir->setText(pathToQString(VCMIDirs::get().userLogsPath()));
 	ui->lineEditConfigDir->setText(pathToQString(VCMIDirs::get().userConfigPath()));
-	ui->lineEditBuildVersion->setText(QString::fromStdString(GameConstants::VCMI_VERSION));
+	ui->lineEditBuildVersion->setText("Dead Man's Boots " DMB_VERSION_STRING " (" + QString::fromStdString(GameConstants::VCMI_VERSION) + ")");
 	ui->lineEditOperatingSystem->setText(QSysInfo::prettyProductName());
+
+	// DMB: its own repository for questions and bug reports, never VCMI's, which would get DMB's
+	// reports; hidden until the repository exists. No DMB Discord yet, so that button is hidden.
+	const bool hasHomepage = !Helper::dmbHomepage().isEmpty();
+	ui->pushButtonDiscord->hide();
+	ui->labelCommunity->setVisible(hasHomepage);
+	ui->labelLanguageSocial->setVisible(hasHomepage);
+	ui->pushButtonGithub->setVisible(hasHomepage);
+	ui->pushButtonHomepage->setVisible(hasHomepage);
+	ui->pushButtonBugreport->setVisible(hasHomepage);
+	// no update feed until DMB's is published: nothing to check against, as on the start page
+	ui->updatesButton->setVisible(!settings["launcher"]["updateConfigUrl"].String().empty());
 
 #ifdef VCMI_MOBILE
 	// On mobile platforms these directories are generally not accessible from phone itself, only via USB connection from PC
@@ -108,23 +121,24 @@ void AboutProjectView::on_pushButtonDiscord_clicked()
 
 void AboutProjectView::on_pushButtonGithub_clicked()
 {
-	QDesktopServices::openUrl(QUrl("https://github.com/vcmi/vcmi"));
+	QDesktopServices::openUrl(QUrl(Helper::dmbHomepage()));
 }
 
 void AboutProjectView::on_pushButtonHomepage_clicked()
 {
-	QDesktopServices::openUrl(QUrl("https://vcmi.eu/"));
+	QDesktopServices::openUrl(QUrl(Helper::dmbHomepage()));
 }
 
 void AboutProjectView::on_pushButtonBugreport_clicked()
 {
-	QDesktopServices::openUrl(QUrl("https://github.com/vcmi/vcmi/issues"));
+	QDesktopServices::openUrl(QUrl(Helper::dmbHomepage() + "/issues"));
 }
 
 static QString gatherDeviceInfo()
 {
 	QString info;
 	QTextStream ts(&info);
+	ts << "Dead Man's Boots version: " << DMB_VERSION_STRING << '\n';
 	ts << "VCMI version: " << QString::fromStdString(GameConstants::VCMI_VERSION) << '\n';
 	ts << "Operating system: " << QSysInfo::prettyProductName() << " (" << QSysInfo::kernelVersion() << ")" << '\n';
 	ts << "CPU architecture: " << QSysInfo::currentCpuArchitecture() << '\n';
@@ -166,7 +180,7 @@ void AboutProjectView::on_pushButtonExportLogs_clicked()
 	const QString tmpDir = QDir::tempPath();
 	const QString outPath = QDir(tmpDir).filePath(QString("vcmi-logs-%1.zip").arg(QString::number(QDateTime::currentMSecsSinceEpoch())));
 #else
-	const QString defaultName = QDir::home().filePath("vcmi-logs.zip");
+	const QString defaultName = QDir::home().filePath("dmb-logs.zip");
 	QString outPath = QFileDialog::getSaveFileName(this, tr("Save logs"), defaultName, tr("Zip archives (*.zip)"));
 	if (outPath.isEmpty())
 		return;

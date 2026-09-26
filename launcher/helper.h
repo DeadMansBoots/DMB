@@ -28,4 +28,6 @@ namespace Helper
 	void nativeFolderPicker(QWidget *parent, std::function<void(QString)>&& cb);
 	QStringList findFilesForCopy(const QString &treeUri);
 	void sendFileToApp(QString path);
+	/// DMB: its repository page (launcher.dmbHomepage), or empty before the repository exists
+	QString dmbHomepage();
 }

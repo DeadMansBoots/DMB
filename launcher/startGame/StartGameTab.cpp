@@ -205,8 +205,9 @@ void StartGameTab::refreshUpdateStatus(EGameUpdateStatus status)
 	ui->buttonUpdateCheck->setVisible(status == EGameUpdateStatus::NOT_CHECKED && hasUpdateFeed);
 	ui->labelUpdateNotFound->setVisible(status == EGameUpdateStatus::NO_UPDATE);
 	ui->labelUpdateAvailable->setVisible(status == EGameUpdateStatus::UPDATE_AVAILABLE);
-	ui->buttonOpenChangelog->setVisible(status == EGameUpdateStatus::UPDATE_AVAILABLE);
-	ui->buttonOpenDownloads->setVisible(status == EGameUpdateStatus::UPDATE_AVAILABLE);
+	const bool hasHomepage = !Helper::dmbHomepage().isEmpty(); // DMB: both open its releases page
+	ui->buttonOpenChangelog->setVisible(status == EGameUpdateStatus::UPDATE_AVAILABLE && hasHomepage);
+	ui->buttonOpenDownloads->setVisible(status == EGameUpdateStatus::UPDATE_AVAILABLE && hasHomepage);
 
 	if (status == EGameUpdateStatus::UPDATE_AVAILABLE)
 		ui->labelUpdateAvailable->setText(tr("Update to %1 available").arg(availableVersion));
@@ -220,12 +221,13 @@ void StartGameTab::on_buttonGameStart_clicked()
 
 void StartGameTab::on_buttonOpenChangelog_clicked()
 {
-	QDesktopServices::openUrl(QUrl("https://vcmi.eu/ChangeLog/"));
+	// DMB: its releases carry the changes and the downloads
+	QDesktopServices::openUrl(QUrl(Helper::dmbHomepage() + "/releases"));
 }
 
 void StartGameTab::on_buttonOpenDownloads_clicked()
 {
-	QDesktopServices::openUrl(QUrl("https://vcmi.eu/download/"));
+	QDesktopServices::openUrl(QUrl(Helper::dmbHomepage() + "/releases"));
 }
 
 void StartGameTab::on_buttonUpdateCheck_clicked()

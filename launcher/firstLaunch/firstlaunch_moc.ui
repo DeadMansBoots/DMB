@@ -155,7 +155,7 @@
          <item row="2" column="0">
           <widget class="QPushButton" name="pushButtonGithub">
            <property name="text">
-            <string>VCMI on Github</string>
+            <string>Dead Man's Boots on GitHub</string>
            </property>
           </widget>
          </item>
@@ -178,11 +178,11 @@
        <item row="1" column="1" colspan="2">
         <widget class="QLabel" name="labelLanguageWelcome">
          <property name="text">
-          <string>Thank you for installing VCMI!
+          <string>Thank you for installing Dead Man's Boots!
 
 Before you can start playing, there are a few more steps to complete.
 
-Please remember that to use VCMI, you must own the original data files for Heroes® of Might and Magic® III: Complete or The Shadow of Death.
+Please remember that to use Dead Man's Boots, you must own the original data files for Heroes® of Might and Magic® III: Complete or The Shadow of Death.
 
 Heroes® of Might and Magic® III HD is currently not supported!</string>
          </property>
@@ -313,7 +313,7 @@ Heroes® of Might and Magic® III HD is currently not supported!</string>
             </sizepolicy>
            </property>
            <property name="text">
-            <string>You can manually copy Maps, Data, and Mp3 folders from the original game directory to the VCMI data directory shown below</string>
+            <string>You can manually copy Maps, Data, and Mp3 folders from the original game directory to the Dead Man's Boots data directory shown below</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -420,7 +420,7 @@ Heroes® of Might and Magic® III HD is currently not supported!</string>
             </sizepolicy>
            </property>
            <property name="text">
-            <string>If you already have Heroes III files on your device, you can select this directory and VCMI will copy the existing data automatically.</string>
+            <string>If you already have Heroes III files on your device, you can select this directory and Dead Man's Boots will copy the existing data automatically.</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -507,7 +507,7 @@ Heroes® of Might and Magic® III HD is currently not supported!</string>
             </sizepolicy>
            </property>
            <property name="text">
-            <string>If you own Heroes III on gog.com, you can download a backup offline installer from gog.com. VCMI will then import Heroes III data using the offline installer. 
+            <string>If you own Heroes III on gog.com, you can download a backup offline installer from gog.com. Dead Man's Boots will then import Heroes III data using the offline installer.
 Offline installer consists of two files: &quot;.exe&quot; and &quot;.bin&quot; - you must download both.</string>
            </property>
            <property name="textFormat">
@@ -701,7 +701,7 @@ Offline installer consists of two files: &quot;.exe&quot; and &quot;.bin&quot; -
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Optionally, you can install additional mods either now, or at any point later, using the VCMI Launcher</string>
+            <string>Optionally, you can install additional mods either now, or at any point later, using the launcher</string>
            </property>
            <property name="wordWrap">
             <bool>true</bool>

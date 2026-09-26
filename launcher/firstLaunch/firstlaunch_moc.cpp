@@ -62,6 +62,11 @@ FirstLaunchView::FirstLaunchView(QWidget * parent)
 	ui->labelDataGogTitle->hide();
 	ui->labelDataGogDescr->hide();
 #endif
+
+	// DMB: its own repository, never VCMI's, hidden until it exists; no DMB Discord yet
+	ui->pushButtonDiscord->hide();
+	ui->labelLanguageSocial->setVisible(!Helper::dmbHomepage().isEmpty());
+	ui->pushButtonGithub->setVisible(!Helper::dmbHomepage().isEmpty());
 }
 
 FirstLaunchView::~FirstLaunchView() = default;
@@ -177,7 +182,7 @@ void FirstLaunchView::activateTabHeroesData()
 	QString installPath = getHeroesInstallDir();
 	if(!installPath.isEmpty())
 	{
-		auto reply = QMessageBox::question(this, tr("Heroes III installation found!"), tr("Copy data to VCMI folder?"), QMessageBox::Yes | QMessageBox::No);
+		auto reply = QMessageBox::question(this, tr("Heroes III installation found!"), tr("Copy data to the Dead Man's Boots folder?"), QMessageBox::Yes | QMessageBox::No);
 		if(reply == QMessageBox::Yes)
 			copyHeroesData(installPath, false);
 	}
@@ -998,5 +1003,5 @@ void FirstLaunchView::on_pushButtonDiscord_clicked()
 
 void FirstLaunchView::on_pushButtonGithub_clicked()
 {
-	QDesktopServices::openUrl(QUrl("https://github.com/vcmi/vcmi"));
+	QDesktopServices::openUrl(QUrl(Helper::dmbHomepage()));
 }
