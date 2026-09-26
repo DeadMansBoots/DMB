@@ -21,6 +21,9 @@ jobs:
   build:
     name: Build (${{ matrix.platform }})
     strategy:
+      # DMB: one platform's failure must not cancel the rest, Windows above all (the first run on
+      # the fork lost every build to a macOS error)
+      fail-fast: false
       matrix:
         include:
           - platform: mac-intel
@@ -730,6 +733,8 @@ jobs:
     if: ${{ !cancelled() && needs.build.result != 'skipped' }}
     name: Create Windows Installer (${{ matrix.arch }})
     strategy:
+      # DMB: the x64 installer, the one released, must not be cancelled by another architecture's
+      fail-fast: false
       matrix:
         include:
           - platform: msvc-x64
