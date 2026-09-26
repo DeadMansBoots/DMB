@@ -213,8 +213,9 @@ Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=dmb_cl
 
 
 [UninstallDelete]
-; DMB: the map generator keeps its index cache in its own folder when that folder is writable (a
-; per-user install). The cache is rebuilt on demand, so it goes with the program.
+; DMB: the map generator keeps its index cache in the user folder it is given (the MapGen tab
+; always gives one), and in its own folder only when it runs without one and that folder is
+; writable, as in a per-user install. The cache is rebuilt on demand, so it goes with the program.
 Type: filesandordirs; Name: "{app}\mapgen\cache"
 
 
