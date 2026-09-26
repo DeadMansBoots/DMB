@@ -4,7 +4,9 @@ on:
     types: [published]
 jobs:
   notify_repos:
-    if: ${{ !github.event.release.prerelease }}
+    # DMB: this tells VCMI's Homebrew repository about VCMI's releases; a DMB release has no token
+    # for it and nothing to announce there
+    if: ${{ !github.event.release.prerelease && github.repository == 'vcmi/vcmi' }}
     runs-on: ubuntu-latest
     steps:
       - name: Repository Dispatch only for releases
