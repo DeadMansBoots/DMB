@@ -88,6 +88,10 @@
 ; data" option removes this folder)
 #define VCMIFilesFolder "My Games\DMB"
 
+; DMB: the name the wizard, the Start menu and Windows' list of installed apps show; the folder,
+; registry key and installer id stay the short VCMIFolder ("DMB")
+#define DMBName "Dead Man's Boots"
+
 #define AppComment "Dead Man's Boots, built on VCMI, the open-source engine for Heroes III."
 #define VCMITeam "Dead Man's Boots"
 #define VCMICopyright "Copyright © VCMI Team and the Dead Man's Boots contributors."
@@ -102,15 +106,15 @@
 
 [Setup]
 AppId={#VCMIFolder}.{#InstallerArch}
-AppName={#VCMIFolder}
+AppName={#DMBName}
 AppVersion={#AppVersion}.{#AppBuild}
-AppVerName={#VCMIFolder}
+AppVerName={#DMBName}
 AppPublisher={#VCMITeam}
 AppPublisherURL={#VCMIHome}
 AppSupportURL={#VCMIContact}
 AppComments={#AppComment}
 DefaultDirName={code:GetDefaultDir}
-DefaultGroupName={#VCMIFolder}
+DefaultGroupName={#DMBName}
 UninstallDisplayIcon={app}\VCMI_launcher.exe
 OutputBaseFilename={#InstallerName}
 PrivilegesRequiredOverridesAllowed=commandline dialog
@@ -139,8 +143,8 @@ WizardImageFile={#WizardLogo}
 ; Version informations
 MinVersion=6.1sp1
 VersionInfoCompany={#VCMITeam}
-VersionInfoDescription={#VCMIFolder} {#AppVersion} Setup (Build {#AppBuild})
-VersionInfoProductName={#VCMIFolder}
+VersionInfoDescription={#DMBName} {#AppVersion} Setup (Build {#AppBuild})
+VersionInfoProductName={#DMBName}
 VersionInfoCopyright={#VCMICopyright}
 VersionInfoVersion={#AppVersion}
 VersionInfoOriginalFileName={#InstallerName}.exe
@@ -628,7 +632,7 @@ begin
   // Create a custom label for the footer message
   FooterLabel := TLabel.Create(WizardForm);
   FooterLabel.Parent := WizardForm;
-  FooterLabel.Caption := '{#VCMIFolder} v' + '{#AppVersion}' + '.' + '{#AppBuild}';
+  FooterLabel.Caption := 'Dead Man''s Boots v' + '{#AppVersion}' + '.' + '{#AppBuild}';
   // Padding from the left edge
   FooterLabel.Left := 10;
   // Adjust to leave space for multiple lines

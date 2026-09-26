@@ -738,6 +738,10 @@ jobs:
         patch=$(grep -m 1 "VCMI_VERSION_PATCH" "$filePath" | tr -d -c 0-9)
 
         short_version="${major}.${minor}.${patch}"
+        # DMB: the installer carries DMB's own version (the one the launcher's update check uses),
+        # not the version of the VCMI engine underneath
+        dmb_version=$(grep -m 1 "set(DMB_VERSION" "$filePath" | grep -o "[0-9][0-9.]*" || true)
+        short_version="${dmb_version:-$short_version}"
         version_timestamp=$(date +"%Y%m%d%H%M%S")
 
         echo "short_version=${short_version}" >> "$GITHUB_OUTPUT"
