@@ -62,6 +62,11 @@ public:
 
 	virtual std::string genHelpString() const;
 
+	// DMB: stock VCMI's counterpart of one of DMB's default user folders (DMB's folder name swapped
+	// for "vcmi"), so a player's existing VCMI setup can be copied across. Empty for a folder that
+	// config/dirs.json sets, since that has no stock counterpart.
+	boost::filesystem::path stockVcmiPath(const boost::filesystem::path & path) const;
+
 	// Creates not existed, but required directories.
 	// Updates directories what change name/path between versions.
 	// Function called automatically.

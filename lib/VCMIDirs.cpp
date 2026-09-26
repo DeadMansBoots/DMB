@@ -58,6 +58,25 @@ std::string IVCMIDirs::genHelpString() const
 		"  user extracted:	" + userExtractedPath().string() + "\n";
 }
 
+bfs::path IVCMIDirs::stockVcmiPath(const bfs::path & path) const
+{
+	// the last component carrying DMB's folder name is where stock VCMI says "vcmi" (on Windows the
+	// config folder sits inside the data folder, so it is not always the last component)
+	std::vector<bfs::path> parts(path.begin(), path.end());
+	for(auto it = parts.rbegin(); it != parts.rend(); ++it)
+	{
+		if(*it == USER_DIR_NAME || *it == USER_DIR_NAME_XDG)
+		{
+			*it = "vcmi";
+			bfs::path result;
+			for(const auto & part : parts)
+				result /= part;
+			return result;
+		}
+	}
+	return {};
+}
+
 void IVCMIDirs::init()
 {
 	// TODO: Log errors

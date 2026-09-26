@@ -101,4 +101,9 @@ private slots:
 
 private:
 	std::unique_ptr<Ui::FirstLaunchView> ui;
+
+	// DMB: bring a player's existing stock VCMI setup across, once, only reading its folders
+	bool stockImportOffered = false;
+	bool offerStockVcmiImport();
+	int importStockVcmi(const boost::filesystem::path & stockData, const boost::filesystem::path & stockConfig, ProgressOverlay * overlay);
 };

@@ -25,6 +25,8 @@
 #include "../innoextract.h"
 #include "progressoverlay.h"
 
+#include <QDirIterator>
+
 // Create and show overlay immediately
 static ProgressOverlay* createOverlay(QWidget *parent, const QString &title, bool indeterminate = true)
 {
@@ -167,6 +169,10 @@ void FirstLaunchView::activateTabHeroesData()
 		activateTabModPreset();
 		return;
 	}
+
+	// DMB: a player who already has stock VCMI can bring that setup across first
+	if(offerStockVcmiImport())
+		return;
 
 	QString installPath = getHeroesInstallDir();
 	if(!installPath.isEmpty())
@@ -736,6 +742,83 @@ void FirstLaunchView::copyHeroesData(const QString &path, bool removeSource)
 #else
 	QTimer::singleShot(0, this, work);
 #endif
+}
+
+bool FirstLaunchView::offerStockVcmiImport()
+{
+	if(stockImportOffered)
+		return false;
+	stockImportOffered = true;
+
+	const auto & dirs = VCMIDirs::get();
+	const boost::filesystem::path stockData = dirs.stockVcmiPath(dirs.userDataPath());
+	const boost::filesystem::path stockConfig = dirs.stockVcmiPath(dirs.userConfigPath());
+	boost::system::error_code ec;
+	if(stockData.empty() || !boost::filesystem::is_directory(stockData, ec))
+		return false;
+
+	auto reply = QMessageBox::question(this, tr("VCMI found"),
+		tr("A VCMI setup was found in %1.\n\nCopy its Heroes III data, mods, saves and maps into Dead Man's Boots? Nothing in the VCMI folder is changed.").arg(pathToQString(stockData)),
+		QMessageBox::Yes | QMessageBox::No);
+	if(reply != QMessageBox::Yes)
+		return false;
+
+	QPointer<ProgressOverlay> overlay = createOverlay(this, tr("Copying the VCMI setup..."), true);
+	overlay->raise();
+	QTimer::singleShot(0, this, [this, stockData, stockConfig, overlay]()
+	{
+		const int copied = importStockVcmi(stockData, stockConfig, overlay);
+		logGlobal->info("Imported %d files from the VCMI setup in '%s'", copied, stockData.string());
+		if(auto * modView = getModView())
+			modView->reload();
+		if(heroesDataUpdate())
+			activateTabModPreset();
+		overlay->deleteLater();
+	});
+	return true;
+}
+
+int FirstLaunchView::importStockVcmi(const boost::filesystem::path & stockData, const boost::filesystem::path & stockConfig, ProgressOverlay * overlay)
+{
+	// VCMI's folders are only read. Nothing DMB already has is overwritten except the mod list, which
+	// is the point of the import. Links are not followed.
+	const auto & dirs = VCMIDirs::get();
+	struct CopyItem { QString source, destination; };
+	QVector<CopyItem> plan;
+
+	for(const char * folder : {"Data", "Maps", "Mp3", "Mods", "Saves"})
+	{
+		const QDir sourceRoot(pathToQString(stockData / folder));
+		const QDir targetRoot(pathToQString(std::string(folder) == "Saves" ? dirs.userSavePath() : dirs.userDataPath() / folder));
+		QDirIterator it(sourceRoot.absolutePath(), QDir::Files | QDir::Hidden | QDir::NoSymLinks, QDirIterator::Subdirectories);
+		while(it.hasNext())
+		{
+			const QString source = it.next();
+			const QString destination = targetRoot.filePath(sourceRoot.relativeFilePath(source));
+			if(!QFile::exists(destination))
+				plan.push_back({ source, destination });
+		}
+	}
+
+	boost::system::error_code ec;
+	const boost::filesystem::path modSettings = stockConfig / "modSettings.json";
+	if(!stockConfig.empty() && boost::filesystem::is_regular_file(modSettings, ec))
+		plan.push_back({ pathToQString(modSettings), pathToQString(dirs.userConfigPath() / "modSettings.json") });
+
+	overlay->setIndeterminate(false);
+	overlay->setRange(plan.size());
+	for(int i = 0; i < plan.size(); ++i)
+	{
+		overlay->setFileName(QFileInfo(plan[i].destination).fileName());
+		overlay->setValue(i + 1);
+		qApp->processEvents();
+
+		QDir{}.mkpath(QFileInfo(plan[i].destination).absolutePath());
+		if(QFile::exists(plan[i].destination))
+			QFile::remove(plan[i].destination); // only the mod list gets here
+		Helper::performNativeCopy(plan[i].source, plan[i].destination);
+	}
+	return plan.size();
 }
 
 // Tab Mod Preset
