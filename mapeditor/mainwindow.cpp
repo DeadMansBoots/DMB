@@ -414,7 +414,7 @@ void MainWindow::setStatusMessage(const QString & status)
 
 void MainWindow::setTitle()
 {
-	QString title = QString("%1%2 - %3 (%4)").arg(filename, unsaved ? "*" : "", tr("VCMI Map Editor"), GameConstants::VCMI_VERSION.c_str());
+	QString title = QString("%1%2 - %3 (%4)").arg(filename, unsaved ? "*" : "", tr("Dead Man's Boots Map Editor"), GameConstants::VCMI_VERSION.c_str());
 	setWindowTitle(title);
 }
 
