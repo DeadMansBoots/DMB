@@ -60,7 +60,12 @@ if(ENABLE_NULLKILLER2_AI)
 endif()
 
 # DMB: OmniAI lives in its own repository and is checked out here as the submodule AI/OmniAI.
-# When it is present it builds in-tree (its CMake sees the vcmi target and switches to that mode).
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/OmniAI/CMakeLists.txt")
-	add_subdirectory(OmniAI)
+# DMB_OMNIAI_DIR names a checkout elsewhere instead, for a local build of the whole package.
+# It builds in-tree. VCMI_IN_TREE says so outright: this folder is added before lib/, so the vcmi
+# target does not exist yet, and OmniAI's own check for it would pick its standalone mode and
+# define a second vcmi target (found 2026-09-26 in the first in-tree build).
+set(DMB_OMNIAI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/OmniAI" CACHE PATH "OmniAI's source (the AI/OmniAI submodule)")
+if(EXISTS "${DMB_OMNIAI_DIR}/CMakeLists.txt")
+	set(VCMI_IN_TREE ON)
+	add_subdirectory("${DMB_OMNIAI_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/OmniAI")
 endif()
