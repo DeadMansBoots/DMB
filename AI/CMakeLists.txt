@@ -58,3 +58,9 @@ endif()
 if(ENABLE_NULLKILLER2_AI)
 	add_subdirectory(Nullkiller2)
 endif()
+
+# DMB: OmniAI lives in its own repository and is checked out here as the submodule AI/OmniAI.
+# When it is present it builds in-tree (its CMake sees the vcmi target and switches to that mode).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/OmniAI/CMakeLists.txt")
+	add_subdirectory(OmniAI)
+endif()
