@@ -11,6 +11,8 @@ add_definitions(
 # update check and the window titles use it; saves, mods and bug reports keep VCMI's.
 set(DMB_VERSION "0.1.0")
 add_definitions(-DDMB_VERSION_STRING="${DMB_VERSION}")
+# The program properties' file version (win/WindowsFileInfo.rc.in reads it as a CMake variable)
+set(VCMI_VERSION_STRING "${VCMI_VERSION_MAJOR}.${VCMI_VERSION_MINOR}.${VCMI_VERSION_PATCH}")
 set(APP_SHORT_VERSION "${VCMI_VERSION_MAJOR}.${VCMI_VERSION_MINOR}")
 if(NOT VCMI_VERSION_PATCH EQUAL 0)
 	string(APPEND APP_SHORT_VERSION ".${VCMI_VERSION_PATCH}")
