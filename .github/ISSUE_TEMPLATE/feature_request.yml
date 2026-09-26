@@ -29,7 +29,7 @@ body:
         - Installer or update
         - Game
         - Map generator (MapGen tab)
-        - Computer players (OmniAI)
+        - Computer players (AI)
         - Map editor
         - Other
     validations:

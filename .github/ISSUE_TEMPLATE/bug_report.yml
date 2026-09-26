@@ -55,7 +55,7 @@ body:
         - Game, town or hero screens
         - Game, menus or lobby
         - Map generator (MapGen tab)
-        - Computer players (OmniAI)
+        - Computer players (AI)
         - Map editor
         - Other
     validations:
