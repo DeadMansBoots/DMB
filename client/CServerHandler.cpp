@@ -69,6 +69,21 @@
 
 #include <boost/lexical_cast.hpp>
 
+namespace
+{
+/// An interface lock that is empty when there is no interface.
+///
+/// Headless runs never construct the graphics engine, so locking its mutex is
+/// a null dereference. Every caller here only wants to serialise against the
+/// GUI, and with no GUI there is nothing to serialise against.
+std::unique_lock<std::mutex> lockInterfaceIfPresent()
+{
+	if(ENGINE)
+		return std::unique_lock<std::mutex>(ENGINE->interfaceMutex);
+	return std::unique_lock<std::mutex>();
+}
+}
+
 CServerHandler::~CServerHandler()
 {
 	if (serverRunner)
@@ -80,8 +95,14 @@ CServerHandler::~CServerHandler()
 	serverRunner.reset();
 	if (threadNetwork.joinable())
 	{
-		auto unlockInterface = vstd::makeUnlockGuard(ENGINE->interfaceMutex);
-		threadNetwork.join();
+		// Nothing was locked in headless, so nothing needs unlocking.
+		if(ENGINE)
+		{
+			auto unlockInterface = vstd::makeUnlockGuard(ENGINE->interfaceMutex);
+			threadNetwork.join();
+		}
+		else
+			threadNetwork.join();
 	}
 }
 
@@ -93,8 +114,14 @@ void CServerHandler::endNetwork()
 
 	if (threadNetwork.joinable())
 	{
-		auto unlockInterface = vstd::makeUnlockGuard(ENGINE->interfaceMutex);
-		threadNetwork.join();
+		// Nothing was locked in headless, so nothing needs unlocking.
+		if(ENGINE)
+		{
+			auto unlockInterface = vstd::makeUnlockGuard(ENGINE->interfaceMutex);
+			threadNetwork.join();
+		}
+		else
+			threadNetwork.join();
 	}
 }
 
@@ -231,7 +258,7 @@ void CServerHandler::connectToServer(const std::string & addr, const ui16 port)
 void CServerHandler::onConnectionFailed(const std::string & errorMessage)
 {
 	assert(getState() == EClientState::CONNECTING);
-	std::scoped_lock interfaceLock(ENGINE->interfaceMutex);
+	auto interfaceLock = lockInterfaceIfPresent();
 
 	if (isServerLocal())
 	{
@@ -249,14 +276,14 @@ void CServerHandler::onConnectionFailed(const std::string & errorMessage)
 
 void CServerHandler::onTimer()
 {
-	std::scoped_lock interfaceLock(ENGINE->interfaceMutex);
+	auto interfaceLock = lockInterfaceIfPresent();
 
 	if(getState() == EClientState::CONNECTION_CANCELLED)
 	{
 		logNetwork->info("Connection aborted by player!");
 		serverRunner->wait();
 		serverRunner.reset();
-		if (ENGINE->windows().topWindow<CSimpleJoinScreen>() != nullptr)
+		if (ENGINE && ENGINE->windows().topWindow<CSimpleJoinScreen>() != nullptr)
 			ENGINE->windows().popWindows(1);
 		return;
 	}
@@ -269,7 +296,7 @@ void CServerHandler::onConnectionEstablished(const NetworkConnectionPtr & netCon
 {
 	assert(getState() == EClientState::CONNECTING);
 
-	std::scoped_lock interfaceLock(ENGINE->interfaceMutex);
+	auto interfaceLock = lockInterfaceIfPresent();
 
 	networkConnection = netConnection;
 
@@ -291,7 +318,8 @@ void CServerHandler::applyPackOnLobbyScreen(CPackForLobby & pack)
 {
 	ApplyOnLobbyScreenNetPackVisitor visitor(*this, dynamic_cast<CLobbyScreen *>(SEL));
 	pack.visit(visitor);
-	ENGINE->windows().totalRedraw();
+	if(ENGINE)
+		ENGINE->windows().totalRedraw();
 }
 
 std::set<PlayerColor> CServerHandler::getHumanColors()
@@ -578,9 +606,9 @@ void CServerHandler::sendGuiAction(ui8 action) const
 void CServerHandler::sendRestartGame() const
 {
 	if(si->campState && !si->campState->getLoadingBackground().empty())
-		ENGINE->windows().createAndPushWindow<CLoadingScreen>(si->campState->getLoadingBackground());
+		if(ENGINE) ENGINE->windows().createAndPushWindow<CLoadingScreen>(si->campState->getLoadingBackground());
 	else
-		ENGINE->windows().createAndPushWindow<CLoadingScreen>();
+		if(ENGINE) ENGINE->windows().createAndPushWindow<CLoadingScreen>();
 	
 	LobbyRestartGame endGame;
 	sendLobbyPack(endGame);
@@ -622,9 +650,9 @@ void CServerHandler::sendStartGame(bool allowOnlyAI, bool verify) const
 	if(!settings["session"]["headless"].Bool())
 	{
 		if(si->campState && !si->campState->getLoadingBackground().empty())
-			ENGINE->windows().createAndPushWindow<CLoadingScreen>(si->campState->getLoadingBackground());
+			if(ENGINE) ENGINE->windows().createAndPushWindow<CLoadingScreen>(si->campState->getLoadingBackground());
 		else
-			ENGINE->windows().createAndPushWindow<CLoadingScreen>();
+			if(ENGINE) ENGINE->windows().createAndPushWindow<CLoadingScreen>();
 	}
 	
 	LobbyPrepareStartGame lpsg;
@@ -672,7 +700,8 @@ void CServerHandler::startGameplay(std::shared_ptr<CGameState> gameState)
 		throw std::runtime_error("Invalid mode");
 	}
 
-	ENGINE->discord().setPlayingStatus(si, &gameState->getMap(), howManyPlayerInterfaces());
+	if(ENGINE)
+		ENGINE->discord().setPlayingStatus(si, &gameState->getMap(), howManyPlayerInterfaces());
 
 	// After everything initialized we can accept CPackToClient netpacks
 	setState(EClientState::GAMEPLAY);
@@ -718,7 +747,8 @@ void CServerHandler::endGameplay()
 		GAME->mainmenu()->makeActiveInterface();
 	}
 
-	ENGINE->discord().setStatus("", "", {0, 0});
+	if(ENGINE)
+		ENGINE->discord().setStatus("", "", {0, 0});
 }
 
 std::optional<std::string> CServerHandler::canQuickLoadGame(const std::string & path) const
@@ -834,8 +864,9 @@ void CServerHandler::startCampaignScenario(HighScoreParameter param, std::shared
 
 void CServerHandler::showServerError(const std::string & txt) const
 {
-	if(auto w = ENGINE->windows().topWindow<CLoadingScreen>())
-		ENGINE->windows().popWindow(w);
+	if(ENGINE)
+		if(auto w = ENGINE->windows().topWindow<CLoadingScreen>())
+			ENGINE->windows().popWindow(w);
 	
 	CInfoWindow::showInfoDialog(txt, {});
 }
@@ -905,6 +936,21 @@ void CServerHandler::debugStartTest(std::string filename, bool save)
 	while(myFirstColor() != PlayerColor::CANNOT_DETERMINE)
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
+	// Difficulty for an unattended run. The lobby screen is the only thing
+	// that normally calls setDifficulty and --testmap skips the lobby, so
+	// every headless match used to run at whatever the scenario defaulted
+	// to. Pinning it is what lets one AI be matched against another at a
+	// chosen tier. The server owns StartInfo and clamps this to 0..4.
+	{
+		const JsonNode & wanted = settings["ai"]["testmapDifficulty"];
+		if(wanted.isNumber() && wanted.Integer() >= 0 && wanted.Integer() <= 4)
+		{
+			logGlobal->info("Test map difficulty pinned to %d", int(wanted.Integer()));
+			setDifficulty(int(wanted.Integer()));
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+	}
+
 	while(true)
 	{
 		try
@@ -946,7 +992,7 @@ public:
 
 void CServerHandler::onPacketReceived(const std::shared_ptr<INetworkConnection> &, const std::vector<std::byte> & message)
 {
-	std::scoped_lock interfaceLock(ENGINE->interfaceMutex);
+	auto interfaceLock = lockInterfaceIfPresent();
 
 	if(getState() == EClientState::DISCONNECTING)
 		return;
@@ -958,7 +1004,7 @@ void CServerHandler::onPacketReceived(const std::shared_ptr<INetworkConnection> 
 
 void CServerHandler::onDisconnected(const std::shared_ptr<INetworkConnection> & connection, const std::string & errorMessage)
 {
-	std::scoped_lock interfaceLock(ENGINE->interfaceMutex);
+	auto interfaceLock = lockInterfaceIfPresent();
 
 	if (connection != networkConnection)
 	{

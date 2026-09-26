@@ -17,6 +17,7 @@
 #include "RandomMapTab.h"
 #include "SelectionTab.h"
 #include "BattleOnlyModeTab.h"
+#include "MapGenTab.h"
 
 #include "../CServerHandler.h"
 #include "../GameEngine.h"
@@ -95,6 +96,17 @@ CLobbyScreen::CLobbyScreen(ESelectionScreen screenType, bool hideScreen)
 			if (getMapInfo() && !getMapInfo()->isRandomMap)
 				tabRand->updateMapInfoByHost();
 		});
+
+		// VCMIMapGen: the MapGen tab, a peer of Scenarios and Random Map. Its
+		// button takes the free slot beside Random Map; a network lobby puts
+		// its chat button there, and gets no MapGen button (the generator
+		// runs on this machine).
+		tabMapGen = std::make_shared<MapGenTab>();
+		if(!buttonChat)
+			buttonMapGen = std::make_shared<CButton>(Point(619, 105), AnimationPath::builtin("GSPButton2Arrow"),
+				CButton::tooltip(LIBRARY->generaltexth->translate("vcmi.lobby.mapGen.hover"),
+					LIBRARY->generaltexth->translate("vcmi.lobby.mapGen.help")),
+				[this]() { toggleTab(tabMapGen); });
 
 		card->iconDifficulty->addCallback(std::bind(&IServerAPI::setDifficulty, &GAME->server(), _1));
 
@@ -338,6 +350,11 @@ void CLobbyScreen::toggleMode(bool host)
 	{
 		buttonRMG->setTextOverlay("  " + LIBRARY->generaltexth->allTexts[740], FONT_SMALL, buttonColor);
 		buttonRMG->block(!host);
+	}
+	if(buttonMapGen)
+	{
+		buttonMapGen->setTextOverlay(LIBRARY->generaltexth->translate("vcmi.lobby.mapGen.hover"), FONT_SMALL, buttonColor);
+		buttonMapGen->block(!host);
 	}
 	buttonSelect->block(!host);
 	buttonOptions->block(!host);

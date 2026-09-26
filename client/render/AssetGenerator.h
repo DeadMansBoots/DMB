@@ -81,6 +81,7 @@ private:
 	CanvasPtr createQuestWindow() const;
 	AnimationLayoutMap createGSPButtonClear();
 	AnimationLayoutMap createGSPButton2Arrow();
+	AnimationLayoutMap createMapGenButton(int width);
 	CanvasPtr createGateListColored(PlayerColor color, PlayerColor backColor) const;
 	CanvasPtr createHeroSlotsColored(PlayerColor backColor) const;
 	CanvasPtr createStackArtifactIndicator(const Point & size) const;

@@ -49,6 +49,12 @@ std::vector < const CGTownInstance *> CPlayerSpecificInfoCallback::getTownsInfo(
 std::vector < const CGHeroInstance *> CPlayerSpecificInfoCallback::getHeroesInfo() const
 {
 	const auto * playerState = gameState().getPlayerState(*getPlayerID());
+	// The spectator is given a real PlayerColor but has no entry in the game
+	// state, so this comes back null and used to be dereferenced anyway. Any
+	// game with no human player in it builds a spectator view, which made
+	// every AI-only game crash before the first turn.
+	if(playerState == nullptr)
+		return {};
 	return playerState->getHeroes();
 }
 

@@ -64,6 +64,7 @@ set(vcmiclientcommon_SRCS
 	lobby/OptionsTab.cpp
 	lobby/OptionsTabBase.cpp
 	lobby/RandomMapTab.cpp
+	lobby/MapGenTab.cpp
 	lobby/SelectionTab.cpp
 
 	mainmenu/CCampaignScreen.cpp
@@ -292,6 +293,7 @@ set(vcmiclientcommon_HEADERS
 	lobby/OptionsTab.h
 	lobby/OptionsTabBase.h
 	lobby/RandomMapTab.h
+	lobby/MapGenTab.h
 	lobby/SelectionTab.h
 
 	mainmenu/CCampaignScreen.h

@@ -399,12 +399,18 @@ void ScalableImageInstance::setEffectColor(const ColorRGBA & color)
 
 void ScalableImageInstance::playerColored(const PlayerColor & player)
 {
-	parameters.player = player;
+	// The images hold neutral and the eight players (index 1 + colour), and
+	// the spectator's colour is -4: anything that is not a player or neutral
+	// draws as neutral, as Graphics::setPlayerPalette already does.
+	const PlayerColor usable = (player.isValidPlayer() || player == PlayerColor::NEUTRAL
+		|| player == PlayerColor::CANNOT_DETERMINE) ? player : PlayerColor::NEUTRAL;
+
+	parameters.player = usable;
 
 	if (parameters.palette)
-		parameters.playerColored(player);
+		parameters.playerColored(usable);
 
-	image->preparePlayerColoredImage(player);
+	image->preparePlayerColoredImage(usable);
 }
 
 void ScalableImageParameters::playerColored(PlayerColor playerColor)

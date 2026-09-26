@@ -131,6 +131,8 @@ void AssetGenerator::initialize()
 	
 	animationFiles[AnimationPath::builtin("SPRITES/GSPButtonClear")] = createGSPButtonClear();
 	animationFiles[AnimationPath::builtin("SPRITES/GSPButton2Arrow")] = createGSPButton2Arrow();
+	animationFiles[AnimationPath::builtin("SPRITES/MapGenButton80")] = createMapGenButton(80);
+	animationFiles[AnimationPath::builtin("SPRITES/MapGenButton190")] = createMapGenButton(190);
 
 	for (PlayerColor color(-1); color < PlayerColor::PLAYER_LIMIT; ++color)
 	{
@@ -1118,6 +1120,53 @@ AssetGenerator::AnimationLayoutMap AssetGenerator::createGSPButton2Arrow()
 			auto canvas = newImg->getCanvas();
 			canvas.draw(baseImg->getImage(i), Point(0, 0));
 			canvas.draw(overlayImg->getImage(i), Point(0, 0), Rect(0, 0, 20, 20));
+			return newImg;
+		};
+
+		layout[0].push_back(ImageLocator(spriteName, EImageBlitMode::SIMPLE));
+	}
+
+	return layout;
+}
+
+AssetGenerator::AnimationLayoutMap AssetGenerator::createMapGenButton(int width)
+{
+	// GSPBUT2 is the classic gold-on-blue button VCMI's own lobby already uses
+	// everywhere (Random Map, Options, chat toggle...) via setTextOverlay for
+	// a dynamic label, but it is a fixed 128x20. MapGenTab needs an 80-wide
+	// tab button and a 190-wide action button, neither of which exists as a
+	// real H3 asset. The fill is fine dithered noise bounded by a 1-2px top
+	// highlight and bottom shadow line, no large-scale pattern, so a real
+	// left/right edge cap plus a tiled real middle slice reads as authentic
+	// at any width instead of stretching or inventing pixels.
+	auto baseImg = ENGINE->renderHandler().loadAnimation(AnimationPath::builtin("GSPBUT2"), EImageBlitMode::OPAQUE);
+	const int capW = 4;
+	const int srcW = 128;
+	const int srcH = 20;
+	const int tileW = 16;
+	const int midW = width - 2 * capW;
+
+	AnimationLayoutMap layout;
+	for(int i = 0; i < 4; i++)
+	{
+		ImagePath spriteName = ImagePath::builtin("MapGenButton" + std::to_string(width) + "_" + std::to_string(i) + ".png");
+
+		imageFiles[spriteName] = [baseImg, i, width, capW, srcW, srcH, tileW, midW](){
+			auto frame = baseImg->getImage(i);
+			auto newImg = ENGINE->renderHandler().createImage(Point(width, srcH), CanvasScalingPolicy::IGNORE);
+			auto canvas = newImg->getCanvas();
+
+			canvas.draw(frame, Point(0, 0), Rect(0, 0, capW, srcH));
+
+			int drawn = 0;
+			while(drawn < midW)
+			{
+				int chunk = std::min(tileW, midW - drawn);
+				canvas.draw(frame, Point(capW + drawn, 0), Rect(capW, 0, chunk, srcH));
+				drawn += chunk;
+			}
+
+			canvas.draw(frame, Point(width - capW, 0), Rect(srcW - capW, 0, capW, srcH));
 			return newImg;
 		};
 

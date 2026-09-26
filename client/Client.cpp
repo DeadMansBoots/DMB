@@ -208,11 +208,19 @@ void CClient::initMapHandler()
 	// TODO: CMapHandler initialization can probably go somewhere else
 	// It's can't be before initialization of interfaces
 	// During loading CPlayerInterface from serialized state it's depend on MH
-	if(!settings["session"]["headless"].Bool())
-	{
-		GAME->setMapInstance(std::make_unique<CMapHandler>(&gameState().getMap()));
-		logNetwork->trace("Creating mapHandler: %d ms", GAME->server().th->getDiff());
-	}
+	// Created in headless too, and it has to be.
+	//
+	// The pack handlers call GAME->map() unconditionally, in 27 places, and
+	// GameInstance::map() throws when there is no instance. So the first time
+	// anything built a structure or moved an object, the network thread threw
+	// and stopped processing packs, leaving any AI waiting on a request
+	// blocked forever. That is why headless has never completed a turn.
+	//
+	// Making one costs nothing: the constructor only stores the map pointer,
+	// and every method just forwards to its observer list, which is empty
+	// when there is no view attached.
+	GAME->setMapInstance(std::make_unique<CMapHandler>(&gameState().getMap()));
+	logNetwork->trace("Creating mapHandler: %d ms", GAME->server().th->getDiff());
 }
 
 void CClient::initPlayerEnvironments()
@@ -304,6 +312,55 @@ std::string CClient::aiNameForPlayer(const PlayerSettings & ps, bool battleAI, b
 		const boost::filesystem::path aiPath = VCMIDirs::get().fullLibraryPath("AI", ps.name);
 		if(boost::filesystem::exists(aiPath))
 			return ps.name;
+	}
+
+	// Per-colour adventure AI override, so two different AIs can be put on
+	// one map with nobody watching.
+	//
+	// The engine's own way of picking an AI per slot is PlayerSettings::name,
+	// and it works, but nothing fills that name in for an AI-only game. The
+	// name comes from the connected client's player name, and the server
+	// gives every AI slot the localised word "Computer" instead
+	// (CVCMIServer.cpp). So the name never matches a dll, every slot falls
+	// through to ai.adventureEnemyAI, and an AI-only game has always been the
+	// same AI playing itself. That makes a head-to-head impossible to set up,
+	// which is the one measurement that says whether this AI is any good.
+	//
+	// settings.json:
+	//   "ai": { "playerAIOverrides": { "red": "OmniAI", "blue": "Nullkiller" } }
+	//
+	// Adventure AI only. Battles stay on ai.combatNeutralAI for both sides so
+	// the comparison measures adventure play rather than two battle AIs.
+	//
+	// This key has to be declared in config/schemas/settings.json, and the
+	// reason is worth writing down because it is not the obvious one. An
+	// unknown enum VALUE is safe, which is why adventureEnemyAI = "OmniAI"
+	// works without a schema edit: JsonUtils::validate only warns and keeps
+	// it. An unknown KEY is deleted. SettingsStorage::init calls maximize,
+	// maximize calls eraseOptionalNodes, and that erases every entry of a
+	// struct that the schema's "required" list does not name. Without the
+	// schema entry this node is gone before the client reads it, and the
+	// match silently runs one AI against itself.
+	if(!battleAI)
+	{
+		const JsonNode & overrides = settings["ai"]["playerAIOverrides"];
+		if(overrides.isStruct())
+		{
+			const auto & m = overrides.Struct();
+			const auto it = m.find(ps.color.toString());
+			if(it != m.end() && it->second.isString() && !it->second.String().empty())
+			{
+				const std::string & wanted = it->second.String();
+				if(boost::filesystem::exists(VCMIDirs::get().fullLibraryPath("AI", wanted)))
+				{
+					logNetwork->info("Player %s overridden to adventure AI %s",
+						ps.color.toString(), wanted);
+					return wanted;
+				}
+				logNetwork->warn("Player %s asked for adventure AI %s but AI/%s.dll is not installed",
+					ps.color.toString(), wanted, wanted);
+			}
+		}
 	}
 
 	return aiNameForPlayer(battleAI, alliedToHuman);
@@ -495,7 +552,7 @@ void CClient::startPlayerBattleAction(const BattleID & battleID, PlayerColor col
 
 	auto battleint = battleints.at(color);
 
-	if (!battleint->human)
+	if (!battleint->human && ENGINE)
 	{
 		// we want to avoid locking gamestate and causing UI to freeze while AI is making turn
 		auto unlockInterface = vstd::makeUnlockGuard(ENGINE->interfaceMutex);

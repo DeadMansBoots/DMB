@@ -1377,7 +1377,12 @@ void CPlayerInterface::initializeHeroTownList()
 			localState->addOwnedTown(town);
 	}
 
-	localState->deserialize(*cb->getPlayerState(playerID)->playerLocalSettings);
+	// The spectator is not a real player. getPlayerState returns null for it
+	// and the result used to be dereferenced unconditionally, which killed the
+	// client on every game that had no human in it. That is precisely the kind
+	// of game an AI test is.
+	if(const PlayerState * ps = cb->getPlayerState(playerID, false))
+		localState->deserialize(*ps->playerLocalSettings);
 
 	if(adventureInt)
 		adventureInt->onHeroChanged(nullptr);

@@ -25,6 +25,7 @@
 #include "../widgets/Buttons.h"
 #include "../widgets/CTextInput.h"
 #include "../widgets/GraphicalPrimitiveCanvas.h"
+#include "../widgets/MiscWidgets.h"
 #include "../widgets/ObjectLists.h"
 #include "../widgets/Slider.h"
 #include "../widgets/TextControls.h"
@@ -36,6 +37,86 @@
 #include "../../lib/texts/CGeneralTextHandler.h"
 #include "../../lib/filesystem/ResourcePath.h"
 #include "../../lib/GameLibrary.h"
+#include "../../lib/CConfigHandler.h"
+
+#include <boost/algorithm/string.hpp>
+
+// Settings-bound widgets (testinstall patch, VCMIMapGen queue item 25). A
+// widget config may carry "setting": "a/b/c", a slash path into settings.json.
+// The widget opens on the stored value and writes every change back, so a
+// panel of options needs no C++ of its own; the settings schema must declare
+// the path, or VCMI erases it on the next load.
+//
+// "setting": "persistent:a/b/c" binds to persistentStorage
+// (config/persistentStorage.json) instead. That store is loaded with no
+// schema, so nothing ever erases its keys, including an official client that
+// shares the same user folder and has never heard of them. Inside the path
+// the store travels as a leading PERSISTENT_MARK element.
+namespace
+{
+	const std::string PERSISTENT_MARK = "@persistent";
+
+	std::vector<std::string> settingPath(const JsonNode & node)
+	{
+		std::string spec = node.String();
+		std::vector<std::string> path;
+		if(boost::algorithm::starts_with(spec, "persistent:"))
+		{
+			path.push_back(PERSISTENT_MARK);
+			spec = spec.substr(std::string("persistent:").size());
+		}
+		std::vector<std::string> parts;
+		boost::split(parts, spec, boost::is_any_of("/"));
+		vstd::erase_if(parts, [](const std::string & s){ return s.empty(); });
+		path.insert(path.end(), parts.begin(), parts.end());
+		return path;
+	}
+
+	bool isPersistent(const std::vector<std::string> & path)
+	{
+		return !path.empty() && path.front() == PERSISTENT_MARK;
+	}
+
+	const JsonNode & settingValue(const std::vector<std::string> & path)
+	{
+		static const JsonNode nullNode;
+		const size_t first = isPersistent(path) ? 1 : 0;
+		if(path.size() <= first)
+			return nullNode;
+		const SettingsStorage & store = isPersistent(path) ? persistentStorage : settings;
+		const JsonNode * node = &store[path[first]];
+		for(size_t i = first + 1; i < path.size(); ++i)
+			node = &(*node)[path[i]];
+		return *node;
+	}
+
+	double settingNumber(const std::vector<std::string> & path, double fallback)
+	{
+		const JsonNode & value = settingValue(path);
+		if(value.isNumber())
+			return value.Float();
+		if(value.getType() == JsonNode::JsonType::DATA_BOOL)
+			return value.Bool() ? 1.0 : 0.0;
+		return fallback;
+	}
+
+	void writeSetting(const std::vector<std::string> & path, const JsonNode & value)
+	{
+		const bool persistent = isPersistent(path);
+		const std::vector<std::string> rest(path.begin() + (persistent ? 1 : 0), path.end());
+		if(rest.empty())
+			return;
+		Settings entry = (persistent ? persistentStorage : settings).write(rest);
+		*entry.operator->() = value;
+	}
+
+	bool sameSettingValue(const JsonNode & a, const JsonNode & b)
+	{
+		if(a.isNumber() && b.isNumber())
+			return std::abs(a.Float() - b.Float()) < 1e-6;
+		return a == b;
+	}
+}
 
 InterfaceObjectConfigurable::InterfaceObjectConfigurable(const JsonNode & config, int used, Point offset):
 	InterfaceObjectConfigurable(used, offset)
@@ -63,6 +144,7 @@ InterfaceObjectConfigurable::InterfaceObjectConfigurable(int used, Point offset)
 	REGISTER_BUILDER("graphicalPrimitive", &InterfaceObjectConfigurable::buildGraphicalPrimitive);
 	REGISTER_BUILDER("transparentFilledRectangle", &InterfaceObjectConfigurable::buildTransparentFilledRectangle);
 	REGISTER_BUILDER("textBox", &InterfaceObjectConfigurable::buildTextBox);
+	REGISTER_BUILDER("hoverHelp", &InterfaceObjectConfigurable::buildHoverHelp);
 }
 
 void InterfaceObjectConfigurable::registerBuilder(const std::string & type, BuilderFunction f)
@@ -152,6 +234,43 @@ void InterfaceObjectConfigurable::build(const JsonNode &config)
 		pos.w = config["width"].Integer();
 	if (!config["height"].isNull())
 		pos.h = config["height"].Integer();
+
+	// value labels of settings-bound sliders may be built after their slider
+	refreshBoundLabels();
+}
+
+std::string InterfaceObjectConfigurable::formatBoundValue(double value, const JsonNode & format) const
+{
+	// named stops: the last [value, text] pair at or below the value
+	if(format["valueNames"].isVector())
+	{
+		std::string text;
+		for(const auto & stop : format["valueNames"].Vector())
+			if(stop.isVector() && stop.Vector().size() >= 2 && stop.Vector()[0].Float() <= value + 1e-6)
+				text = readText(stop.Vector()[1]);
+		if(!text.empty())
+			return text;
+	}
+	const double scale = format["valueDisplayScale"].isNull() ? 1.0 : format["valueDisplayScale"].Float();
+	const int decimals = format["valueDecimals"].isNull() ? 2 : static_cast<int>(format["valueDecimals"].Integer());
+	std::ostringstream out;
+	out << std::fixed << std::setprecision(std::max(0, decimals)) << value * scale;
+	if(!format["valueSuffix"].isNull())
+		out << format["valueSuffix"].String();
+	return out.str();
+}
+
+void InterfaceObjectConfigurable::refreshBoundLabels() const
+{
+	for(const auto & bound : boundLabels)
+	{
+		auto label = widget<CLabel>(bound.label);
+		if(!label)
+			continue;
+		const double fallback = bound.format["valueDefault"].isNull()
+			? bound.format["valueMin"].Float() : bound.format["valueDefault"].Float();
+		label->setText(formatBoundValue(settingNumber(bound.path, fallback), bound.format));
+	}
 }
 
 void InterfaceObjectConfigurable::addConditional(const std::string & name, bool active)
@@ -383,6 +502,41 @@ std::shared_ptr<CToggleGroup> InterfaceObjectConfigurable::buildToggleGroup(cons
 			group->addToggle(itemIdx, newToggle);
 		}
 	}
+	if(!config["setting"].isNull())
+	{
+		// Settings-bound group: a toggle's value is values[index] when
+		// "values" is given, else its index. Opens on the stored value
+		// (or "selected" when nothing matches) before the writer is added,
+		// so opening the panel writes nothing.
+		const auto path = settingPath(config["setting"]);
+		const JsonNode values = config["values"];
+		auto valueOf = [values](int index) -> JsonNode
+		{
+			if(values.isVector() && index >= 0 && index < static_cast<int>(values.Vector().size()))
+				return values.Vector()[index];
+			return JsonNode(static_cast<int32_t>(index));
+		};
+		const JsonNode & stored = settingValue(path);
+		bool matched = false;
+		for(const auto & entry : group->buttons)
+		{
+			if(!stored.isNull() && sameSettingValue(stored, valueOf(entry.first)))
+			{
+				group->setSelected(entry.first);
+				matched = true;
+				break;
+			}
+		}
+		if(!matched && !config["selected"].isNull())
+			group->setSelected(config["selected"].Integer());
+		group->addCallback([path, valueOf](int index)
+		{
+			writeSetting(path, valueOf(index));
+		});
+		if(!config["callback"].isNull())
+			group->addCallback(callbacks_int.at(config["callback"].String()));
+		return group;
+	}
 	if(!config["selected"].isNull())
 		group->setSelected(config["selected"].Integer());
 	if(!config["callback"].isNull())
@@ -411,6 +565,18 @@ std::shared_ptr<CToggleButton> InterfaceObjectConfigurable::buildToggleButton(co
 		auto imgOrder = config["imageOrder"].Vector();
 		assert(imgOrder.size() >= 4);
 		button->setImageOrder(imgOrder[0].Integer(), imgOrder[1].Integer(), imgOrder[2].Integer(), imgOrder[3].Integer());
+	}
+	if(!config["setting"].isNull())
+	{
+		// Settings-bound checkbox: opens silently on the stored value, then
+		// writes 1 for on and 0 for off
+		const auto path = settingPath(config["setting"]);
+		const double fallback = (!config["selected"].isNull() && config["selected"].Bool()) ? 1 : 0;
+		button->setSelectedSilent(settingNumber(path, fallback) != 0);
+		button->addCallback([path](bool on)
+		{
+			writeSetting(path, JsonNode(static_cast<int32_t>(on ? 1 : 0)));
+		});
 	}
 	loadToggleButtonCallback(button, config["callback"]);
 	loadButtonHotkey(button, config["hotkey"]);
@@ -531,7 +697,33 @@ std::shared_ptr<CSlider> InterfaceObjectConfigurable::buildSlider(const JsonNode
 
 	std::shared_ptr<CSlider> result;
 
-	if (config["items"].isNull())
+	if(!config["setting"].isNull())
+	{
+		// Settings-bound slider: position p stands for valueMin + p *
+		// valueStep, p in 0..itemsTotal. Opens on the stored value (or
+		// valueDefault), writes every move, and keeps its "valueLabel"
+		// widget showing the value.
+		const auto path = settingPath(config["setting"]);
+		const double vmin = config["valueMin"].Float();
+		const double vstep = config["valueStep"].isNull() ? 1.0 : config["valueStep"].Float();
+		const int total = std::max<int>(1, static_cast<int>(config["itemsTotal"].Integer()));
+		const double fallback = config["valueDefault"].isNull() ? vmin : config["valueDefault"].Float();
+		const int start = std::clamp(static_cast<int>(std::lround((settingNumber(path, fallback) - vmin) / vstep)), 0, total);
+		const std::string labelName = config["valueLabel"].isNull() ? std::string() : config["valueLabel"].String();
+		const JsonNode format = config;
+		auto moved = [this, path, vmin, vstep, labelName, format](int p)
+		{
+			const double v = std::round((vmin + p * vstep) * 1e6) / 1e6;
+			writeSetting(path, JsonNode(v));
+			if(!labelName.empty())
+				if(auto label = widget<CLabel>(labelName))
+					label->setText(formatBoundValue(v, format));
+		};
+		result = std::make_shared<CSlider>(position, length, moved, 0, total, start, orientation, style);
+		if(!labelName.empty())
+			boundLabels.push_back({labelName, path, format});
+	}
+	else if (config["items"].isNull())
 	{
 		auto itemsVisible = config["itemsVisible"].Integer();
 		auto itemsTotal = config["itemsTotal"].Integer();
@@ -778,6 +970,16 @@ std::shared_ptr<CTextBox> InterfaceObjectConfigurable::buildTextBox(const JsonNo
 	auto blueTheme = config["blueTheme"].Bool();
 
 	return std::make_shared<CTextBox>(text, rect, blueTheme ? 1 : 0, font, alignment, color);
+}
+
+std::shared_ptr<LRClickableAreaWText> InterfaceObjectConfigurable::buildHoverHelp(const JsonNode & config) const
+{
+	logGlobal->debug("Building widget LRClickableAreaWText");
+
+	auto rect = readRect(config["rect"]);
+	auto hint = readHintText(config["help"]);
+
+	return std::make_shared<LRClickableAreaWText>(rect, hint.first, hint.second);
 }
 
 std::shared_ptr<CIntObject> InterfaceObjectConfigurable::buildWidget(JsonNode config) const

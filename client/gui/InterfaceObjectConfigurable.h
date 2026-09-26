@@ -31,6 +31,7 @@ class ComboBox;
 class CTextInput;
 class TransparentFilledRectangle;
 class CTextBox;
+class LRClickableAreaWText;
 
 #define REGISTER_BUILDER(type, method) registerBuilder(type, std::bind(method, this, std::placeholders::_1))
 
@@ -110,10 +111,21 @@ protected:
 	std::shared_ptr<TransparentFilledRectangle> buildTransparentFilledRectangle(const JsonNode & config) const;
 	std::shared_ptr<CIntObject> buildGraphicalPrimitive(const JsonNode & config) const;
 	std::shared_ptr<CTextBox> buildTextBox(const JsonNode & config) const;
-		
+	/// An invisible hoverable rect: hover text on the status bar, help text on
+	/// right-click, nothing drawn. What the base game actually uses instead of
+	/// a visible help icon (client/lobby/RandomMapTab.cpp has none).
+	std::shared_ptr<LRClickableAreaWText> buildHoverHelp(const JsonNode & config) const;
+
 	//composite widgets
 	std::shared_ptr<CIntObject> buildWidget(JsonNode config) const;
 	
+	/// Settings-bound widgets (testinstall patch, VCMIMapGen item 25): a
+	/// toggleGroup, toggleButton or slider whose config names a "setting"
+	/// (a slash path into settings.json) opens on the stored value and
+	/// writes every change back, so a panel of options needs no C++ of its
+	/// own. A slider may name a "valueLabel" widget that shows its value.
+	void refreshBoundLabels() const;
+
 private:
 	struct ShortcutState
 	{
@@ -121,6 +133,15 @@ private:
 		mutable std::vector<std::shared_ptr<CButton>> assignedButtons;
 		bool blocked = false;
 	};
+
+	struct BoundLabel
+	{
+		std::string label;              ///< widget name of the CLabel to update
+		std::vector<std::string> path;  ///< settings path the value lives at
+		JsonNode format;                ///< the slider's config, for formatting
+	};
+	mutable std::vector<BoundLabel> boundLabels;
+	std::string formatBoundValue(double value, const JsonNode & format) const;
 	
 	int unnamedObjectId = 0;
 	std::map<std::string, BuilderFunction> builders;
