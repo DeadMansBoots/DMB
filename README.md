@@ -10,7 +10,6 @@ The installer is not signed yet, so Windows may say it protected your PC. Choose
 
 ## What DMB adds to VCMI
 
-- A random map generator in the lobby's MapGen tab.
 - Its own user folder, `Documents\My Games\DMB`, so DMB and VCMI never share settings, saves or mods.
 - A dark interface option in the game's settings.
 - Its own mod list, [DMB-Mods-Repository](https://github.com/DeadMansBoots/DMB-Mods-Repository): VCMI's mods, plus mods made for DMB, all installed from the launcher.

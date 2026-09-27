@@ -3,8 +3,6 @@
 *.cpp linguist-language=C++
 
 *.bat text eol=crlf
-# DMB: the map generator's launch script (win/CMakeLists.txt), CRLF wherever it is checked out
-/win/mapgen/generate.cmd text eol=crlf
 /android/gradlew text eol=lf
 # DMB: the installer's images are pixels; no line-ending conversion may touch them
 *.bmp binary

@@ -54,7 +54,7 @@ body:
         - Game, battle
         - Game, town or hero screens
         - Game, menus or lobby
-        - Map generator (MapGen tab)
+        - Random maps
         - Computer players (AI)
         - Map editor
         - Other
@@ -121,7 +121,7 @@ body:
     attributes:
       label: Map, save and mods
       description: >
-        The map's name; for a generated map, its MapGen settings or seed; whether a save shows the
+        The map's name; for a random map, its template and settings; whether a save shows the
         problem; the mods that were on.
 
   - type: textarea

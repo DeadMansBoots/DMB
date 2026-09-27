@@ -28,7 +28,7 @@ body:
         - Launcher
         - Installer or update
         - Game
-        - Map generator (MapGen tab)
+        - Random maps
         - Computer players (AI)
         - Map editor
         - Other

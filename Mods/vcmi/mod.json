@@ -276,9 +276,6 @@
 		"config/rmg/symmetric/8sm0f.JSON",
 		"config/rmg/symmetric/8xm12.JSON",
 		"config/rmg/symmetric/8xm12a.JSON",
-		"config/rmg/symmetric/8xm8.JSON",
-		"config/rmg/dmb/golemFoundry.json",
-		"config/rmg/dmb/gauntletRoad.json",
-		"config/rmg/dmb/threeCrowns.json"
+		"config/rmg/symmetric/8xm8.JSON"
 	]
 }
