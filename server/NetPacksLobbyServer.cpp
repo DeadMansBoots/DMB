@@ -15,6 +15,7 @@
 
 #include "../lib/StartInfo.h"
 #include "../lib/GameLibrary.h"
+#include "../lib/VCMIDirs.h"
 
 #include "../lib/CRandomGenerator.h"
 #include "../lib/campaign/CampaignState.h"
@@ -441,9 +442,24 @@ void ApplyOnServerNetPackVisitor::visitLobbyDelete(LobbyDelete & pack)
 		boost::system::error_code ec;
 		auto file = boost::filesystem::canonical(*name, ec);
 
+		// DMB: a random map goes only from the user's Maps/RandomMaps, whatever map the client names (the
+		// scenario list can now ask from its RandomMaps folder, where the rest of the list is a step away)
+		bool outsideRandomMaps = false;
+		if(!ec && pack.type == LobbyDelete::EType::RANDOMMAP)
+		{
+			boost::system::error_code folderEc;
+			const auto randomMaps = boost::filesystem::canonical(VCMIDirs::get().userDataPath() / "Maps" / "RandomMaps", folderEc);
+			const auto relative = file.lexically_relative(randomMaps);
+			outsideRandomMaps = folderEc || relative.empty() || *relative.begin() == "..";
+		}
+
 		if (ec)
 		{
 			logGlobal->error("Failed to delete file '%s'. Reason: %s", res.getOriginalName(), ec.message());
+		}
+		else if (outsideRandomMaps)
+		{
+			logGlobal->error("Not deleting '%s': a random map is deleted only from Maps/RandomMaps", file.string());
 		}
 		else
 		{

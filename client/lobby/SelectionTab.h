@@ -133,6 +133,8 @@ private:
 	std::shared_ptr<CButton> buttonDeleteMode;
 	std::shared_ptr<ScenarioTabConfigurable> scenarioTabConfigurable;
 	bool deleteMode;
+	/// DMB: the tab's title outside delete mode, for ending that mode on leaving RandomMaps
+	std::string titleOutsideDeleteMode;
 
 	bool enableUiEnhancements;
 	std::shared_ptr<CButton> buttonCampaignSet;

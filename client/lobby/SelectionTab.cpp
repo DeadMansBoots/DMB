@@ -275,6 +275,7 @@ SelectionTab::SelectionTab(ESelectionScreen Type)
 
 		if(tabType == ESelectionScreen::loadGame || tabType == ESelectionScreen::newGame)
 		{
+			titleOutsideDeleteMode = tabTitle;
 			buttonDeleteMode = std::make_shared<CButton>(Point(367, 18), AnimationPath::builtin("lobby/deleteButton"), CButton::tooltip("", LIBRARY->generaltexth->translate("vcmi.lobby.deleteMode")), [this, tabTitle, tabTitleDelete](){
 				deleteMode = !deleteMode;
 				if(deleteMode)
@@ -421,7 +422,8 @@ void SelectionTab::clickReleased(const Point & cursorPosition)
 			vstd::amax(py, 0);
 			vstd::amin(py, curItems.size() - 1);
 
-			if(curItems[py]->isFolder && boost::algorithm::starts_with(curItems[py]->folderName, ".."))
+			// DMB: in the scenario list a folder only opens: deleting one is for saved games
+			if(curItems[py]->isFolder && (boost::algorithm::starts_with(curItems[py]->folderName, "..") || tabType == ESelectionScreen::newGame))
 			{
 				select(line);
 				return;
@@ -614,7 +616,17 @@ void SelectionTab::filter(int size, bool selectFirst)
 	curItems.clear();
 
 	if(buttonDeleteMode)
-		buttonDeleteMode->setEnabled(tabType != ESelectionScreen::newGame || showRandom);
+	{
+		// DMB: the maps in RandomMaps can be deleted from that folder of the list as well, and delete mode
+		// ends on leaving it, so no other scenario is ever sent to be deleted as a random map
+		const bool mayDelete = tabType != ESelectionScreen::newGame || showRandom || boost::algorithm::istarts_with(curFolder, "RandomMaps/");
+		buttonDeleteMode->setEnabled(mayDelete);
+		if(!mayDelete && deleteMode)
+		{
+			deleteMode = false;
+			labelTabTitle->setText(titleOutsideDeleteMode);
+		}
+	}
 
 	hiddenIncompatibleMapsCount = 0;
 
