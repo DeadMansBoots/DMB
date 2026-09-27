@@ -67,6 +67,8 @@ MapGenPage::MapGenPage(const JsonNode & layout, const std::function<void(MapGenP
 	// A page has no background of its own: when a value label changes, the tab, which has one,
 	// repaints under it. Otherwise the old text stays under the new ("KL" for L, then XL).
 	setRedrawParent(true);
+	// a page of many sliders: the arrow keys would move them all at once, as VCMI gives each the keyboard
+	slidersTakeKeys = false;
 	if(setup)
 		setup(*this);
 	build(layout);

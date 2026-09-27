@@ -56,6 +56,10 @@ protected:
 	/// what only code knows). Set it before build().
 	std::function<void(LayoutPage &)> onPageBuilt;
 
+	/// DMB: whether this layout's horizontal sliders take the arrow keys, as VCMI's do; a slider's own
+	/// "keyboard" field overrides it. Pages set it off: their arrows turn the page. Set it before build().
+	bool slidersTakeKeys = true;
+
 	/// DMB: a "pages" widget's page gets its owner's callbacks, conditionals and variables
 	void inheritFrom(const InterfaceObjectConfigurable & owner);
 

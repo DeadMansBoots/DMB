@@ -119,7 +119,10 @@ page of options needs no code:
 - `toggleButton`: on or off;
 - `slider`: a number; `valueLabel` names a label that shows it, formatted by `valueMin`,
   `valueMax`, `valueStep`, `valueDefault`, `valueDecimals`, `valueDisplayScale`, `valueSuffix` and
-  `valueNames`;
+  `valueNames`. VCMI lets every horizontal slider take the left and right arrow keys, so on a screen
+  with several they all move at once. On a page of a pages widget, and on a map generator's tab,
+  sliders take no keys (the arrows turn the page); elsewhere `"keyboard": false` turns them off for
+  one slider, and `"keyboard": true` turns them back on;
 - `label`: shows the stored text, or its `emptyText` while there is none (level 2).
 
 A `setting` is a path with `/` between its parts: `persistent:myMod/speed` in

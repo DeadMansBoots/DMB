@@ -767,6 +767,14 @@ std::shared_ptr<CSlider> InterfaceObjectConfigurable::buildSlider(const JsonNode
 	if(!config["panningStep"].isNull())
 		result->setPanningStep(config["panningStep"].Integer());
 
+	// DMB: VCMI gives every horizontal slider the keyboard, so on a screen of several the arrow keys
+	// moved them all at once, and on a pages widget's page they moved them as the page turned (MapGen,
+	// September 27th). A slider takes keys when its "keyboard" says so, else as its screen decides
+	// (slidersTakeKeys: off on pages, on elsewhere, as in VCMI).
+	const bool keyboard = config["keyboard"].isBool() ? config["keyboard"].Bool() : slidersTakeKeys;
+	if(horizontal && !keyboard)
+		result->removeUsedEvents(KEYBOARD);
+
 	return result;
 }
 
@@ -1114,6 +1122,7 @@ LayoutPage::LayoutPage(const InterfaceObjectConfigurable & owner, const JsonNode
 	setRedrawParent(true);
 	inheritFrom(owner);
 	layoutScope = scope;
+	slidersTakeKeys = false; // the arrow keys turn the page
 	build(layout);
 	if(onPageBuilt)
 		onPageBuilt(*this);
