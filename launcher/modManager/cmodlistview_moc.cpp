@@ -1560,9 +1560,13 @@ void CModListView::doUninstallMod(const QString & modName, bool silent)
 			return;
 	}
 
-	if(modStateModel->isModEnabled(modName))
+	const bool wasEnabled = modStateModel->isModEnabled(modName);
+	if(wasEnabled)
 		manager->disableMod(modName);
-	manager->uninstallMod(modName);
+	// DMB: a refused uninstall leaves the mod as it was. It used to leave it disabled, which looks like a
+	// half-done uninstall (K, rc.1: the mod "should have already been gone")
+	if(!manager->uninstallMod(modName) && wasEnabled)
+		manager->enableMods({modName});
 	reload(modName);
 }
 

@@ -153,6 +153,11 @@ QString detectModArchive(QString path, QString modName, std::vector<std::string>
 ModStateController::ModStateController(std::shared_ptr<ModStateModel> modList)
 	: modList(modList)
 {
+	// DMB: what an uninstall renamed away but could not delete then, a file being in use (doUninstallMod)
+	const QFileInfoList leftovers = QDir(CLauncherDirs::modsPath()).entryInfoList({"*.removing-*"}, QDir::Dirs | QDir::NoDotAndDotDot);
+	for(const QFileInfo & leftover : leftovers)
+		if(isInUserModsFolder(leftover.absoluteFilePath()) && !QDir(leftover.absoluteFilePath()).removeRecursively())
+			logGlobal->warn("Could not delete %s yet, what an earlier uninstall left", leftover.absoluteFilePath().toStdString());
 }
 
 ModStateController::~ModStateController() = default;
@@ -352,24 +357,35 @@ bool ModStateController::doUninstallMod(QString modname)
 	}
 
 	QDir modFullDir(modDir);
-	if(!removeModDir(modDir))
+	if(!isInUserModsFolder(modDir))
 		return addError(modname, tr("Mod is located in a protected directory, please remove it manually:\n") + modFullDir.absolutePath());
+
+	// DMB: all or nothing. Deleting in place stops at a file another program has open and leaves a broken
+	// mod behind. So the folder first leaves the mod list in one step, a rename to a name VCMI never reads
+	// as a mod (it has a dot); Windows refuses that rename while a file inside is open, and then nothing
+	// is deleted and the player is told why. What cannot be deleted after the rename goes at the next start.
+	const QString doomed = QDir::cleanPath(modFullDir.absolutePath()) + ".removing-" + QString::number(QDateTime::currentMSecsSinceEpoch());
+	if(!QDir().rename(modFullDir.absolutePath(), doomed))
+		return addError(modname, tr("Some of this mod's files are in use, perhaps by the game or another program. Close it, then uninstall again:\n") + modFullDir.absolutePath());
+	if(!QDir(doomed).removeRecursively())
+		logGlobal->warn("Mod '%s': some files in %s could not be deleted; the launcher deletes them at its next start", modname.toStdString(), doomed.toStdString());
 
 	return true;
 }
 
-bool ModStateController::removeModDir(QString path)
+bool ModStateController::isInUserModsFolder(QString path)
 {
 	// issues 2673 and 2680 its why you do not recursively remove without sanity check
 	// DMB: VCMI checked folder names here (a Mods folder inside one named vcmi). DMB's user folder has its own
 	// name, so every uninstall was refused and players were told to delete mods by hand. Now a folder is
 	// removed only when its parent is the user's Mods folder, the one the launcher installs into, compared as
 	// the same folder on disk, so letter case and links do not matter.
-	QDir dir(path);
 	boost::system::error_code error;
-	const auto parent = qstringToPath(QDir::cleanPath(dir.absolutePath())).parent_path();
-	if(!boost::filesystem::equivalent(parent, qstringToPath(CLauncherDirs::modsPath()), error) || error)
-		return false;
+	const auto parent = qstringToPath(QDir::cleanPath(QDir(path).absolutePath())).parent_path();
+	return boost::filesystem::equivalent(parent, qstringToPath(CLauncherDirs::modsPath()), error) && !error;
+}
 
-	return dir.removeRecursively();
+bool ModStateController::removeModDir(QString path)
+{
+	return isInUserModsFolder(path) && QDir(path).removeRecursively();
 }

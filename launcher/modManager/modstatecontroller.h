@@ -30,6 +30,7 @@ class ModStateController : public QObject, public boost::noncopyable
 	QStringList recentErrors;
 	bool addError(QString modname, QString message);
 	bool removeModDir(QString mod);
+	bool isInUserModsFolder(QString path);
 
 public:
 	ModStateController(std::shared_ptr<ModStateModel> modList);
