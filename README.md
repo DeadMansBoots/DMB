@@ -10,7 +10,7 @@ The installer is not signed yet, so Windows may say it protected your PC. Choose
 
 ## What DMB adds to VCMI
 
-- A wider mod framework. Besides new content, a mod can bring an AI player or a random map generator with its own lobby tab, installed and updated from the launcher like any other mod. DMB runs code from a mod only when its mod catalog vouches for that exact code. The first addons arrive with DMB 0.1.1.
+- Compatibility for mods that change the game's interface, on top of the VCMI layer, installed and updated from the launcher like any other mod. A mod that brings code runs only when DMB's mod catalog vouches for that exact code.
 - Its own mod catalog, [DMB-Mods-Repository](https://github.com/DeadMansBoots/DMB-Mods-Repository): VCMI's mods, plus mods made for DMB, all installed from the launcher.
 - Its own user folder, `Documents\My Games\DMB`, so DMB and VCMI never share settings, saves or mods.
 - A dark interface option in the game's settings.
@@ -22,7 +22,7 @@ Use the forms on the [Issues](https://github.com/DeadMansBoots/Dead-Mans-Boots/i
 
 ## Mods
 
-Every mod lives in its own repository, wherever its author keeps it, and DMB's own team works the same way: the AI player [OmniAI](https://github.com/Renegade1993/OmniAI) and the map generator [OmniMapGen](https://github.com/Renegade1993/OmniMapGen) have pages of their own. To list a mod in DMB's launcher, open a pull request that adds its entry to [DMB-Mods-Repository](https://github.com/DeadMansBoots/DMB-Mods-Repository/tree/main/entries).
+Every mod lives in its own repository, wherever its author keeps it, and DMB's own team works the same way: [OmniAI](https://github.com/Renegade1993/OmniAI) and [OmniMapGen](https://github.com/Renegade1993/OmniMapGen) have pages of their own. To list a mod in DMB's launcher, open a pull request that adds its entry to [DMB-Mods-Repository](https://github.com/DeadMansBoots/DMB-Mods-Repository/tree/main/entries).
 
 ## Building from source
 
