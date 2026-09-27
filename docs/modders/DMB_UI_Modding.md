@@ -97,12 +97,18 @@ Pages ids in use:
 | id | Screen | Callbacks a page may use |
 | --- | --- | --- |
 | `randomMap` | the lobby's Random Map tab | `toggleMapSize`, `toggleTwoLevels`, `setPlayersCount`, `setTeamsCount`, `setCompOnlyPlayers`, `setCompOnlyTeams`, `setWaterContent`, `setMonsterStrength`, `teamAlignments` |
+| `advancedOptions` | the lobby's Advanced Options | the tab's own, as in `config/widgets/playerOptionsTab.json` |
+| `turnOptions` | the lobby's Turn Options | the tab's own, as in `config/widgets/turnOptionsTab.json` |
+| `extraOptions` | the lobby's Extra Options | the tab's own, as in `config/widgets/extraOptionsTab.json` |
 | `mapGen` | OmniMapGen's tab, from its release that uses the pages widget | `activateMapGenPage`, `resetMapGenDefaults`, `generateMapGenMap`, `chooseMapGenTemplate` |
 
 A stock screen has no pages of its own. Until a mod adds one, it looks as it always has; then its
 own content becomes page 1, its title shows the page's title between the arrows, and what belongs
-to every page stays: on the Random Map tab, the background, the title and Show Random Maps. More
-stock screens will be listed here as they take pages.
+to every page stays: the background and the title, and on the Random Map tab Show Random Maps too.
+A page sits on the screen's background picture, so what that picture draws shows behind it: on
+Advanced Options, the empty column boxes and the turn slider of the original screen. A page that
+needs the room covers them with a picture of its own. More stock screens will be listed here as
+they take pages.
 
 ## Settings-bound widgets
 

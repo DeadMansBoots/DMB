@@ -1018,21 +1018,32 @@ void InterfaceObjectConfigurable::acceptTabPages(const std::string & id, const s
 	if(!wanted)
 		return; // nothing on the screen changes until a mod adds a page
 
+	// the stock content moves into one object, so the pages widget can show and hide it as its first page:
+	// every child but the frame, those the screen made in code after its layout included
+	std::set<CIntObject *> kept;
+	for(const auto & name : frame)
+		if(const auto found = widgets.find(name); found != widgets.end() && found->second)
+			kept.insert(found->second.get());
+	const std::vector<CIntObject *> stock = children;
+
 	OBJECT_CONSTRUCTION;
-	// the stock content moves into one object, so the pages widget can show and hide it as its first page
 	auto content = std::make_shared<CIntObject>();
 	content->pos = pos;
-	for(const auto & entry : widgets)
-	{
-		if(entry.second && !frame.count(entry.first) && entry.second->parent == this)
-			content->addChild(entry.second.get());
-	}
+	for(auto * child : stock)
+		if(!kept.count(child))
+			content->addChild(child);
 	addWidget("dmbStockPage", content);
 
 	JsonNode config = pagesConfig;
 	config["id"].String() = id;
 	addWidget("dmbPages", std::make_shared<LayoutPages>(*this, config, content, pagesConfig["stockTitle"]));
 	logMod->info("The screen %s takes pages from mods", id);
+}
+
+CIntObject * InterfaceObjectConfigurable::stockPageOrSelf()
+{
+	const auto content = widgets.find("dmbStockPage");
+	return content != widgets.end() && content->second ? content->second.get() : this;
 }
 
 std::shared_ptr<CIntObject> InterfaceObjectConfigurable::buildWidget(JsonNode config) const

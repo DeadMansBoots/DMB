@@ -62,6 +62,7 @@ OptionsTab::OptionsTab()
 	: OptionsTabBase(optionsTabConfigLocation())
 	, humanPlayers(0)
 {
+	acceptOptionPages("advancedOptions", "core.genrltxt.515");
 }
 
 void OptionsTab::recreate()
@@ -78,7 +79,8 @@ void OptionsTab::recreate()
 	for (auto selectionWindow : ENGINE->windows().findWindows<SelectionWindow>())
 		selectionWindow->reopen();
 
-	OBJECT_CONSTRUCTION;
+	// DMB: on the tab's own page when mods have added pages to it (acceptOptionPages)
+	OBJECT_CONSTRUCTION_TARGETED(stockPageOrSelf());
 	for(auto & pInfo : SEL->getStartInfo()->playerInfos)
 	{
 		if(pInfo.second.isControlledByHuman())

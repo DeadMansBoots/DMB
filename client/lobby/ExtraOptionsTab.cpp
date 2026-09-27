@@ -17,4 +17,5 @@ ExtraOptionsTab::ExtraOptionsTab()
 {
 	if(auto textureCampaignOverdraw = widget<CFilledTexture>("textureCampaignOverdraw"))
 		textureCampaignOverdraw->disable();
+	acceptOptionPages("extraOptions", "vcmi.optionsTab.extraOptions.hover");
 }

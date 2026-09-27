@@ -314,6 +314,20 @@ OptionsTabBase::OptionsTabBase(const JsonPath & configPath)
 	}
 }
 
+void OptionsTabBase::acceptOptionPages(const std::string & id, const std::string & stockTitle)
+{
+	JsonNode pagesConfig;
+	pagesConfig["title"].String() = "labelTitle";
+	pagesConfig["stockTitle"].String() = stockTitle;
+	pagesConfig["previous"]["image"].String() = "SCNRBLF";
+	pagesConfig["previous"]["position"]["x"].Integer() = 66;
+	pagesConfig["previous"]["position"]["y"].Integer() = 28;
+	pagesConfig["next"]["image"].String() = "SCNRBRT";
+	pagesConfig["next"]["position"]["x"].Integer() = 362;
+	pagesConfig["next"]["position"]["y"].Integer() = 28;
+	acceptTabPages(id, {"background", "labelTitle"}, pagesConfig);
+}
+
 void OptionsTabBase::recreate(bool campaign)
 {
 	auto const & generateSimturnsDurationText = [](int days) -> std::string

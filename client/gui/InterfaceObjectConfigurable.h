@@ -65,6 +65,10 @@ protected:
 	/// through it and the mods' pages. Call it after build().
 	void acceptTabPages(const std::string & id, const std::set<std::string> & frame, const JsonNode & pagesConfig);
 
+	/// DMB: where a screen that took pages (acceptTabPages) builds content it makes later, such as rows
+	/// rebuilt on every change, so they stay on its own page; the screen itself when it took none
+	CIntObject * stockPageOrSelf();
+
 	/// Set blocked status for all buttons associated with provided shortcut
 	void setShortcutBlocked(EShortcut shortcut, bool isBlocked);
 

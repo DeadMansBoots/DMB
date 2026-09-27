@@ -14,5 +14,5 @@
 TurnOptionsTab::TurnOptionsTab()
 	: OptionsTabBase(JsonPath::builtin("config/widgets/turnOptionsTab.json"))
 {
-
+	acceptOptionPages("turnOptions", "vcmi.optionsTab.turnOptions.hover");
 }
