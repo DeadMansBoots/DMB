@@ -92,7 +92,30 @@ CLobbyScreen::CLobbyScreen(ESelectionScreen screenType, bool hideScreen)
 		tabExtraOptions = std::make_shared<ExtraOptionsTab>();
 		tabRand = std::make_shared<RandomMapTab>();
 		tabRand->mapInfoChanged += std::bind(&IServerAPI::setMapInfo, &GAME->server(), _1, _2);
-		buttonRMG = std::make_shared<CButton>(Point(411, 105), AnimationPath::builtin("GSPBUTT.DEF"), LIBRARY->generaltexth->zelp[47], 0, EShortcut::LOBBY_RANDOM_MAP);
+
+		// DMB: a map generator's tab, a peer of Scenarios and Random Map, when an enabled mod brings
+		// one (lib/modding/MapGenerators.h); with several, the last in load order, as later mods win
+		// in VCMI. Its button goes beside Random Map, in single player, hotseat and network lobbies
+		// alike. A network lobby has its chat button in the slot the generator takes elsewhere, so
+		// there Random Map narrows and the generator's button takes the rest of Random Map's slot; the
+		// chat and Battle Mode stay where they are. Only the host can use it, as with Random Map. The
+		// players who join need neither the generator nor its mod: when the game starts, the server
+		// sends every player the whole game, the generated map included (LobbyStartGame).
+		std::optional<MapGeneratorInfo> generator;
+		for(const auto & found : MapGenerators::active())
+		{
+			if(!found.problem.empty())
+				logGlobal->warn("Map generator %s (mod %s) is not offered: %s", found.name, found.modID, found.problem);
+			else
+			{
+				if(generator)
+					logGlobal->info("Map generator %s (mod %s) takes the place of %s (mod %s)", found.name, found.modID, generator->name, generator->modID);
+				generator = found;
+			}
+		}
+		const bool shareRandomMapSlot = generator && buttonChat;
+
+		buttonRMG = std::make_shared<CButton>(Point(411, 105), AnimationPath::builtin(shareRandomMapSlot ? "GSPButton2Arrow" : "GSPBUTT.DEF"), LIBRARY->generaltexth->zelp[47], 0, EShortcut::LOBBY_RANDOM_MAP);
 		buttonRMG->addCallback([this]()
 		{
 			toggleTab(tabRand);
@@ -100,32 +123,19 @@ CLobbyScreen::CLobbyScreen(ESelectionScreen screenType, bool hideScreen)
 				tabRand->updateMapInfoByHost();
 		});
 
-		// DMB: a map generator's tab, a peer of Scenarios and Random Map, when an enabled mod brings
-		// one (lib/modding/MapGenerators.h); with several, the last in load order, as later mods win
-		// in VCMI. Its button takes the free slot beside Random Map; a network lobby puts its chat
-		// button there and gets no generator (it runs on this machine).
+		if(generator)
 		{
-			std::optional<MapGeneratorInfo> generator;
-			for(const auto & found : MapGenerators::active())
-			{
-				if(!found.problem.empty())
-					logGlobal->warn("Map generator %s (mod %s) is not offered: %s", found.name, found.modID, found.problem);
-				else
-				{
-					if(generator)
-						logGlobal->info("Map generator %s (mod %s) takes the place of %s (mod %s)", found.name, found.modID, generator->name, generator->modID);
-					generator = found;
-				}
-			}
-			if(generator && !buttonChat)
-			{
-				mapGenName = generator->name;
-				tabMapGen = std::make_shared<MapGenTab>(*generator);
-				const std::string description = LIBRARY->modh->getModInfo(generator->modID).getLocalizedDescription().String();
-				buttonMapGen = std::make_shared<CButton>(Point(619, 105), AnimationPath::builtin("GSPButton2Arrow"),
-					CButton::tooltip(generator->name, "{" + generator->name + "}\n\n" + description),
+			mapGenName = generator->name;
+			tabMapGen = std::make_shared<MapGenTab>(*generator);
+			const std::string description = LIBRARY->modh->getModInfo(generator->modID).getLocalizedDescription().String();
+			const auto tooltip = CButton::tooltip(generator->name, "{" + generator->name + "}\n\n" + description);
+			// Random Map's slot is 200 wide: 128 for Random Map, a gap of 8 as between the two columns, 64 here
+			if(shareRandomMapSlot)
+				buttonMapGen = std::make_shared<CButton>(Point(547, 105), AnimationPath::builtin("MapGenButton64"), tooltip,
 					[this]() { toggleTab(tabMapGen); }, EShortcut::LOBBY_MAP_GENERATOR);
-			}
+			else
+				buttonMapGen = std::make_shared<CButton>(Point(619, 105), AnimationPath::builtin("GSPButton2Arrow"), tooltip,
+					[this]() { toggleTab(tabMapGen); }, EShortcut::LOBBY_MAP_GENERATOR);
 		}
 
 		card->iconDifficulty->addCallback(std::bind(&IServerAPI::setDifficulty, &GAME->server(), _1));

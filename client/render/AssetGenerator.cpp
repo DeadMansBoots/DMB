@@ -131,6 +131,7 @@ void AssetGenerator::initialize()
 	
 	animationFiles[AnimationPath::builtin("SPRITES/GSPButtonClear")] = createGSPButtonClear();
 	animationFiles[AnimationPath::builtin("SPRITES/GSPButton2Arrow")] = createGSPButton2Arrow();
+	animationFiles[AnimationPath::builtin("SPRITES/MapGenButton64")] = createMapGenButton(64); // beside Random Map in a network lobby
 	animationFiles[AnimationPath::builtin("SPRITES/MapGenButton80")] = createMapGenButton(80);
 	animationFiles[AnimationPath::builtin("SPRITES/MapGenButton190")] = createMapGenButton(190);
 

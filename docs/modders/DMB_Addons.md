@@ -74,6 +74,13 @@ with `Error:` is what the player is shown. The generator must write nothing insi
 With several generator mods enabled, the last one in load order gets the tab. The new map lands in
 the player's `Maps/RandomMaps`, and the lobby selects it.
 
+The tab's button sits beside Random Map in every lobby: single player, hotseat, and network games.
+In a network lobby it is 64 pixels wide, so a name of about eight letters fits; only the host can
+use it, as with Random Map. The players who join need neither the generator nor its mod, as long as
+the mod changes no game content (a generator, templates and texts do not): when the game starts,
+the host's server sends every player the whole game, the generated map included. Content the map
+uses from other mods, such as their towns, needs those mods on every side, as in any VCMI game.
+
 ## Trust: DMB's mod catalog pins the code
 
 A mod's code runs with the player's rights, so DMB runs it only when
