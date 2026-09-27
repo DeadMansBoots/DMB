@@ -4,7 +4,7 @@ Dead Man's Boots (DMB) is a Heroes of Might and Magic III engine built on [VCMI]
 
 ## Download
 
-Windows installers are on the [Releases](https://github.com/DeadMansBoots/DMB/releases) page. DMB does not include the game itself: you need your own copy of Heroes of Might and Magic III, and the launcher asks for its files the first time it starts. If you already play VCMI, it offers to copy your setup across, and leaves the original untouched.
+Windows installers are on the [Releases](https://github.com/DeadMansBoots/Dead-Mans-Boots/releases) page. DMB does not include the game itself: you need your own copy of Heroes of Might and Magic III, and the launcher asks for its files the first time it starts. If you already play VCMI, it offers to copy your setup across, and leaves the original untouched.
 
 The installer is not signed yet, so Windows may say it protected your PC. Choose More info, then Run anyway.
 
@@ -18,7 +18,7 @@ The installer is not signed yet, so Windows may say it protected your PC. Choose
 
 ## Bugs and ideas
 
-Use the forms on the [Issues](https://github.com/DeadMansBoots/DMB/issues/new/choose) page. The launcher's help page links there, and it can export your logs to attach.
+Use the forms on the [Issues](https://github.com/DeadMansBoots/Dead-Mans-Boots/issues/new/choose) page. The launcher's help page links there, and it can export your logs to attach.
 
 ## Mods
 

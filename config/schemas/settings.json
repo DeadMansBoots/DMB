@@ -868,7 +868,7 @@
 					// DMB's repository page: the launcher's GitHub, homepage, bug-report and download
 					// links. Empty until the repository exists; the links stay hidden until then.
 					"type" : "string",
-					"default" : "https://github.com/DeadMansBoots/DMB"
+					"default" : "https://github.com/DeadMansBoots/Dead-Mans-Boots"
 				},
 				"trackClipboardState" : {
 					"type" : "boolean",
