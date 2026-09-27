@@ -40,11 +40,17 @@ mymapgen/
 
 ```json
 "mapGenerator" : {
-    "name" : "My Generator",                     // what the lobby's button says
+    "name" : "My Generator",                     // what the lobby's Random Map button says in its mode
     "command" : "generator/generate.cmd",        // inside the generator folder
-    "tab" : "config/widgets/mygen/tab.json"      // the tab's layout, in the mod's Content
+    "tab" : "config/widgets/mygen/tab.json",     // the tab's layout, in the mod's Content
+    "atBegin" : true                             // makes the game's map at Begin (addon API level 3)
 }
 ```
+
+The lobby has one Random Map button. With a generator mod enabled, its first press opens the random
+map settings in the mode used last, and each press after that moves to the next mode: VCMI's own
+random map ("VCMI Random") or the generator's tab, named by `name`. The button shows the mode, the
+lobby remembers it (`persistentStorage.json`, `dmb.randomMapMode`), and only the host can use it.
 
 The tab layout is an ordinary VCMI widget layout. Its pages are a `pages` widget named `pages`
 (addon API level 2, [DMB_UI_Modding.md](DMB_UI_Modding.md)), or, in layouts written for level 1, a
@@ -59,14 +65,14 @@ the lobby), and `vcmi.mapGen.template.hover`,
 `.choose`, `.none`. Where the mod brings none, DMB's generic wording shows
 (`vcmi.dmb.mapGenerator.*`).
 
-Generate runs the command with these arguments, and the command writes a `.vmap` at `--out`:
+The command gets these arguments, and writes a `.vmap` at `--out`:
 
 ```text
 --w N --h N --players N --humans N --seed N --out PATH
 --underground 1          (a two-level map)
 --declaremods 1|0
 --vcmiroot DIR --vcmiuserdir DIR     (the game's data folder and the player's user folder)
---template NAME          (a template the player chose)
+--template NAME          (a template the player chose; the chooser lists every template installed)
 --preset NAME
 --bio.<name> VALUE       (each stored setting; rivers as --rivers VALUE)
 ```
@@ -74,19 +80,63 @@ Generate runs the command with these arguments, and the command writes a `.vmap`
 Its output goes to `extmapgen_log.txt` in the logs folder. When it fails, a line there that starts
 with `Error:` is what the player is shown. The generator must write nothing inside its own folder
 (caches belong under `--vcmiuserdir`), because DMB checks that folder before every run, as below.
-With several generator mods enabled, the last one in load order gets the tab. The new map lands in
-the player's `Maps/RandomMaps`, and the lobby selects it.
+It runs with no console window, so a console program shows nothing on the player's screen. With
+several generator mods enabled, the last one in load order gets the tab. Every map it makes stays
+in the player's `Maps/RandomMaps`, which the scenario list shows as a folder like any other, so a
+map can be played again. (VCMI's own "save random maps" setting covers only VCMI's generator.)
 
-When more players are in the lobby than the tab's human players setting (friends who joined, or
-hotseat names), `--humans` is raised to one per player, and `--players` with it if needed: a map
-with fewer human slots cannot be played there, and a multiplayer lobby does not list it.
+### A generator that makes the map at Begin (`atBegin`, API level 3)
 
-The tab's button sits beside Random Map in every lobby: single player, hotseat, and network games.
-In a network lobby it is 64 pixels wide, so a name of about eight letters fits; only the host can
-use it, as with Random Map. The players who join need neither the generator nor its mod, as long as
-the mod changes no game content (a generator, templates and texts do not): when the game starts,
-the host's server sends every player the whole game, the generated map included. Content the map
-uses from other mods, such as their towns, needs those mods on every side, as in any VCMI game.
+The map is made when the host presses Begin, after every player has picked a town, where VCMI's own
+random map is made: on the host's server, as the game starts. The tab needs no Generate button (a
+leftover one only tells the player that the map is made at Begin). While the generator's mode is
+on, the lobby's random map is the generator's, with player slots from the tab's settings:
+
+- `map/size`, or `map/width` and `map/height` when both are set;
+- `map/underground`;
+- `map/humans`: the slots a human or the computer may take (-1 for Random), at least one per player
+  in the lobby;
+- `params/compOnly`: the slots only the computer takes (-1 for Random); a layout without it counts
+  the rest of `map/players` as the computer's. At Begin the generator gets the game's count as
+  `--bio.compOnly`, whatever the tab stored;
+- `map/teams`: a team number per player, in colour order (-1 for none).
+
+At Begin the command gets the arguments above, with `--players` and `--humans` counting the game's
+players and those a human may take, plus:
+
+```text
+--factions core:castle,random,...     each player's town, in colour order
+--bio.compOnly N                      the players only the computer takes
+--teams red,blue;tan,green            the teams of two or more, when there are any
+```
+
+The game's players are always the first colours (red, blue, tan and on), which is where the
+generator places its players, so `--factions` lists their towns by position: the faction as map
+files name it (`core:castle`, or a mod's `modid:faction`), or `random` for the generator to pick.
+A player count the tab leaves on Random (-1) is rolled when the lobby's random map is put together,
+so the lobby shows the players the game will have.
+
+The tab's settings travel to the server inside the game's options, since the server can run in a
+process of its own. A player who left their town on Random gets the town the map's header names for
+them. When the generator fails, every player is told "Failed to load game" with its `Error:` line,
+and the lobby stays open. A big map may take a few minutes; a generator still running after ten is
+ended.
+
+### A generator that makes maps to pick (without `atBegin`)
+
+The tab's `generateMapGenMap` button runs the command with the arguments above, and the new map is
+selected in the scenario list. When more players are in the lobby than the tab's human players
+setting (friends who joined, or hotseat names), `--humans` is raised to one per player, and
+`--players` with it if needed: a map with fewer human slots cannot be played there, and a
+multiplayer lobby does not list it. Towns are picked after the map is made, so such a generator
+cannot place them.
+
+### Multiplayer
+
+The players who join need neither the generator nor its mod, as long as the mod changes no game
+content (a generator, templates and texts do not): when the game starts, the host's server sends
+every player the whole game, the generated map included. Content the map uses from other mods, such
+as their towns, needs those mods on every side, as in any VCMI game.
 
 ## Trust: DMB's mod catalog pins the code
 

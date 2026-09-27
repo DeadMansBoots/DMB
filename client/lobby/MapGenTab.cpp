@@ -11,6 +11,7 @@
 #include "MapGenTab.h"
 
 #include "CLobbyScreen.h"
+#include "RandomMapTab.h"
 #include "SelectionTab.h"
 
 #include "../CServerHandler.h"
@@ -28,25 +29,18 @@
 #include "../../lib/VCMIDirs.h"
 #include "../../lib/filesystem/Filesystem.h"
 #include "../../lib/modding/AddonCode.h"
+#include "../../lib/modding/CModHandler.h"
+#include "../../lib/modding/ModDescription.h"
+#include "../../lib/rmg/CMapGenOptions.h"
 #include "../../lib/rmg/CRmgTemplate.h"
 #include "../../lib/rmg/CRmgTemplateStorage.h"
 #include "../../lib/texts/CGeneralTextHandler.h"
 #include "../../lib/texts/MetaString.h"
 
-#include <fstream>
 #include <random>
 #include <thread>
 
 #include <boost/algorithm/string.hpp>
-
-#if BOOST_VERSION >= 108600
-// the v1 API, as the engine's own launcher code uses it
-#include <boost/process/v1/child.hpp>
-#include <boost/process/v1/io.hpp>
-#else
-#include <boost/process/child.hpp>
-#include <boost/process/io.hpp>
-#endif
 
 /// One of the texts the tab itself shows: the mod's own wording ("vcmi.mapGen.<name>", from its
 /// translation) when it brings one, else DMB's generic text ("vcmi.dmb.mapGenerator.<name>"). The
@@ -81,6 +75,11 @@ void MapGenPage::setCallback(const std::string & name, std::function<void(int)> 
 	addCallback(name, std::move(callback));
 }
 
+void MapGenPage::setOnSettingChanged(std::function<void(const std::string &)> callback)
+{
+	onSettingChanged = std::move(callback);
+}
+
 std::shared_ptr<CLabel> MapGenPage::label(const std::string & name) const
 {
 	return widget<CLabel>(name);
@@ -101,8 +100,21 @@ MapGenTab::MapGenTab(const MapGeneratorInfo & info)
 
 	addCallback("activateMapGenPage", [this](int index) { openPage(index); });
 	addCallback("resetMapGenDefaults", [this](int) { resetToDefaults(); });
-	addCallback("generateMapGenMap", [this](int) { generate(); });
+	addCallback("generateMapGenMap", [this](int)
+	{
+		if(!generator.atBegin)
+			generate();
+		else // the map is made when the game starts; a layout's leftover Generate button only says so
+			ENGINE->statusbar()->write(tabText("generate.atBegin"));
+	});
 	addCallback("chooseMapGenTemplate", [this](int) { chooseTemplate(); });
+	// every setting the generator gets goes to the server with the lobby's random map, so a change puts
+	// that together again (at Begin it would be too late: a new map resets the towns picked)
+	onSettingChanged = [this](const std::string & setting)
+	{
+		if(boost::algorithm::starts_with(setting, "persistent:mapGen/"))
+			updateMapInfoByHost();
+	};
 	// a "pages" widget's page layouts are the mod's files too, and a page that shows the chosen
 	// template by the label's name (layouts before the settings-bound label) gets it filled in
 	layoutScope = generator.modID;
@@ -144,6 +156,7 @@ std::shared_ptr<CIntObject> MapGenTab::createPage(size_t index)
 		[this](MapGenPage & page)
 		{
 			page.setCallback("chooseMapGenTemplate", [this](int) { chooseTemplate(); });
+			page.setOnSettingChanged(onSettingChanged);
 		},
 		[this](MapGenPage & page)
 		{
@@ -186,13 +199,93 @@ void MapGenTab::resetToDefaults()
 		Settings value = persistentStorage.write["mapGen"]["map"][entry.first];
 		*value.operator->() = entry.second;
 	}
-	Settings chosenPreset = persistentStorage.write["mapGen"]["preset"];
-	chosenPreset->String() = defaults["preset"].isString() ? defaults["preset"].String() : std::string();
+	{
+		Settings chosenPreset = persistentStorage.write["mapGen"]["preset"];
+		chosenPreset->String() = defaults["preset"].isString() ? defaults["preset"].String() : std::string();
+	}
 	if(pages)
 		pages->reset();
 	if(layoutPages)
 		layoutPages->refresh();
 	CIntObject::redraw();
+	updateMapInfoByHost();
+}
+
+const MapGeneratorInfo & MapGenTab::getGenerator() const
+{
+	return generator;
+}
+
+void MapGenTab::updateMapInfoByHost()
+{
+	if(!generator.atBegin || GAME->server().isGuest())
+		return;
+
+	const JsonNode & stored = persistentStorage["mapGen"];
+	// read through a const reference, so a key the layout lacks is not added to it as null
+	const JsonNode & layoutDefaults = defaults;
+	const auto number = [&stored, &layoutDefaults](const std::string & section, const std::string & key, int fallback)
+	{
+		const JsonNode & value = stored[section][key].isNumber() ? stored[section][key] : layoutDefaults[section][key];
+		return value.isNumber() ? static_cast<int>(value.Integer()) : fallback;
+	};
+
+	auto options = std::make_shared<CMapGenOptions>();
+	const int size = std::clamp(number("map", "size", 108), 36, 252);
+	const int width = number("map", "width", 0);
+	const int height = number("map", "height", 0);
+	const bool custom = width > 0 && height > 0;
+	options->setWidth(custom ? width : size);
+	options->setHeight(custom ? height : size);
+	options->setLevels(number("map", "underground", 0) ? 2 : 1);
+	// the lobby's slots: map/humans a human or the computer may take, at least one for everyone in the
+	// lobby (friends who joined, or hotseat names), as the Generate button's maps have; params/compOnly
+	// only the computer, or, in a layout without it, the rest of map/players
+	int humans = number("map", "humans", 1);
+	const int inLobby = std::clamp<int>(static_cast<int>(GAME->server().playerNames.size()), 1, PlayerColor::PLAYER_LIMIT_I);
+	if(humans >= 0 && humans < inLobby)
+		humans = inLobby;
+	const bool hasCompOnly = stored["params"]["compOnly"].isNumber() || layoutDefaults["params"]["compOnly"].isNumber();
+	const int compOnly = hasCompOnly ? number("params", "compOnly", 0) : std::max(0, number("map", "players", 0) - std::max(humans, 1));
+	// A count left on Random is rolled now, not at Begin as VCMI's own random map does: the lobby then
+	// has exactly the game's players, on the first colours, where a generator places its players (a
+	// player on a later colour would have no place on the map). The lobby shows what was rolled.
+	std::mt19937 roll(std::random_device{}());
+	const auto rolled = [&roll](int low, int high)
+	{
+		return high <= low ? low : std::uniform_int_distribution<int>(low, high)(roll);
+	};
+	const int humanSlots = humans < 0 ? rolled(inLobby, PlayerColor::PLAYER_LIMIT_I) : std::clamp<int>(humans, 1, PlayerColor::PLAYER_LIMIT_I);
+	options->setHumanOrCpuPlayerCount(humanSlots);
+	const int room = PlayerColor::PLAYER_LIMIT_I - humanSlots;
+	options->setCompOnlyPlayerCount(compOnly < 0 ? rolled(humanSlots >= 2 ? 0 : 1, room) : std::clamp(compOnly, 0, room));
+	const JsonNode & teams = stored["map"]["teams"];
+	if(teams.isVector())
+	{
+		const auto players = options->getPlayersSettings();
+		for(const auto & player : players)
+		{
+			const size_t index = player.first.getNum();
+			if(index < teams.Vector().size() && teams.Vector()[index].isNumber() && teams.Vector()[index].Integer() >= 0)
+				options->setPlayerTeam(player.first, TeamID(static_cast<int>(teams.Vector()[index].Integer())));
+		}
+	}
+	// the settings the generator gets, which go to the server with the options: the map's (stored over
+	// the layout's defaults), the params only as stored (the generator keeps its own default for the
+	// rest), and the preset
+	JsonNode chosen;
+	chosen["map"] = layoutDefaults["map"];
+	for(const auto & entry : stored["map"].Struct())
+		chosen["map"][entry.first] = entry.second;
+	chosen["params"] = stored["params"];
+	chosen["preset"].String() = preset();
+	options->setExternalGenerator(generator.modID, chosen);
+
+	MetaString name;
+	name.appendRawString(generator.name);
+	MetaString description;
+	description.appendRawString(LIBRARY->modh->getModInfo(generator.modID).getLocalizedDescription().String());
+	GAME->server().setMapInfo(RandomMapTab::createRandomMapInfo(*options, name, description), options);
 }
 
 int MapGenTab::mapSetting(const std::string & key) const
@@ -219,17 +312,15 @@ std::string MapGenTab::preset() const
 
 void MapGenTab::chooseTemplate()
 {
-	// the install's templates that take this map size, level count and
-	// player count, the way the Random Map tab filters its own list; the
-	// first entry is the generator's own layout
-	const int size = mapSetting("size");
-	const int levels = mapSetting("underground") ? 2 : 1;
-	const int players = mapSetting("players");
+	// every template of the install, whatever the map's size, levels and players: the generator fits
+	// the template to the map instead of refusing it (MapGen, September 27th, for K's "never refuse").
+	// The first entry is the generator's own layout.
 	std::vector<std::string> fits;
 	for(const auto * tpl : LIBRARY->tplh->getTemplates())
-		if(tpl && tpl->matchesSize(int3(size, size, levels)) && tpl->getPlayers().isInRange(players))
+		if(tpl)
 			fits.push_back(tpl->getName());
 	std::sort(fits.begin(), fits.end());
+	fits.erase(std::unique(fits.begin(), fits.end()), fits.end());
 
 	std::vector<std::string> names { tabText("template.none") };
 	size_t current = 0;
@@ -245,13 +336,16 @@ void MapGenTab::chooseTemplate()
 		tabText("template.choose"),
 		[this, fits](int index)
 		{
-			Settings entry = persistentStorage.write["mapGen"]["map"]["template"];
-			entry->String() = index <= 0 || index > static_cast<int>(fits.size()) ? "" : fits[index - 1];
+			{
+				Settings entry = persistentStorage.write["mapGen"]["map"]["template"];
+				entry->String() = index <= 0 || index > static_cast<int>(fits.size()) ? "" : fits[index - 1];
+			}
 			if(pages)
 				pages->reset();
 			if(layoutPages)
 				layoutPages->refresh();
 			CIntObject::redraw();
+			updateMapInfoByHost();
 		}, current, std::vector<std::shared_ptr<IImage>>(), true);
 }
 
@@ -384,53 +478,23 @@ void MapGenTab::generate()
 			return;
 		}
 
-		// batch scripts need the shell; anything else runs directly
-		const std::string command = gen.command.string();
-		const std::string ext = boost::algorithm::to_lower_copy(gen.command.extension().string());
-		std::error_code ec;
-		std::unique_ptr<boost::process::child> child;
-		if(ext == ".cmd" || ext == ".bat")
+		logGlobal->info("Map generator %s (mod %s) running: %s -> %s", gen.name, gen.modID, gen.command.string(), outPath.string());
+		int exitCode = -1;
+		try
 		{
-			// cmd /c splits `cmd /c "quoted path" args` at the first space inside
-			// the quotes; the form that parses is one more quote pair around the
-			// whole tail: cmd /c ""path" args", passed verbatim as one string
-			std::string tail = "cmd /c \"\"" + command + "\"";
-			for(const auto & a : args)
-			{
-				tail += ' ';
-				tail += (a.find_first_of(" \"") == std::string::npos) ? a : "\"" + a + "\"";
-			}
-			tail += '"';
-			// one handle for both streams: two handles on the file each write from its start and
-			// overwrite each other, the "Error: " line the player is shown included (MapGen's finding)
-			child = std::make_unique<boost::process::child>(tail, ec,
-				(boost::process::std_out & boost::process::std_err) > logPath);
+			exitCode = MapGenerators::run(gen, args, logPath, std::chrono::minutes(10));
 		}
-		else
-			child = std::make_unique<boost::process::child>(command, args, ec,
-				(boost::process::std_out & boost::process::std_err) > logPath);
-
-		if(ec)
+		catch(const std::exception & e)
 		{
-			logGlobal->error("Map generator %s: failed to start %s: %s", gen.name, command, ec.message());
+			logGlobal->error("Map generator %s: %s", gen.name, e.what());
 			failWith(tabText("generate.failed"));
 			return;
 		}
-		logGlobal->info("Map generator %s (mod %s) running: %s -> %s", gen.name, gen.modID, command, outPath.string());
-
-		child->wait();
-		const int exitCode = child->exit_code();
-		const bool produced = boost::filesystem::exists(outPath);
-		if(exitCode != 0 || !produced)
+		if(exitCode != 0 || !boost::filesystem::exists(outPath))
 		{
 			// A generator that refuses a combination says why on a line starting "Error: ", such as
 			// water that does not fit the chosen template. That line beats the bare failure text.
-			std::string reason;
-			std::ifstream log(logPath.string());
-			std::string line;
-			while(std::getline(log, line))
-				if(boost::algorithm::starts_with(line, "Error: "))
-					reason = boost::algorithm::trim_right_copy(line.substr(7));
+			const std::string reason = MapGenerators::errorLine(logPath);
 			failWith(reason.empty() ? tabText("generate.failed") : title + reason);
 			return;
 		}

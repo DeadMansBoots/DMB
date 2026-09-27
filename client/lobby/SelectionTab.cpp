@@ -633,7 +633,9 @@ void SelectionTab::filter(int size, bool selectFirst)
 
 			auto [folderName, baseFolder, parentExists, fileInFolder] = checkSubfolder(elem->originalFileURI);
 
-			if((showRandom && baseFolder != "RandomMaps") || (!showRandom && baseFolder == "RandomMaps"))
+			// DMB: the maps a random map game was made from are a folder of the list like any other, so
+			// any of them can be played again; VCMI showed them only from the Random Map tab's button
+			if(showRandom && baseFolder != "RandomMaps")
 				continue;
 
 			if(parentExists && !showRandom)
@@ -857,8 +859,8 @@ void SelectionTab::selectFileName(std::string fname)
 		if(boost::to_upper_copy(allItems[i]->fileURI) == fname)
 		{
 			auto [folderName, baseFolder, parentExists, fileInFolder] = checkSubfolder(allItems[i]->originalFileURI);
-			// Keep scenario selection on the root list: random maps are accessed via dedicated UI path.
-			curFolder = (baseFolder != "" && baseFolder != "RandomMaps") ? baseFolder + "/" : "";
+			// DMB: a map in RandomMaps opens that folder, as any other folder's map does (filter)
+			curFolder = baseFolder != "" ? baseFolder + "/" : "";
 		}
 
 	}

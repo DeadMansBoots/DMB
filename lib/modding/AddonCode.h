@@ -21,7 +21,8 @@ namespace AddonCode
 	/// The addon API level this DMB offers mods; mod.json's "dmb": { "api": N } asks for at least N.
 	/// 1: AI plugins, map generators and the catalog's pins (DMB 0.1.0-rc.1 and rc.2).
 	/// 2: the "pages" layout widget, mod.json "tabPages", settings-bound labels, and this check.
-	constexpr int API_LEVEL = 2;
+	/// 3: a map generator that makes the game's map at Begin (mapGenerator "atBegin", --factions).
+	constexpr int API_LEVEL = 3;
 
 	/// A mod's own folder on disk, absolute, found in any Mods folder; a submod's is inside its parent's
 	DLL_LINKAGE std::optional<boost::filesystem::path> modFolder(const std::string & modID);

@@ -123,7 +123,9 @@ void LobbyInfo::verifyStateBeforeStart(bool ignoreNoHuman) const
 	if(i == si->playerInfos.cend() && !ignoreNoHuman)
 		throw std::domain_error(LIBRARY->generaltexth->translate("core.genrltxt.530"));
 
-	if(si->mapGenOptions && si->mode == EStartMode::NEW_GAME)
+	// DMB: a map generator mod makes the map from its own settings (MapGenerators::generateForGame) and
+	// needs none of VCMI's templates, which is all this check is about
+	if(si->mapGenOptions && si->mode == EStartMode::NEW_GAME && si->mapGenOptions->getExternalGenerator().empty())
 	{
 		if(!si->mapGenOptions->checkOptions())
 			throw std::domain_error(LIBRARY->generaltexth->translate("core.genrltxt.751"));

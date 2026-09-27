@@ -36,9 +36,7 @@
 #include "../../lib/mapping/CMapInfo.h"
 #include "../../lib/networkPacks/PacksForLobby.h"
 #include "../../lib/rmg/CMapGenOptions.h"
-#include "../../lib/modding/CModHandler.h"
 #include "../../lib/modding/MapGenerators.h"
-#include "../../lib/modding/ModDescription.h"
 #include "../../lib/GameLibrary.h"
 
 CLobbyScreen::CLobbyScreen(ESelectionScreen screenType, bool hideScreen)
@@ -93,14 +91,14 @@ CLobbyScreen::CLobbyScreen(ESelectionScreen screenType, bool hideScreen)
 		tabRand = std::make_shared<RandomMapTab>();
 		tabRand->mapInfoChanged += std::bind(&IServerAPI::setMapInfo, &GAME->server(), _1, _2);
 
-		// DMB: a map generator's tab, a peer of Scenarios and Random Map, when an enabled mod brings
-		// one (lib/modding/MapGenerators.h); with several, the last in load order, as later mods win
-		// in VCMI. Its button goes beside Random Map, in single player, hotseat and network lobbies
-		// alike. A network lobby has its chat button in the slot the generator takes elsewhere, so
-		// there Random Map narrows and the generator's button takes the rest of Random Map's slot; the
-		// chat and Battle Mode stay where they are. Only the host can use it, as with Random Map. The
-		// players who join need neither the generator nor its mod: when the game starts, the server
-		// sends every player the whole game, the generated map included (LobbyStartGame).
+		// DMB: a map generator mod (lib/modding/MapGenerators.h) is a second way to make the random map,
+		// beside VCMI's own; with several, the last in load order, as later mods win in VCMI. There is one
+		// Random Map button (K, September 27th: "the golden arrows should pick map generation mode"): the
+		// first press opens the random map settings in the last mode used, and each press after that moves
+		// to the next mode, "VCMI Random" or the generator's name, which the button shows. Only the host
+		// can use it. A generator that makes the map at Begin (atBegin) gets its tab's settings as the
+		// lobby's random map; the players who join need neither the generator nor its mod, since the
+		// server sends every player the whole game, the map included (LobbyStartGame).
 		std::optional<MapGeneratorInfo> generator;
 		for(const auto & found : MapGenerators::active())
 		{
@@ -113,30 +111,15 @@ CLobbyScreen::CLobbyScreen(ESelectionScreen screenType, bool hideScreen)
 				generator = found;
 			}
 		}
-		const bool shareRandomMapSlot = generator && buttonChat;
-
-		buttonRMG = std::make_shared<CButton>(Point(411, 105), AnimationPath::builtin(shareRandomMapSlot ? "GSPButton2Arrow" : "GSPBUTT.DEF"), LIBRARY->generaltexth->zelp[47], 0, EShortcut::LOBBY_RANDOM_MAP);
-		buttonRMG->addCallback([this]()
-		{
-			toggleTab(tabRand);
-			if (getMapInfo() && !getMapInfo()->isRandomMap)
-				tabRand->updateMapInfoByHost();
-		});
-
 		if(generator)
 		{
-			mapGenName = generator->name;
 			tabMapGen = std::make_shared<MapGenTab>(*generator);
-			const std::string description = LIBRARY->modh->getModInfo(generator->modID).getLocalizedDescription().String();
-			const auto tooltip = CButton::tooltip(generator->name, "{" + generator->name + "}\n\n" + description);
-			// Random Map's slot is 200 wide: 128 for Random Map, a gap of 8 as between the two columns, 64 here
-			if(shareRandomMapSlot)
-				buttonMapGen = std::make_shared<CButton>(Point(547, 105), AnimationPath::builtin("MapGenButton64"), tooltip,
-					[this]() { toggleTab(tabMapGen); }, EShortcut::LOBBY_MAP_GENERATOR);
-			else
-				buttonMapGen = std::make_shared<CButton>(Point(619, 105), AnimationPath::builtin("GSPButton2Arrow"), tooltip,
-					[this]() { toggleTab(tabMapGen); }, EShortcut::LOBBY_MAP_GENERATOR);
+			randomByGenerator = persistentStorage["dmb"]["randomMapMode"].String() == generator->modID;
 		}
+
+		buttonRMG = std::make_shared<CButton>(Point(411, 105), AnimationPath::builtin("GSPBUTT.DEF"),
+			generator ? CButton::tooltipLocalized("vcmi.dmb.randomMode") : LIBRARY->generaltexth->zelp[47], 0, EShortcut::LOBBY_RANDOM_MAP);
+		buttonRMG->addCallback([this]() { pressRandomMap(); });
 
 		card->iconDifficulty->addCallback(std::bind(&IServerAPI::setDifficulty, &GAME->server(), _1));
 
@@ -276,6 +259,58 @@ void CLobbyScreen::onRemoteClientLobbyStateChanged()
 	updateHostLobbyChatState();
 }
 
+void CLobbyScreen::pressRandomMap()
+{
+	if(!tabMapGen)
+	{
+		// VCMI's own behaviour while no generator mod is enabled
+		toggleTab(tabRand);
+		if (getMapInfo() && !getMapInfo()->isRandomMap)
+			tabRand->updateMapInfoByHost();
+		return;
+	}
+	// the first press opens the random map settings in the last mode, the next ones move to the next mode
+	const bool nextMode = curTab == tabRand || curTab == tabMapGen;
+	if(nextMode)
+	{
+		randomByGenerator = !randomByGenerator;
+		Settings mode = persistentStorage.write["dmb"]["randomMapMode"];
+		mode->String() = randomByGenerator ? tabMapGen->getGenerator().modID : std::string();
+	}
+	showRandomMode(nextMode);
+}
+
+void CLobbyScreen::showRandomMode(bool modeChanged)
+{
+	if(randomByGenerator)
+	{
+		if(curTab != tabMapGen)
+			toggleTab(tabMapGen);
+		// a generator that makes the map at Begin is the lobby's random map; one that makes maps to pick
+		// leaves the lobby's map as it is until its Generate button makes one
+		tabMapGen->updateMapInfoByHost();
+	}
+	else
+	{
+		if(curTab != tabRand)
+			toggleTab(tabRand);
+		// on a change of mode even when the lobby's map is already random, as the server may not have
+		// answered the last press yet
+		const auto & options = GAME->server().si->mapGenOptions;
+		if (modeChanged || !getMapInfo() || !getMapInfo()->isRandomMap || (options && !options->getExternalGenerator().empty()))
+			tabRand->updateMapInfoByHost();
+	}
+	buttonRMG->setTextOverlay("  " + randomModeLabel(), FONT_SMALL, GAME->server().isHost() ? Colors::WHITE : Colors::ORANGE);
+}
+
+std::string CLobbyScreen::randomModeLabel() const
+{
+	// a guest's own mode says nothing of the host's, whose random map the guest's card shows
+	if(!tabMapGen || GAME->server().isGuest())
+		return LIBRARY->generaltexth->allTexts[740];
+	return randomByGenerator ? tabMapGen->getGenerator().name : LIBRARY->generaltexth->translate("vcmi.dmb.randomMode.vcmi");
+}
+
 void CLobbyScreen::toggleTab(std::shared_ptr<CIntObject> tab)
 {
 	if(tab == curTab)
@@ -340,9 +375,9 @@ void CLobbyScreen::startCampaign()
 
 void CLobbyScreen::startScenario(bool allowOnlyAI)
 {
-	if (tabRand && GAME->server().si->mapGenOptions)
+	if (tabRand && GAME->server().si->mapGenOptions && GAME->server().si->mapGenOptions->getExternalGenerator().empty())
 	{
-		// Save RMG settings at game start
+		// Save RMG settings at game start (DMB: VCMI's own; a generator mod's tab keeps its own settings)
 		tabRand->saveOptions(*GAME->server().si->mapGenOptions);
 	}
 
@@ -378,13 +413,8 @@ void CLobbyScreen::toggleMode(bool host)
 
 	if(buttonRMG)
 	{
-		buttonRMG->setTextOverlay("  " + LIBRARY->generaltexth->allTexts[740], FONT_SMALL, buttonColor);
+		buttonRMG->setTextOverlay("  " + randomModeLabel(), FONT_SMALL, buttonColor);
 		buttonRMG->block(!host);
-	}
-	if(buttonMapGen)
-	{
-		buttonMapGen->setTextOverlay(mapGenName, FONT_SMALL, buttonColor);
-		buttonMapGen->block(!host);
 	}
 	buttonSelect->block(!host);
 	buttonOptions->block(!host);

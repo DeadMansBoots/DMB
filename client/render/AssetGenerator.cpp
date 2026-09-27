@@ -131,7 +131,8 @@ void AssetGenerator::initialize()
 	
 	animationFiles[AnimationPath::builtin("SPRITES/GSPButtonClear")] = createGSPButtonClear();
 	animationFiles[AnimationPath::builtin("SPRITES/GSPButton2Arrow")] = createGSPButton2Arrow();
-	animationFiles[AnimationPath::builtin("SPRITES/MapGenButton64")] = createMapGenButton(64); // beside Random Map in a network lobby
+	// DMB: lobby-style buttons for mods' layouts (docs/modders/DMB_UI_Modding.md)
+	animationFiles[AnimationPath::builtin("SPRITES/MapGenButton64")] = createMapGenButton(64);
 	animationFiles[AnimationPath::builtin("SPRITES/MapGenButton80")] = createMapGenButton(80);
 	// DMB: the Random Map Setup's own buttons without their words, for layouts that write their own:
 	// RANWEAK's blue bevelled button at the widths of 2, 3, 4 and 5 to a row, and RANSHOW's gold bar

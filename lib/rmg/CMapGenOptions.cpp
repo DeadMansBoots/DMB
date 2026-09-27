@@ -37,6 +37,22 @@ si32 CMapGenOptions::getWidth() const
 	return width;
 }
 
+const std::string & CMapGenOptions::getExternalGenerator() const
+{
+	return externalGenerator;
+}
+
+const JsonNode & CMapGenOptions::getExternalSettings() const
+{
+	return externalSettings;
+}
+
+void CMapGenOptions::setExternalGenerator(const std::string & modID, const JsonNode & settings)
+{
+	externalGenerator = modID;
+	externalSettings = settings;
+}
+
 void CMapGenOptions::setWidth(si32 value)
 {
 	assert(value >= 1);

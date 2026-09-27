@@ -160,6 +160,7 @@ void InterfaceObjectConfigurable::inheritFrom(const InterfaceObjectConfigurable 
 	conditionals = owner.conditionals;
 	variables = owner.variables;
 	onPageBuilt = owner.onPageBuilt;
+	onSettingChanged = owner.onSettingChanged;
 }
 
 void InterfaceObjectConfigurable::registerBuilder(const std::string & type, BuilderFunction f)
@@ -550,9 +551,12 @@ std::shared_ptr<CToggleGroup> InterfaceObjectConfigurable::buildToggleGroup(cons
 		}
 		if(!matched && !config["selected"].isNull())
 			group->setSelected(config["selected"].Integer());
-		group->addCallback([path, valueOf](int index)
+		const std::string spec = config["setting"].String();
+		group->addCallback([this, path, spec, valueOf](int index)
 		{
 			writeSetting(path, valueOf(index));
+			if(onSettingChanged)
+				onSettingChanged(spec);
 		});
 		if(!config["callback"].isNull())
 			group->addCallback(callbacks_int.at(config["callback"].String()));
@@ -594,9 +598,12 @@ std::shared_ptr<CToggleButton> InterfaceObjectConfigurable::buildToggleButton(co
 		const auto path = settingPath(config["setting"]);
 		const double fallback = (!config["selected"].isNull() && config["selected"].Bool()) ? 1 : 0;
 		button->setSelectedSilent(settingNumber(path, fallback) != 0);
-		button->addCallback([path](bool on)
+		const std::string spec = config["setting"].String();
+		button->addCallback([this, path, spec](bool on)
 		{
 			writeSetting(path, JsonNode(static_cast<int32_t>(on ? 1 : 0)));
+			if(onSettingChanged)
+				onSettingChanged(spec);
 		});
 	}
 	loadToggleButtonCallback(button, config["callback"]);
@@ -732,13 +739,16 @@ std::shared_ptr<CSlider> InterfaceObjectConfigurable::buildSlider(const JsonNode
 		const int start = std::clamp(static_cast<int>(std::lround((settingNumber(path, fallback) - vmin) / vstep)), 0, total);
 		const std::string labelName = config["valueLabel"].isNull() ? std::string() : config["valueLabel"].String();
 		const JsonNode format = config;
-		auto moved = [this, path, vmin, vstep, labelName, format](int p)
+		const std::string spec = config["setting"].String();
+		auto moved = [this, path, spec, vmin, vstep, labelName, format](int p)
 		{
 			const double v = std::round((vmin + p * vstep) * 1e6) / 1e6;
 			writeSetting(path, JsonNode(v));
 			if(!labelName.empty())
 				if(auto label = widget<CLabel>(labelName))
 					label->setText(formatBoundValue(v, format));
+			if(onSettingChanged)
+				onSettingChanged(spec);
 		};
 		result = std::make_shared<CSlider>(position, length, moved, 0, total, start, orientation, style);
 		if(!labelName.empty())

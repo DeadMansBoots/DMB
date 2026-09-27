@@ -21,6 +21,7 @@
 VCMI_LIB_NAMESPACE_BEGIN
 
 class CMapGenOptions;
+class MetaString;
 
 VCMI_LIB_NAMESPACE_END
 
@@ -38,6 +39,9 @@ public:
 	RandomMapTab();
 
 	void updateMapInfoByHost();
+	/// The lobby's entry for a random map the options describe, named as given (DMB: a map generator
+	/// mod's tab makes its own, MapGenTab)
+	static std::shared_ptr<CMapInfo> createRandomMapInfo(const CMapGenOptions & options, const MetaString & mapName, const MetaString & mapDescription);
 	void setMapGenOptions(std::shared_ptr<CMapGenOptions> opts);
 	void setTemplate(const CRmgTemplate *);
 

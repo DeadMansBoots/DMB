@@ -87,7 +87,6 @@ enum class EShortcut
 	LOBBY_LOAD_GAME,  // l, Return
 	LOBBY_SAVE_GAME,  // s, Return
 	LOBBY_RANDOM_MAP, // Open random map tab
-	LOBBY_MAP_GENERATOR, // DMB: open the tab of a map generator mod
 	LOBBY_TOGGLE_CHAT,
 	LOBBY_ADDITIONAL_OPTIONS, // Open additional options tab
 	LOBBY_SELECT_SCENARIO,    // Open map list tab

@@ -216,6 +216,10 @@
 				"tab" : {
 					"type" : "string",
 					"description" : "The tab's layout in the mod's Content, such as config/widgets/mapGen/mapGenTab.json"
+				},
+				"atBegin" : {
+					"type" : "boolean",
+					"description" : "The command makes the game's map when the host presses Begin, with every player's chosen town (--towns); without it, the tab's Generate button makes a map to pick (addon API 3)"
 				}
 			}
 		},

@@ -60,6 +60,10 @@ protected:
 	/// "keyboard" field overrides it. Pages set it off: their arrows turn the page. Set it before build().
 	bool slidersTakeKeys = true;
 
+	/// DMB: runs after a settings-bound widget of this layout (or of its pages) writes its setting, with
+	/// the widget's "setting" as written in the layout. Set it before build().
+	std::function<void(const std::string &)> onSettingChanged;
+
 	/// DMB: a "pages" widget's page gets its owner's callbacks, conditionals and variables
 	void inheritFrom(const InterfaceObjectConfigurable & owner);
 

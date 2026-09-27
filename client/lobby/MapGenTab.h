@@ -38,6 +38,8 @@ public:
 		const std::function<void(MapGenPage &)> & after);
 
 	void setCallback(const std::string & name, std::function<void(int)> callback);
+	/// told of each change to a setting its widgets are bound to, as the tab is
+	void setOnSettingChanged(std::function<void(const std::string &)> callback);
 	std::shared_ptr<CLabel> label(const std::string & name) const;
 };
 
@@ -66,4 +68,14 @@ class MapGenTab : public InterfaceObjectConfigurable
 
 public:
 	explicit MapGenTab(const MapGeneratorInfo & generator);
+
+	const MapGeneratorInfo & getGenerator() const;
+
+	/// For a generator that makes the game's map at Begin (MapGeneratorInfo::atBegin): puts the lobby's
+	/// random-map entry together from the tab's settings, the slots everyone sees and the towns they
+	/// pick included, marked for this generator, as the Random Map tab does for VCMI's own. The host's
+	/// server then runs the generator when the host presses Begin (MapGenerators::generateForGame).
+	/// Read: map/size (or map/width and map/height), map/underground, map/humans and params/compOnly
+	/// (-1 for Random), map/teams (a team number per player, in colour order).
+	void updateMapInfoByHost();
 };

@@ -28,9 +28,11 @@ si64 CMemoryStream::read(ui8 * data, si64 size)
 
 si64 CMemoryStream::seek(si64 position)
 {
-	si64 origin = tell();
+	// DMB: the position moved to, as CStream::seek promises and every other stream returns. It was the
+	// distance moved, so the zip reader logged "Stream seek failed" on every seek in a .vmap read from
+	// memory, as a generator mod's map is at Begin (CGameState::initNewGame).
 	this->position = std::min(position, size);
-	return tell() - origin;
+	return tell();
 }
 
 si64 CMemoryStream::tell()

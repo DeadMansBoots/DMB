@@ -270,13 +270,29 @@ void RandomMapTab::updateMapInfoByHost()
 	if(GAME->server().isGuest())
 		return;
 
+	// DMB: this tab's random map is VCMI's own, even when its options came back from the server while
+	// the lobby's random map was a generator mod's (CLobbyScreen::updateAfterStateChange)
+	mapGenOptions->setExternalGenerator({});
+
+	MetaString name;
+	name.appendLocalString(EMetaText::GENERAL_TXT, 740);
+	MetaString description;
+	description.appendLocalString(EMetaText::GENERAL_TXT, 741);
+	mapInfo = createRandomMapInfo(*mapGenOptions, name, description);
+	mapInfoChanged(mapInfo, mapGenOptions);
+}
+
+std::shared_ptr<CMapInfo> RandomMapTab::createRandomMapInfo(const CMapGenOptions & options, const MetaString & mapName, const MetaString & mapDescription)
+{
+	const auto * mapGenOptions = &options;
+
 	// Generate header info
-	mapInfo = std::make_shared<CMapInfo>();
+	auto mapInfo = std::make_shared<CMapInfo>();
 	mapInfo->isRandomMap = true;
 	mapInfo->mapHeader = std::make_unique<CMapHeader>();
 	mapInfo->mapHeader->version = EMapFormat::VCMI;
-	mapInfo->mapHeader->name.appendLocalString(EMetaText::GENERAL_TXT, 740);
-	mapInfo->mapHeader->description.appendLocalString(EMetaText::GENERAL_TXT, 741);
+	mapInfo->mapHeader->name = mapName;
+	mapInfo->mapHeader->description = mapDescription;
 
 	if(mapGenOptions->getWaterContent() != EWaterContent::RANDOM)
 		mapInfo->mapHeader->banWaterHeroes(mapGenOptions->getWaterContent() != EWaterContent::NONE);
@@ -347,7 +363,7 @@ void RandomMapTab::updateMapInfoByHost()
 		vstd::erase(availableColors, player.first);
 	}
 
-	mapInfoChanged(mapInfo, mapGenOptions);
+	return mapInfo;
 }
 
 void RandomMapTab::setMapGenOptions(std::shared_ptr<CMapGenOptions> opts)

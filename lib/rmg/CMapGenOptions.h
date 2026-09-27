@@ -11,6 +11,7 @@
 #pragma once
 
 #include "../GameConstants.h"
+#include "../json/JsonNode.h"
 #include "../serializer/Serializeable.h"
 #include "CRmgTemplate.h"
 
@@ -83,6 +84,8 @@ public:
 
 	CMapGenOptions();
 	CMapGenOptions(const CMapGenOptions&) = delete;
+	// DMB: stated with the copy constructor, as clang's -Wdeprecated-copy asks; nothing assigns options
+	CMapGenOptions & operator=(const CMapGenOptions &) = delete;
 
 	si32 getWidth() const;
 	void setWidth(si32 value);
@@ -145,6 +148,14 @@ public:
 
 	std::vector<const CRmgTemplate *> getPossibleTemplates() const;
 
+	/// DMB: the mod whose map generator makes this random map when the game starts, in place of VCMI's
+	/// own (lib/modding/MapGenerators.h); empty for VCMI's own. Set by the lobby's generation mode, with
+	/// the generator's settings as its lobby tab left them ("map", "params", "preset"). They travel to the
+	/// server inside these options, since the server may run in a process of its own.
+	const std::string & getExternalGenerator() const;
+	const JsonNode & getExternalSettings() const;
+	void setExternalGenerator(const std::string & modID, const JsonNode & settings = JsonNode());
+
 	/// Finalizes the options. All random sizes for various properties will be overwritten by numbers from
 	/// a random number generator by keeping the options in a valid state. Check options should return true, otherwise
 	/// this function fails.
@@ -181,7 +192,9 @@ private:
 	std::map<PlayerColor, CPlayerSettings> savedPlayerSettings;
 	std::set<RoadId> enabledRoads;
 	bool customizedPlayers;
-	
+	std::string externalGenerator;
+	JsonNode externalSettings;
+
 	const CRmgTemplate * mapTemplate;
 
 public:
@@ -225,6 +238,11 @@ public:
 		}
 
 		h & enabledRoads;
+		if (h.version >= Handler::Version::DMB_EXTERNAL_MAP_GENERATOR)
+		{
+			h & externalGenerator;
+			h & externalSettings;
+		}
 	}
 
 	void serializeJson(JsonSerializeFormat & handler);

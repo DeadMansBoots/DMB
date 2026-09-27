@@ -20,6 +20,7 @@
 
 #include "../GameSettings.h"
 #include "../texts/CGeneralTextHandler.h"
+#include "../texts/Languages.h"
 #include "../CPlayerState.h"
 #include "../CStopWatch.h"
 #include "../IGameSettings.h"
@@ -58,6 +59,7 @@
 #include "../mapping/CMapService.h"
 #include "../modding/ActiveModsInSaveList.h"
 #include "../modding/IdentifierStorage.h"
+#include "../modding/MapGenerators.h"
 #include "../modding/ModScope.h"
 #include "../networkPacks/NetPacksBase.h"
 #include "../pathfinder/CPathfinder.h"
@@ -312,7 +314,42 @@ void CGameState::updateOnLoad(const StartInfo & si)
 
 void CGameState::initNewGame(const IMapService * mapService, vstd::RNG & randomGenerator, bool allowSavingRandomMap, Load::ProgressAccumulator & progressTracking)
 {
-	if(scenarioOps->createRandomMap())
+	if(scenarioOps->createRandomMap() && !scenarioOps->mapGenOptions->getExternalGenerator().empty())
+	{
+		// DMB: a map generator mod makes this random map, here, where VCMI's own generator would: once
+		// every player has made their choices at Begin, towns included (lib/modding/MapGenerators.h).
+		// The map it writes stays in Maps/RandomMaps, and the game starts on it as on any map.
+		CStopWatch sw;
+		const auto file = MapGenerators::generateForGame(*scenarioOps->mapGenOptions, *scenarioOps, randomGenerator.nextInt());
+		std::ifstream in(file.string(), std::ios::binary);
+		const std::vector<char> bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+		if(bytes.empty())
+			throw std::runtime_error("the generated map could not be read: " + file.string());
+		const std::string encoding = Languages::getLanguageOptions(LIBRARY->generaltexth->getPreferredLanguage()).encoding;
+		map = mapService->loadMap(reinterpret_cast<const uint8_t *>(bytes.data()), static_cast<int>(bytes.size()),
+			file.filename().string(), ModScope::scopeBuiltin(), encoding, this);
+
+		// as below for VCMI's own, except that the players keep the towns they chose; a player who left it on
+		// Random gets the town the generator gave them, and a colour the map has not stops playing
+		for(int i = 0; i < map->players.size(); ++i)
+		{
+			const auto & playerInfo = map->players[i];
+			if(!playerInfo.canAnyonePlay())
+			{
+				scenarioOps->playerInfos.erase(PlayerColor(i));
+				continue;
+			}
+			PlayerSettings & playerSettings = scenarioOps->playerInfos[PlayerColor(i)];
+			playerSettings.compOnly = !playerInfo.canHumanPlay;
+			if(!playerSettings.castle.hasValue())
+				playerSettings.castle = playerInfo.defaultCastle();
+			if(playerSettings.isControlledByAI() && playerSettings.name.empty())
+				playerSettings.name = LIBRARY->generaltexth->allTexts[468];
+			playerSettings.color = PlayerColor(i);
+		}
+		logGlobal->info("Map generator made the game's map in %i ms: %s", sw.getDiff(), file.string());
+	}
+	else if(scenarioOps->createRandomMap())
 	{
 		logGlobal->info("Create random map.");
 		CStopWatch sw;

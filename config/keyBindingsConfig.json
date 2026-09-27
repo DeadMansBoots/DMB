@@ -151,7 +151,6 @@
 		"lobbyInvitePlayers":       "I",
 		"lobbyLoadGame":            [ "L", "Return", "Keypad Enter"],
 		"lobbyRandomMap":           "R",
-		"lobbyMapGenerator":        "G",
 		"lobbyRandomTown":          "T",
 		"lobbyRandomTownVs":        "V",
 		"lobbyHandicap":            "H",
