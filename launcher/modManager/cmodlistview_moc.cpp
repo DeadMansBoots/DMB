@@ -202,6 +202,16 @@ void CModListView::reload(const QString & modToSelect)
 		if (!matches.isEmpty())
 			ui->allModsView->setCurrentIndex(filterModel->mapFromSource(matches.first()));
 	}
+
+	// DMB: resetting the model clears the current row without a signal. When the mod just uninstalled had
+	// left the list (one no catalog lists), the panel kept showing it with its buttons live, and a click
+	// on them looked up a mod that no longer exists and crashed the launcher.
+	if (!ui->allModsView->currentIndex().isValid())
+	{
+		selectMod(QModelIndex());
+		ui->modInfoBrowser->clear();
+		ui->changelogBrowser->clear();
+	}
 }
 
 void CModListView::loadRepositories()
@@ -711,6 +721,8 @@ QStringList CModListView::findUnavailableMods(QStringList candidates)
 void CModListView::on_enableButton_clicked()
 {
 	QString modName = ui->allModsView->currentIndex().data(ModRoles::ModNameRole).toString();
+	if(!modStateModel->isModExists(modName))
+		return; // DMB: no mod selected, see reload()
 	enableModByName(modName);
 	checkManagerErrors();
 }
@@ -724,6 +736,8 @@ void CModListView::enableModByName(QString modName)
 void CModListView::on_disableButton_clicked()
 {
 	QString modName = ui->allModsView->currentIndex().data(ModRoles::ModNameRole).toString();
+	if(!modStateModel->isModExists(modName))
+		return; // DMB: no mod selected, see reload()
 	disableModByName(modName);
 	checkManagerErrors();
 }
@@ -821,9 +835,11 @@ void CModListView::openModDictionary(const QString & modName)
 
 	ResourcePath resID(std::string("Mods/") + tmp.toStdString(), EResType::DIRECTORY);
 	// Get location of the mod, in case-insensitive way
-	QString modDir = pathToQString(*CResourceHandler::get()->getResourceName(resID));
+	const auto location = CResourceHandler::get()->getResourceName(resID);
+	if(!location)
+		return;
 
-	Helper::revealDirectoryInFileBrowser(modDir);
+	Helper::revealDirectoryInFileBrowser(pathToQString(*location));
 }
 
 void CModListView::on_uninstallButton_clicked()

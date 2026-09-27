@@ -98,13 +98,24 @@ uint32_t ModsState::computeChecksum(const TModID & modName) const
 double ModsState::getInstalledModSizeMegabytes(const TModID & modName) const
 {
 	ResourcePath resDir(getModDirectory(modName), EResType::DIRECTORY);
-	std::string path = CResourceHandler::get()->getResourceName(resDir)->string();
+	const auto location = CResourceHandler::get()->getResourceName(resDir);
+	if(!location)
+		return 0;
 
+	// DMB: a player can delete a mod's folder while the launcher is open, and the launcher asks for the size
+	// again whenever it shows the mod. The throwing iterator took the whole launcher down on the missing
+	// folder; now a file or folder that is gone counts as nothing.
 	size_t sizeBytes = 0;
-	for(boost::filesystem::recursive_directory_iterator it(path); it != boost::filesystem::recursive_directory_iterator(); ++it)
+	boost::system::error_code error;
+	for(boost::filesystem::recursive_directory_iterator it(*location, error), end; !error && it != end; it.increment(error))
 	{
-		if(!boost::filesystem::is_directory(*it))
-			sizeBytes += boost::filesystem::file_size(*it);
+		boost::system::error_code fileError;
+		if(boost::filesystem::is_regular_file(it->path(), fileError))
+		{
+			const auto size = boost::filesystem::file_size(it->path(), fileError);
+			if(!fileError)
+				sizeBytes += size;
+		}
 	}
 
 	double sizeMegabytes = sizeBytes / static_cast<double>(1024*1024);

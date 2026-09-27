@@ -338,10 +338,18 @@ bool ModStateController::doUninstallMod(QString modname)
 {
 	ResourcePath resID(std::string("Mods/") + modname.toStdString(), EResType::DIRECTORY);
 	// Get location of the mod, in case-insensitive way
-	QString modDir = pathToQString(*CResourceHandler::get()->getResourceName(resID));
-
-	if(!QDir(modDir).exists())
+	const auto location = CResourceHandler::get()->getResourceName(resID);
+	if(!location)
 		return addError(modname, tr("Mod data was not found"));
+	QString modDir = pathToQString(*location);
+
+	// DMB: the folder was there when the launcher last looked, so the player deleted it by hand, and what they
+	// asked for is done; the reload after this drops the mod from the list
+	if(!QDir(modDir).exists())
+	{
+		logGlobal->info("Mod '%s' was already removed from %s", modname.toStdString(), modDir.toStdString());
+		return true;
+	}
 
 	QDir modFullDir(modDir);
 	if(!removeModDir(modDir))
@@ -353,19 +361,14 @@ bool ModStateController::doUninstallMod(QString modname)
 bool ModStateController::removeModDir(QString path)
 {
 	// issues 2673 and 2680 its why you do not recursively remove without sanity check
-	QDir checkDir(path);
+	// DMB: VCMI checked folder names here (a Mods folder inside one named vcmi). DMB's user folder has its own
+	// name, so every uninstall was refused and players were told to delete mods by hand. Now a folder is
+	// removed only when its parent is the user's Mods folder, the one the launcher installs into, compared as
+	// the same folder on disk, so letter case and links do not matter.
 	QDir dir(path);
-	
-	if(!checkDir.cdUp() || QString::compare("Mods", checkDir.dirName(), Qt::CaseInsensitive))
-		return false;
-#ifndef VCMI_MOBILE // ios and android applications are stored in the isolated container
-	if(!checkDir.cdUp() || QString::compare("vcmi", checkDir.dirName(), Qt::CaseInsensitive))
-		return false;
-
-	if(!dir.absolutePath().contains("vcmi", Qt::CaseInsensitive))
-		return false;
-#endif
-	if(!dir.absolutePath().contains("Mods", Qt::CaseInsensitive))
+	boost::system::error_code error;
+	const auto parent = qstringToPath(QDir::cleanPath(dir.absolutePath())).parent_path();
+	if(!boost::filesystem::equivalent(parent, qstringToPath(CLauncherDirs::modsPath()), error) || error)
 		return false;
 
 	return dir.removeRecursively();
