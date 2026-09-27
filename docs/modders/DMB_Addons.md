@@ -46,8 +46,10 @@ mymapgen/
 }
 ```
 
-The tab layout is an ordinary VCMI widget layout. Its `pages` list names one layout per page, and
-its `defaults` hold the map settings (`map`), the generator's own settings (`params`) and an optional
+The tab layout is an ordinary VCMI widget layout. Its pages are a `pages` widget named `pages`
+(addon API level 2, [DMB_UI_Modding.md](DMB_UI_Modding.md)), or, in layouts written for level 1, a
+`pages` list naming one layout per page, opened by buttons that call `activateMapGenPage`. Its
+`defaults` hold the map settings (`map`), the generator's own settings (`params`) and an optional
 `preset`. Widgets bind to settings with `"setting": "persistent:mapGen/params/<name>"`, which keeps
 their values in `persistentStorage.json`. The callbacks `activateMapGenPage`, `resetMapGenDefaults`,
 `generateMapGenMap` and `chooseMapGenTemplate` are the tab's own. The texts the tab itself shows can

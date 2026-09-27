@@ -44,6 +44,9 @@ public:
 class MapGenTab : public InterfaceObjectConfigurable
 {
 	MapGeneratorInfo generator;
+	/// the pages of a tab layout that holds a "pages" widget named "pages" (LayoutPages)
+	std::shared_ptr<LayoutPages> layoutPages;
+	/// the pages of an older tab layout: its root "pages" list, opened by activateMapGenPage buttons
 	std::shared_ptr<CTabbedInt> pages;
 	std::vector<std::string> pageFiles;
 	JsonNode defaults;

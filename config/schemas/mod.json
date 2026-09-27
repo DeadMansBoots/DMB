@@ -165,6 +165,40 @@
 				}
 			}
 		},
+		"dmb" : {
+			"type" : "object",
+			"additionalProperties" : false,
+			"description" : "DMB: what this mod needs from DMB (docs/modders/DMB_UI_Modding.md)",
+			"properties" : {
+				"api" : {
+					"type" : "number",
+					"description" : "The lowest DMB addon API level the mod needs; a DMB below it marks the mod incompatible. 1: AI plugins, map generators, catalog pins. 2: the pages widget and tabPages"
+				}
+			}
+		},
+		"tabPages" : {
+			"type" : "array",
+			"description" : "DMB: pages this mod adds to a pages widget, of any mod or of a stock tab, found by the widget's id (docs/modders/DMB_UI_Modding.md)",
+			"items" : {
+				"type" : "object",
+				"additionalProperties" : false,
+				"required" : [ "target", "layout", "title" ],
+				"properties" : {
+					"target" : {
+						"type" : "string",
+						"description" : "The id of the pages widget the page joins, such as mapGen or randomMap"
+					},
+					"layout" : {
+						"type" : "string",
+						"description" : "The page's layout in this mod's Content, such as config/widgets/myMod/page.json"
+					},
+					"title" : {
+						"type" : "string",
+						"description" : "The text key of the page's title, shown between the arrows"
+					}
+				}
+			}
+		},
 		"mapGenerator" : {
 			"type" : "object",
 			"additionalProperties" : false,

@@ -32,16 +32,33 @@ class CTextInput;
 class TransparentFilledRectangle;
 class CTextBox;
 class LRClickableAreaWText;
+class CTabbedInt;
+class LayoutPage;
+class LayoutPages;
 
 #define REGISTER_BUILDER(type, method) registerBuilder(type, std::bind(method, this, std::placeholders::_1))
 
 class InterfaceObjectConfigurable: public CIntObject
 {
+	friend class LayoutPage;
+	friend class LayoutPages;
+
 public:
 	InterfaceObjectConfigurable(int used=0, Point offset=Point());
 	InterfaceObjectConfigurable(const JsonNode & config, int used=0, Point offset=Point());
 
 protected:
+	/// DMB: the mod whose files the layout's own file paths resolve in (a "pages" widget's page layouts);
+	/// empty for the game's own layouts. An owner that loads a mod's layout sets it before build().
+	std::string layoutScope;
+
+	/// DMB: runs on every page a "pages" widget of this layout builds, once the page is built (to fill in
+	/// what only code knows). Set it before build().
+	std::function<void(LayoutPage &)> onPageBuilt;
+
+	/// DMB: a "pages" widget's page gets its owner's callbacks, conditionals, variables and shortcuts
+	void inheritFrom(const InterfaceObjectConfigurable & owner);
+
 	/// Set blocked status for all buttons associated with provided shortcut
 	void setShortcutBlocked(EShortcut shortcut, bool isBlocked);
 
@@ -115,6 +132,8 @@ protected:
 	/// right-click, nothing drawn. What the base game actually uses instead of
 	/// a visible help icon (client/lobby/RandomMapTab.cpp has none).
 	std::shared_ptr<LRClickableAreaWText> buildHoverHelp(const JsonNode & config) const;
+	/// DMB: several layouts shown one at a time, see LayoutPages
+	std::shared_ptr<CIntObject> buildPages(const JsonNode & config);
 
 	//composite widgets
 	std::shared_ptr<CIntObject> buildWidget(JsonNode config) const;
@@ -150,4 +169,70 @@ private:
 	std::map<std::string, std::function<void(std::string)>> callbacks_string;
 	std::map<std::string, bool> conditionals;
 	std::map<EShortcut, ShortcutState> shortcuts;
+};
+
+/// DMB: one page of a "pages" widget: a layout with its owner's callbacks, conditionals, variables
+/// and shortcuts, so its buttons reach the code of the tab it belongs to
+class LayoutPage : public InterfaceObjectConfigurable
+{
+public:
+	LayoutPage(const InterfaceObjectConfigurable & owner, const JsonNode & layout, const std::string & scope);
+
+	template<class T>
+	std::shared_ptr<T> find(const std::string & name) const
+	{
+		return widget<T>(name);
+	}
+};
+
+/// DMB: a layout widget of type "pages": several layouts shown one at a time, with the shown page's
+/// title between a previous and a next arrow, the way Heroes III's Random Map Setup pages. Any layout
+/// may hold one. Mods add pages to it by its "id" (mod.json "tabPages"), after its own, in load order.
+/// The arrows step and wrap, MOVE_LEFT and MOVE_RIGHT press them, and they hide when there is one
+/// page. docs/modders/DMB_UI_Modding.md is the contract.
+///
+///   { "type": "pages", "name": "pages", "id": "myTab",
+///     "pages": [ { "layout": "config/widgets/myTab/first.json", "title": "myMod.page.first" } ],
+///     "position": { "x": 0, "y": 0 },            where the pages' own layouts sit in the owner
+///     "title": { "font": "big", "color": "yellow", "alignment": "center", "position": { ... } },
+///     "previous": { "image": "SCNRBLF", "position": { ... } },
+///     "next": { "image": "SCNRBRT", "position": { ... } },
+///     "remember": "persistent:myMod/lastPage" }  the shown page, kept between visits
+class LayoutPages : public CIntObject
+{
+	struct Page
+	{
+		JsonNode layout;   ///< the page entry's layout path
+		JsonNode title;    ///< a text key, or text
+		std::string scope; ///< the mod whose files the layout path resolves in
+		std::string from;  ///< the mod that added it, for the log
+	};
+
+	InterfaceObjectConfigurable & owner;
+	std::string id;
+	std::vector<Page> pages;
+	std::vector<std::string> remember;
+	Point pagePosition;
+	std::shared_ptr<CTabbedInt> shown;
+	std::shared_ptr<CLabel> title;
+	std::shared_ptr<CButton> previous;
+	std::shared_ptr<CButton> next;
+
+	std::shared_ptr<CIntObject> createPage(size_t index);
+	std::string pageTitle(size_t index) const;
+	void updateAround();
+
+public:
+	LayoutPages(InterfaceObjectConfigurable & owner, const JsonNode & config);
+
+	size_t count() const;
+	size_t current() const;
+	/// shows page `index` (wrapping), and remembers it
+	void showPage(size_t index);
+	/// the next page (+1) or the previous (-1), wrapping
+	void step(int direction);
+	/// builds the shown page again, after a setting it shows changed elsewhere
+	void refresh();
+	/// the page shown now; null when there is none
+	std::shared_ptr<LayoutPage> shownPage() const;
 };

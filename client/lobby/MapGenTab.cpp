@@ -100,7 +100,23 @@ MapGenTab::MapGenTab(const MapGeneratorInfo & info)
 	addCallback("activateMapGenPage", [this](int index) { openPage(index); });
 	addCallback("resetMapGenDefaults", [this](int) { resetToDefaults(); });
 	addCallback("generateMapGenMap", [this](int) { generate(); });
+	addCallback("chooseMapGenTemplate", [this](int) { chooseTemplate(); });
+	// a "pages" widget's page layouts are the mod's files too, and a page that shows the chosen
+	// template by the label's name (layouts before the settings-bound label) gets it filled in
+	layoutScope = generator.modID;
+	onPageBuilt = [this](LayoutPage & page)
+	{
+		if(auto name = page.find<CLabel>("labelTemplateName"))
+		{
+			const std::string chosen = templateName();
+			name->setText(chosen.empty() ? tabText("template.none") : chosen);
+		}
+	};
 	build(config);
+
+	layoutPages = widget<LayoutPages>("pages");
+	if(layoutPages || pageFiles.empty())
+		return;
 
 	int first = 0;
 	if(persistentStorage["mapGen"]["lastPage"].isNumber())
@@ -140,6 +156,11 @@ std::shared_ptr<CIntObject> MapGenTab::createPage(size_t index)
 
 void MapGenTab::openPage(size_t index)
 {
+	if(layoutPages)
+	{
+		layoutPages->showPage(index);
+		return;
+	}
 	if(!pages || index >= pageFiles.size())
 		return;
 	pages->setActive(index);
@@ -167,6 +188,8 @@ void MapGenTab::resetToDefaults()
 	chosenPreset->String() = defaults["preset"].isString() ? defaults["preset"].String() : std::string();
 	if(pages)
 		pages->reset();
+	if(layoutPages)
+		layoutPages->refresh();
 	CIntObject::redraw();
 }
 
@@ -224,6 +247,8 @@ void MapGenTab::chooseTemplate()
 			entry->String() = index <= 0 || index > static_cast<int>(fits.size()) ? "" : fits[index - 1];
 			if(pages)
 				pages->reset();
+			if(layoutPages)
+				layoutPages->refresh();
 			CIntObject::redraw();
 		}, current, std::vector<std::shared_ptr<IImage>>(), true);
 }

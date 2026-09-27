@@ -10,6 +10,7 @@
 #include "StdInc.h"
 #include "ModDescription.h"
 
+#include "AddonCode.h"
 #include "CModVersion.h"
 #include "ModVerificationInfo.h"
 
@@ -200,6 +201,12 @@ ModVerificationInfo ModDescription::getVerificationInfo() const
 
 bool ModDescription::isCompatible() const
 {
+	// DMB: a mod that needs a newer addon API than this DMB offers (AddonCode::API_LEVEL); the installed
+	// copy decides, and the catalog's entry for a mod not installed yet
+	const JsonNode & dmbApi = (isInstalled() ? getLocalValue("dmb") : getRepositoryValue("dmb"))["api"];
+	if(dmbApi.isNumber() && dmbApi.Integer() > AddonCode::API_LEVEL)
+		return false;
+
 	const JsonNode & compatibility = getLocalValue("compatibility");
 
 	if (compatibility.isNull())

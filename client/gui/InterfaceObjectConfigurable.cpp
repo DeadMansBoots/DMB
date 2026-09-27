@@ -35,7 +35,10 @@
 #include "../../lib/constants/StringConstants.h"
 #include "../../lib/json/JsonUtils.h"
 #include "../../lib/texts/CGeneralTextHandler.h"
+#include "../../lib/filesystem/Filesystem.h"
 #include "../../lib/filesystem/ResourcePath.h"
+#include "../../lib/modding/CModHandler.h"
+#include "../../lib/modding/ModDescription.h"
 #include "../../lib/GameLibrary.h"
 #include "../../lib/CConfigHandler.h"
 
@@ -145,6 +148,18 @@ InterfaceObjectConfigurable::InterfaceObjectConfigurable(int used, Point offset)
 	REGISTER_BUILDER("transparentFilledRectangle", &InterfaceObjectConfigurable::buildTransparentFilledRectangle);
 	REGISTER_BUILDER("textBox", &InterfaceObjectConfigurable::buildTextBox);
 	REGISTER_BUILDER("hoverHelp", &InterfaceObjectConfigurable::buildHoverHelp);
+	REGISTER_BUILDER("pages", &InterfaceObjectConfigurable::buildPages);
+}
+
+void InterfaceObjectConfigurable::inheritFrom(const InterfaceObjectConfigurable & owner)
+{
+	// Not the shortcuts: the owner answers those itself, and a page answering too would run them twice.
+	// A page's own button with a "hotkey" still presses on its key.
+	callbacks_int = owner.callbacks_int;
+	callbacks_string = owner.callbacks_string;
+	conditionals = owner.conditionals;
+	variables = owner.variables;
+	onPageBuilt = owner.onPageBuilt;
 }
 
 void InterfaceObjectConfigurable::registerBuilder(const std::string & type, BuilderFunction f)
@@ -465,6 +480,12 @@ std::shared_ptr<CLabel> InterfaceObjectConfigurable::buildLabel(const JsonNode &
 	auto alignment = readTextAlignment(config["alignment"]);
 	auto color = readColor(config["color"]);
 	auto text = readText(config["text"]);
+	// DMB: a label bound to a setting shows the stored text, or its "emptyText" while there is none
+	if(config["setting"].isString())
+	{
+		const JsonNode & stored = settingValue(settingPath(config["setting"]));
+		text = stored.isString() && !stored.String().empty() ? stored.String() : readText(config["emptyText"]);
+	}
 	auto position = readPosition(config["position"]);
 	auto maxWidth = config["maxWidth"].Integer();
 	return std::make_shared<CLabel>(position.x, position.y, font, alignment, color, text, maxWidth);
@@ -982,6 +1003,12 @@ std::shared_ptr<LRClickableAreaWText> InterfaceObjectConfigurable::buildHoverHel
 	return std::make_shared<LRClickableAreaWText>(rect, hint.first, hint.second);
 }
 
+std::shared_ptr<CIntObject> InterfaceObjectConfigurable::buildPages(const JsonNode & config)
+{
+	logGlobal->debug("Building widget LayoutPages");
+	return std::make_shared<LayoutPages>(*this, config);
+}
+
 std::shared_ptr<CIntObject> InterfaceObjectConfigurable::buildWidget(JsonNode config) const
 {
 	assert(!config.isNull());
@@ -1039,4 +1066,161 @@ void InterfaceObjectConfigurable::keyPressed(EShortcut key)
 		return;
 
 	target->second.callback();
+}
+
+LayoutPage::LayoutPage(const InterfaceObjectConfigurable & owner, const JsonNode & layout, const std::string & scope)
+	: InterfaceObjectConfigurable()
+{
+	OBJECT_CONSTRUCTION;
+	// A page has no background of its own: when a value label changes, the owner, which has one,
+	// repaints under it. Otherwise the old text stays under the new.
+	setRedrawParent(true);
+	inheritFrom(owner);
+	layoutScope = scope;
+	build(layout);
+	if(onPageBuilt)
+		onPageBuilt(*this);
+}
+
+LayoutPages::LayoutPages(InterfaceObjectConfigurable & owner, const JsonNode & config)
+	: owner(owner)
+	, id(config["id"].String())
+{
+	OBJECT_CONSTRUCTION;
+	setRedrawParent(true);
+	pos.w = owner.pos.w;
+	pos.h = owner.pos.h;
+	pagePosition = owner.readPosition(config["position"]);
+
+	const std::string ownScope = owner.layoutScope;
+	for(const auto & entry : config["pages"].Vector())
+		pages.push_back({entry["layout"], entry["title"], ownScope, ownScope.empty() ? "the game" : ownScope});
+
+	// the pages enabled mods add to this one by its id (mod.json "tabPages"), after its own, in load order
+	if(!id.empty())
+	{
+		for(const auto & modID : LIBRARY->modh->getActiveMods())
+		{
+			for(const auto & entry : LIBRARY->modh->getModInfo(modID).getLocalValue("tabPages").Vector())
+			{
+				if(entry["target"].String() != id)
+					continue;
+				pages.push_back({entry["layout"], entry["title"], modID, modID});
+				logMod->info("Mod %s adds the page %s to the pages %s", modID, entry["layout"].String(), id);
+			}
+		}
+	}
+
+	if(!config["title"].isNull())
+		title = owner.buildLabel(config["title"]);
+
+	const auto arrow = [this](const JsonNode & spec, int direction, EShortcut key) -> std::shared_ptr<CButton>
+	{
+		if(spec.isNull())
+			return nullptr;
+		return std::make_shared<CButton>(this->owner.readPosition(spec["position"]), AnimationPath::fromJson(spec["image"]),
+			CButton::tooltip(), [this, direction]() { step(direction); }, key);
+	};
+	previous = arrow(config["previous"], -1, EShortcut::MOVE_LEFT);
+	next = arrow(config["next"], 1, EShortcut::MOVE_RIGHT);
+
+	size_t first = 0;
+	if(config["remember"].isString())
+	{
+		remember = settingPath(config["remember"]);
+		const double stored = settingNumber(remember, 0);
+		if(stored >= 0 && stored < static_cast<double>(pages.size()))
+			first = static_cast<size_t>(stored);
+	}
+
+	shown = std::make_shared<CTabbedInt>(std::bind(&LayoutPages::createPage, this, std::placeholders::_1), pagePosition, first);
+	shown->setRedrawParent(true);
+	updateAround();
+}
+
+std::shared_ptr<CIntObject> LayoutPages::createPage(size_t index)
+{
+	if(index >= pages.size())
+		return std::make_shared<CIntObject>();
+
+	const Page & page = pages[index];
+	const JsonPath path = JsonPath::builtin(page.layout.String());
+	try
+	{
+		const auto * files = page.scope.empty() ? CResourceHandler::get() : CResourceHandler::get(page.scope);
+		if(files->existsResource(path))
+			return std::make_shared<LayoutPage>(owner, page.scope.empty() ? JsonNode(path) : JsonNode(path, page.scope), page.scope);
+	}
+	catch(const std::out_of_range &)
+	{
+		// the mod's files are not loaded: the mod is not active
+	}
+	logMod->error("Pages %s: the layout %s from %s is missing", id, page.layout.String(), page.from);
+	return std::make_shared<CIntObject>();
+}
+
+std::string LayoutPages::pageTitle(size_t index) const
+{
+	return index < pages.size() ? owner.readText(pages[index].title) : std::string();
+}
+
+void LayoutPages::updateAround()
+{
+	const size_t index = current();
+	if(title)
+		title->setText(pageTitle(index));
+
+	for(const auto & [button, direction] : { std::make_pair(previous, -1), std::make_pair(next, 1) })
+	{
+		if(!button)
+			continue;
+		if(pages.size() < 2)
+		{
+			button->disable(); // nothing to page to
+			continue;
+		}
+		const size_t target = (index + pages.size() + direction) % pages.size();
+		button->setHelp(CButton::tooltip(pageTitle(target)));
+	}
+}
+
+size_t LayoutPages::count() const
+{
+	return pages.size();
+}
+
+size_t LayoutPages::current() const
+{
+	return shown ? shown->getActive() : 0;
+}
+
+void LayoutPages::showPage(size_t index)
+{
+	if(pages.empty())
+		return;
+	index %= pages.size();
+	shown->setActive(index);
+	updateAround();
+	if(!remember.empty())
+		writeSetting(remember, JsonNode(static_cast<int32_t>(index)));
+	logGlobal->info("Pages %s: page %d of %d, %s", id, static_cast<int>(index) + 1, static_cast<int>(pages.size()), pageTitle(index));
+	owner.redraw();
+}
+
+void LayoutPages::step(int direction)
+{
+	if(!pages.empty())
+		showPage((current() + pages.size() + direction) % pages.size());
+}
+
+void LayoutPages::refresh()
+{
+	if(shown)
+		shown->reset();
+	owner.redraw();
+}
+
+std::shared_ptr<LayoutPage> LayoutPages::shownPage() const
+{
+	return shown ? std::dynamic_pointer_cast<LayoutPage>(shown->getItem()) : nullptr;
 }

@@ -1,0 +1,123 @@
+# UI modding standards (Dead Man's Boots)
+
+This page is the contract between Dead Man's Boots (DMB) and mods that change or add to its
+screens. It says where a mod hooks in, and what it does so that it never collides with another mod
+doing something similar. It grows: each time a mod needs a hook nobody planned for, the hook is
+added to DMB and written down here, with the addon API level that brings it.
+
+Layouts are VCMI's configurable widgets ([Configurable_Widgets.md](Configurable_Widgets.md)). Mods
+that bring code, AI plugins and map generators, are in [DMB_Addons.md](DMB_Addons.md).
+
+## The addon API level
+
+A mod names the lowest DMB addon API level it needs in its `mod.json`:
+
+```json
+"dmb" : { "api" : 2 }
+```
+
+On a DMB below that level the mod counts as incompatible: the launcher shows it so, and the game
+does not load it, as VCMI does with `compatibility`. DMB versions before the level existed (0.1.0
+test candidates 1 and 2) do not know the key and cannot enforce it; a mod that needs level 2 should
+not be offered to them.
+
+| Level | Brings |
+| --- | --- |
+| 1 | AI plugins, map generators, the mod catalog's code pins |
+| 2 | the `pages` widget, `tabPages`, settings-bound labels, this check |
+
+## Rules every UI mod follows
+
+1. Add through a hook; do not replace a whole file to add to it. When two mods replace the same
+   layout file, only the one loaded last shows, and the other mod's change is lost without a word.
+   A page for someone else's tab goes in through `tabPages`, below.
+2. Put your mod's ID in every name you create: text keys (`vcmi.<modID>.<name>`), stored settings
+   (`persistent:<modID>/<name>`), pages ids, and your own image names. A name without it will one
+   day meet another mod's.
+3. Store settings in `persistent:` paths. `persistentStorage.json` has no schema, so nothing
+   erases your keys, including an official VCMI client that shares the user folder.
+4. Use only the callbacks the screen you extend offers, by their names below. A callback name that
+   does not exist is logged and does nothing.
+5. Name the addon API level you need in `mod.json`, as above, whenever you use anything from this
+   page.
+
+## The pages widget
+
+Any layout may hold a widget of type `pages`: several page layouts shown one at a time, with the
+shown page's title between a previous and a next arrow, the way Heroes III's own Random Map Setup
+pages.
+
+```json
+{
+    "type" : "pages",
+    "name" : "pages",
+    "id" : "myModTab",
+    "pages" : [
+        { "layout" : "config/widgets/myModTab/first.json", "title" : "vcmi.myMod.page.first" },
+        { "layout" : "config/widgets/myModTab/second.json", "title" : "vcmi.myMod.page.second" }
+    ],
+    "position" : { "x" : 0, "y" : 0 },
+    "title" : { "font" : "big", "color" : "yellow", "alignment" : "center", "position" : { "x" : 222, "y" : 36 } },
+    "previous" : { "image" : "SCNRBLF", "position" : { "x" : 66, "y" : 28 } },
+    "next" : { "image" : "SCNRBRT", "position" : { "x" : 362, "y" : 28 } },
+    "remember" : "persistent:myMod/lastPage"
+}
+```
+
+- `id` is how other mods find the widget to add pages to it. Leave it out, and nobody can.
+- `pages` lists the layout's own pages. Each layout path is found in the mod the tab comes from.
+- `position` is where the pages' layouts sit in the owner; the title and the arrows are placed in
+  the owner's own coordinates.
+- `title` is a label; it shows the shown page's `title` text.
+- `previous` and `next` are buttons. They step through the pages and wrap around, the keyboard's
+  left and right arrows press them, and their hover text names the page they lead to. With one
+  page they are hidden. Either may be left out.
+- `remember` keeps the shown page between visits.
+
+Each page gets its owner's callbacks, conditionals and variables, so a page's button reaches the
+same code as a button on the owner. A page has no background of its own; the owner's shows through.
+
+## Adding a page to another tab: tabPages
+
+A mod adds pages to any pages widget, of its own or of another mod, by the widget's `id`:
+
+```json
+"tabPages" : [
+    { "target" : "mapGen", "layout" : "config/widgets/myMod/page.json", "title" : "vcmi.myMod.page" }
+]
+```
+
+The pages of every enabled mod join after the widget's own, in load order. The layout path is found
+in the mod that adds the page. The page gets the owner's callbacks like the owner's own pages. A mod
+that is disabled, or incompatible under the addon API level, adds nothing.
+
+Pages ids in use:
+
+| id | Screen | Callbacks a page may use |
+| --- | --- | --- |
+| `mapGen` | OmniMapGen's tab, from its release that uses the pages widget | `activateMapGenPage`, `resetMapGenDefaults`, `generateMapGenMap`, `chooseMapGenTemplate` |
+
+The stock tabs, Random Map first, are to take pages next, and will be listed here with their ids.
+
+## Settings-bound widgets
+
+A widget whose config names a `setting` opens on the stored value and writes every change back, so a
+page of options needs no code:
+
+- `toggleGroup`: the stored number selects a toggle;
+- `toggleButton`: on or off;
+- `slider`: a number; `valueLabel` names a label that shows it, formatted by `valueMin`,
+  `valueMax`, `valueStep`, `valueDefault`, `valueDecimals`, `valueDisplayScale`, `valueSuffix` and
+  `valueNames`;
+- `label`: shows the stored text, or its `emptyText` while there is none (level 2).
+
+A `setting` is a path with `/` between its parts: `persistent:myMod/speed` in
+`persistentStorage.json`, or a plain path into `settings.json`, which the settings schema must
+declare or VCMI erases it.
+
+## Asking for a hook
+
+A mod that needs a hook this page does not list opens an idea on
+[DMB's issues](https://github.com/DeadMansBoots/Dead-Mans-Boots/issues/new/choose), naming the
+screen and what the mod wants to add there. The hook it becomes is added to DMB, gets the next
+addon API level, and is written down here.
