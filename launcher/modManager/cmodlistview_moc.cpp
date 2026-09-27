@@ -1525,6 +1525,20 @@ bool CModListView::isModEnabled(const QString & modName)
 	return modStateModel->isModEnabled(modName);
 }
 
+std::vector<AIPluginInfo> CModListView::getAIPlugins() const
+{
+	std::vector<AIPluginInfo> result;
+	for(const auto & modName : modStateModel->getAllMods())
+	{
+		if(!modStateModel->isModInstalled(modName) || !modStateModel->isModEnabled(modName))
+			continue;
+		auto plugin = modStateModel->getMod(modName).getAIPlugin();
+		if(plugin)
+			result.push_back(*plugin);
+	}
+	return result;
+}
+
 bool CModListView::isModInstalled(const QString & modName)
 {
 	if(!modStateModel->isModExists(modName))

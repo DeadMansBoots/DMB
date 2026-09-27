@@ -38,6 +38,8 @@ public:
 
 public slots:
 	void fillValidResolutions();
+	/// DMB: the AI menus again, so AI plugins from mods enabled since show up
+	void refreshAIChoices();
 
 private slots:
 	void on_comboBoxResolution_currentTextChanged(const QString & arg1);

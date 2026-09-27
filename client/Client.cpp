@@ -307,12 +307,9 @@ void CClient::initPlayerInterfaces()
 
 std::string CClient::aiNameForPlayer(const PlayerSettings & ps, bool battleAI, bool alliedToHuman) const
 {
-	if(ps.name.size())
-	{
-		const boost::filesystem::path aiPath = VCMIDirs::get().fullLibraryPath("AI", ps.name);
-		if(boost::filesystem::exists(aiPath))
-			return ps.name;
-	}
+	// DMB: an AI plugin from an active mod counts as installed too (CDynLibHandler::findAILibrary)
+	if(ps.name.size() && !CDynLibHandler::findAILibrary(ps.name, battleAI).empty())
+		return ps.name;
 
 	// Per-colour adventure AI override, so two different AIs can be put on
 	// one map with nobody watching.
@@ -351,14 +348,14 @@ std::string CClient::aiNameForPlayer(const PlayerSettings & ps, bool battleAI, b
 			if(it != m.end() && it->second.isString() && !it->second.String().empty())
 			{
 				const std::string & wanted = it->second.String();
-				if(boost::filesystem::exists(VCMIDirs::get().fullLibraryPath("AI", wanted)))
+				if(!CDynLibHandler::findAILibrary(wanted, false).empty())
 				{
 					logNetwork->info("Player %s overridden to adventure AI %s",
 						ps.color.toString(), wanted);
 					return wanted;
 				}
-				logNetwork->warn("Player %s asked for adventure AI %s but AI/%s.dll is not installed",
-					ps.color.toString(), wanted, wanted);
+				logNetwork->warn("Player %s asked for adventure AI %s, which is not installed and no active mod provides",
+					ps.color.toString(), wanted);
 			}
 		}
 	}

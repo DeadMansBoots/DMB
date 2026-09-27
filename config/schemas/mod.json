@@ -140,6 +140,31 @@
 			"type" : "boolean",
 			"description" : "If set to true, mod will not be enabled automatically on install"
 		},
+		"aiPlugin" : {
+			"type" : "object",
+			"additionalProperties" : false,
+			"required" : [ "library", "name", "kinds", "builtFor" ],
+			"description" : "DMB: this mod is an AI plugin; its library sits in the mod's own ai folder (lib/modding/AIPlugins.h)",
+			"properties" : {
+				"library" : {
+					"type" : "string",
+					"description" : "The library's base name: ai/<library>.dll, ai/lib<library>.so or ai/lib<library>.dylib"
+				},
+				"name" : {
+					"type" : "string",
+					"description" : "What the AI menus show and the settings store"
+				},
+				"kinds" : {
+					"type" : "array",
+					"description" : "What the library plays: the adventure map (GetNewAI), battles (GetNewBattleAI), or both",
+					"items" : { "type" : "string", "enum" : [ "adventure", "battle" ] }
+				},
+				"builtFor" : {
+					"type" : "string",
+					"description" : "The DMB version the library was built against; any other version refuses it"
+				}
+			}
+		},
 		"settings" : {
 			"description" : "List of changed game settings by mod",
 			"oneOf" : [

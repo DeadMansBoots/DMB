@@ -11,6 +11,7 @@
 
 #include "../StdInc.h"
 #include "../../lib/CConfigHandler.h"
+#include "../../lib/modding/AIPlugins.h"
 
 namespace Ui
 {
@@ -122,6 +123,9 @@ public:
 
 	/// returns true if mod is currently enabled
 	bool isModEnabled(const QString & modName);
+
+	/// DMB: the AI plugins among the installed, enabled mods (lib/modding/AIPlugins.h)
+	std::vector<AIPluginInfo> getAIPlugins() const;
 
 	/// returns true if mod is currently installed
 	bool isModInstalled(const QString & modName);

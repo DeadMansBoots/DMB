@@ -21,6 +21,7 @@
 
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QStandardItemModel>
 
 #include "../../lib/CConfigHandler.h"
 
@@ -54,6 +55,32 @@ static void enableMod(const QString & name)
 	else
 	{
 		view->enableModByName(name);
+	}
+}
+
+// DMB: the AI plugins among the enabled mods, listed after VCMI's own AIs. One that cannot load (built
+// for another DMB version, its library missing) is shown greyed out, with the reason as its tooltip.
+static void addAIPlugins(QComboBox * comboBox, bool battle)
+{
+	auto * mainWindow = Helper::getMainWindow();
+	if (!mainWindow || !mainWindow->getModView())
+		return;
+
+	for (const auto & plugin : mainWindow->getModView()->getAIPlugins())
+	{
+		if (!(battle ? plugin.battle : plugin.adventure))
+			continue;
+		const QString name = QString::fromStdString(plugin.name);
+		if (plugin.problem.empty())
+		{
+			comboBox->addItem(QObject::tr("%1 (from the mod %2)").arg(name, QString::fromStdString(plugin.modID)), name);
+			continue;
+		}
+		comboBox->addItem(QObject::tr("%1 (unavailable)").arg(name), name);
+		const int index = comboBox->count() - 1;
+		comboBox->setItemData(index, QString::fromStdString(plugin.problem), Qt::ToolTipRole);
+		if (auto * model = qobject_cast<QStandardItemModel *>(comboBox->model()))
+			model->item(index)->setEnabled(false);
 	}
 }
 
@@ -132,6 +159,7 @@ void CSettingsView::fillValidCombatAILibraries(QComboBox * comboBox, QString act
 	comboBox->addItem(tr("MMAI (experimental)"), "MMAI");
 #endif
 
+	addAIPlugins(comboBox, true);
 	fillValidAnyAILibraries(comboBox, activeAI);
 	comboBox->blockSignals(false);
 }
@@ -149,6 +177,7 @@ void CSettingsView::fillValidAdventureAILibraries(QComboBox * comboBox, QString 
 	comboBox->addItem(tr("Nullkiller2 (default, recommended)"), "Nullkiller2");
 #endif
 
+	addAIPlugins(comboBox, false);
 	fillValidAnyAILibraries(comboBox, activeAI);
 	comboBox->blockSignals(false);
 }
@@ -164,6 +193,11 @@ void CSettingsView::fillValidAnyAILibraries(QComboBox * comboBox, QString active
 		comboBox->setCurrentIndex(0);
 	else
 		comboBox->setCurrentIndex(indexToSelect);
+}
+
+void CSettingsView::refreshAIChoices()
+{
+	fillValidAILibraries();
 }
 
 void CSettingsView::fillValidAILibraries()

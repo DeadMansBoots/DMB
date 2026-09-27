@@ -229,6 +229,7 @@ void MainWindow::on_modslistButton_clicked()
 void MainWindow::on_settingsButton_clicked()
 {
 	ui->startGameButton->setEnabled(true);
+	ui->settingsView->refreshAIChoices(); // DMB: AI plugins from mods enabled since the launcher started
 	ui->tabListWidget->setCurrentIndex(TabRows::SETTINGS);
 }
 

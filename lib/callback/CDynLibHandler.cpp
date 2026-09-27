@@ -13,6 +13,7 @@
 #include "CGlobalAI.h"
 
 #include "../VCMIDirs.h"
+#include "../modding/AIPlugins.h"
 
 #ifdef STATIC_AI
 #  ifdef ENABLE_NULLKILLER_AI
@@ -153,14 +154,59 @@ std::shared_ptr<CBattleGameInterface> createAny(const boost::filesystem::path & 
 
 #endif // STATIC_AI
 
+boost::filesystem::path CDynLibHandler::findAILibrary(const std::string & aiName, bool battle)
+{
+#ifdef STATIC_AI
+	// no libraries to look for: createAny picks the built-in AI by name
+	return VCMIDirs::get().fullLibraryPath("AI", aiName);
+#else
+	const boost::filesystem::path stock = VCMIDirs::get().fullLibraryPath("AI", aiName);
+	if(boost::filesystem::exists(stock))
+		return stock;
+
+	for(const auto & plugin : AIPlugins::active())
+	{
+		if(plugin.name != aiName || !(battle ? plugin.battle : plugin.adventure))
+			continue;
+		if(plugin.problem.empty())
+			return plugin.path;
+		logGlobal->warn("AI plugin %s (mod %s) cannot load: %s", plugin.name, plugin.modID, plugin.problem);
+	}
+	return {};
+#endif
+}
+
 template<typename rett>
 std::shared_ptr<rett> createAnyAI(const std::string & dllname, const std::string & methodName)
 {
-	logGlobal->info("Opening %s", dllname);
+	const bool battle = methodName == "GetNewBattleAI";
+	std::string name = dllname;
+	boost::filesystem::path filePath = CDynLibHandler::findAILibrary(name, battle);
 
-	const boost::filesystem::path filePath = VCMIDirs::get().fullLibraryPath("AI", dllname);
+	// DMB: an AI the settings name but the game does not have (a plugin removed or refused, say)
+	// falls back to the first of VCMI's own that is here, where it used to end the game
+	if(filePath.empty())
+	{
+		const std::vector<std::string> fallbacks = battle
+			? std::vector<std::string>{"BattleAI", "StupidAI"}
+			: std::vector<std::string>{"Nullkiller2", "Nullkiller", "EmptyAI"};
+		for(const auto & fallback : fallbacks)
+		{
+			filePath = CDynLibHandler::findAILibrary(fallback, battle);
+			if(!filePath.empty())
+			{
+				logGlobal->warn("AI %s is not installed or cannot load; %s plays instead", dllname, fallback);
+				name = fallback;
+				break;
+			}
+		}
+		if(filePath.empty())
+			filePath = VCMIDirs::get().fullLibraryPath("AI", dllname); // nothing better: fail as before
+	}
+
+	logGlobal->info("Opening %s from %s", name, filePath.string());
 	auto ret = createAny<rett>(filePath, methodName);
-	ret->dllName = dllname;
+	ret->dllName = name;
 	return ret;
 }
 

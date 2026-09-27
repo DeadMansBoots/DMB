@@ -609,29 +609,26 @@
 			"default" : {},
 			"required" : [ "adventureAlliedAI", "adventureEnemyAI", "combatEnemyAI", "combatAlliedAI", "combatNeutralAI", "playerAIOverrides", "omniaiLearning", "omniaiDifficulty", "testmapDifficulty", "omniaiLearningMode", "omniaiResetBrain", "omniaiDifficultyBySlot" ],
 			"properties" : {
+				// DMB: no fixed list for the five AI keys: an AI plugin from a mod (lib/modding/AIPlugins.h)
+				// has a name only its mod knows. A missing AI falls back to VCMI's own (CDynLibHandler).
 				"adventureAlliedAI" : {
 					"type" : "string",
-					"enum" : [ "EmptyAI", "Nullkiller", "Nullkiller2" ],
 					"default" : "Nullkiller2"
 				},
 				"adventureEnemyAI" : {
 					"type" : "string",
-					"enum" : [ "EmptyAI", "Nullkiller", "Nullkiller2" ],
 					"default" : "Nullkiller2"
 				},
 				"combatEnemyAI" : {
 					"type" : "string",
-					"enum" : [ "EmptyAI", "StupidAI", "BattleAI", "MMAI" ],
 					"default" : "BattleAI"
 				},
 				"combatAlliedAI" : {
 					"type" : "string",
-					"enum" : [ "EmptyAI", "StupidAI", "BattleAI", "MMAI" ],
 					"default" : "BattleAI"
 				},
 				"combatNeutralAI" : {
 					"type" : "string",
-					"enum" : [ "EmptyAI", "StupidAI", "BattleAI", "MMAI" ],
 					"default" : "BattleAI"
 				},
 				// Per-colour adventure AI override, read by CClient::aiNameForPlayer.

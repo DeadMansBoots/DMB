@@ -124,6 +124,11 @@ QMap<QString, QStringList> ModState::getChangelog() const
 	return result;
 }
 
+std::optional<AIPluginInfo> ModState::getAIPlugin() const
+{
+	return AIPlugins::read(impl);
+}
+
 QString ModState::getInstalledVersion() const
 {
 	return QString::fromStdString(impl.getLocalValue("version").String());

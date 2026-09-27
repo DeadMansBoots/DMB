@@ -26,6 +26,10 @@ class DLL_LINKAGE CDynLibHandler
 public:
 	static std::shared_ptr<CGlobalAI> getNewAI(const std::string & dllname);
 	static std::shared_ptr<CBattleGameInterface> getNewBattleAI(const std::string & dllname);
+
+	/// DMB: the library an AI name stands for: VCMI's own AI/<name> first, else an AI plugin of that
+	/// name and kind among the active mods (modding/AIPlugins.h). Empty if neither can load.
+	static boost::filesystem::path findAILibrary(const std::string & aiName, bool battle);
 #if SCRIPTING_ENABLED
 	static std::shared_ptr<scripting::Module> getNewScriptingModule(const boost::filesystem::path & dllname);
 #endif

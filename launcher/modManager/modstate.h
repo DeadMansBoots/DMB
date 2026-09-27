@@ -9,6 +9,8 @@
  */
 #pragma once
 
+#include "../../lib/modding/AIPlugins.h"
+
 VCMI_LIB_NAMESPACE_BEGIN
 class ModDescription;
 VCMI_LIB_NAMESPACE_END
@@ -39,6 +41,9 @@ public:
 	QStringList getSupportedLanguages() const;
 
 	QMap<QString, QStringList> getChangelog() const;
+
+	/// DMB: the AI plugin this mod carries, from its installed mod.json; nothing if none
+	std::optional<AIPluginInfo> getAIPlugin() const;
 
 	QString getInstalledVersion() const;
 	QString getRepositoryVersion() const;
