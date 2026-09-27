@@ -17,8 +17,13 @@
 #include "../CServerHandler.h"
 #include "../GameEngine.h"
 #include "../GameInstance.h"
+#include "../gui/Shortcut.h"
 #include "../gui/WindowHandler.h"
+#include "../render/Colors.h"
 #include "../widgets/Buttons.h"
+#include "../widgets/CTextInput.h"
+#include "../widgets/GraphicalPrimitiveCanvas.h"
+#include "../widgets/Images.h"
 #include "../widgets/ObjectLists.h"
 #include "../widgets/TextControls.h"
 #include "../windows/GUIClasses.h"
@@ -37,10 +42,49 @@
 #include "../../lib/texts/CGeneralTextHandler.h"
 #include "../../lib/texts/MetaString.h"
 
+#include <fstream>
 #include <random>
 #include <thread>
 
 #include <boost/algorithm/string.hpp>
+
+namespace
+{
+/// asks for the name to save the tab's settings under, as VCMI's custom size window asks for a size
+class PresetNameWindow : public CWindowObject
+{
+	std::shared_ptr<FilledTexturePlayerColored> background;
+	std::shared_ptr<CLabel> title;
+	std::shared_ptr<TransparentFilledRectangle> field;
+	std::shared_ptr<CTextInput> name;
+	std::shared_ptr<CButton> buttonOk;
+	std::shared_ptr<CButton> buttonCancel;
+
+public:
+	PresetNameWindow(const std::string & heading, std::function<void(const std::string &)> onOk)
+		: CWindowObject(BORDERED)
+	{
+		OBJECT_CONSTRUCTION;
+		pos.w = 300;
+		pos.h = 130;
+		updateShadow();
+		center();
+
+		background = std::make_shared<FilledTexturePlayerColored>(Rect(0, 0, pos.w, pos.h));
+		background->setPlayerColor(PlayerColor(1));
+		title = std::make_shared<CLabel>(150, 20, FONT_BIG, ETextAlignment::CENTER, Colors::YELLOW, heading);
+		field = std::make_shared<TransparentFilledRectangle>(Rect(20, 45, 260, 22), ColorRGBA(0, 0, 0, 128), ColorRGBA(64, 64, 64, 64), 1);
+		name = std::make_shared<CTextInput>(Rect(24, 47, 252, 18), FONT_SMALL, ETextAlignment::CENTERLEFT, true);
+		buttonOk = std::make_shared<CButton>(Point(70, 85), AnimationPath::builtin("MuBchck"), CButton::tooltip(), [this, onOk]()
+		{
+			const std::string typed = name->getText();
+			close();
+			onOk(typed);
+		}, EShortcut::GLOBAL_ACCEPT);
+		buttonCancel = std::make_shared<CButton>(Point(160, 85), AnimationPath::builtin("MuBcanc"), CButton::tooltip(), [this]() { close(); }, EShortcut::GLOBAL_CANCEL);
+	}
+};
+}
 
 /// the template a generator picks for itself from those that fit (OmniMapGen reads "random" so)
 static const std::string RANDOM_TEMPLATE = "random";
@@ -113,6 +157,8 @@ MapGenTab::MapGenTab(const MapGeneratorInfo & info)
 	addCallback("chooseMapGenTemplate", [this](int) { chooseTemplate(); });
 	addCallback("chooseMapGenTeams", [this](int) { chooseTeams(); });
 	addCallback("chooseMapGenCustomSize", [this](int) { chooseCustomSize(); });
+	addCallback("saveMapGenPreset", [this](int) { savePreset(); });
+	addCallback("loadMapGenPreset", [this](int) { loadPreset(); });
 	// every setting the generator gets goes to the server with the lobby's random map, so a change puts
 	// that together again (at Begin it would be too late: a new map resets the towns picked)
 	onSettingChanged = [this](const std::string & setting)
@@ -162,6 +208,8 @@ std::shared_ptr<CIntObject> MapGenTab::createPage(size_t index)
 			page.setCallback("chooseMapGenTemplate", [this](int) { chooseTemplate(); });
 			page.setCallback("chooseMapGenTeams", [this](int) { chooseTeams(); });
 			page.setCallback("chooseMapGenCustomSize", [this](int) { chooseCustomSize(); });
+			page.setCallback("saveMapGenPreset", [this](int) { savePreset(); });
+			page.setCallback("loadMapGenPreset", [this](int) { loadPreset(); });
 			page.setOnSettingChanged(onSettingChanged);
 		},
 		[this](MapGenPage & page)
@@ -360,6 +408,86 @@ void MapGenTab::chooseCustomSize()
 		refreshPages();
 		updateMapInfoByHost();
 	});
+}
+
+boost::filesystem::path MapGenTab::presetFolder() const
+{
+	return VCMIDirs::get().userDataPath() / "MapGenPresets" / generator.modID;
+}
+
+void MapGenTab::savePreset()
+{
+	ENGINE->windows().createAndPushWindow<PresetNameWindow>(tabText("presets.saveTitle"), [this](const std::string & typed)
+	{
+		// the file takes the name typed, with the characters Windows refuses in a file name as _
+		std::string name = boost::algorithm::trim_copy(typed);
+		for(auto & c : name)
+			if(std::string("\\/:*?\"<>|").find(c) != std::string::npos || static_cast<unsigned char>(c) < 32)
+				c = '_';
+		if(name.empty())
+			return;
+
+		// everything the tab stores for the generator; the page shown is not a setting
+		const JsonNode & stored = persistentStorage["mapGen"];
+		JsonNode preset;
+		preset["map"] = stored["map"];
+		preset["params"] = stored["params"];
+		preset["preset"] = stored["preset"];
+		boost::system::error_code ec;
+		boost::filesystem::create_directories(presetFolder(), ec);
+		const auto path = presetFolder() / (name + ".json");
+		std::ofstream out(path.c_str(), std::ios::binary | std::ios::trunc);
+		out << preset.toString();
+		out.close();
+
+		MetaString text;
+		text.appendRawString(tabText(out.fail() ? "presets.failed" : "presets.saved"));
+		text.replaceRawString(name);
+		ENGINE->statusbar()->write(text.toString());
+		logGlobal->info("Map generator %s: settings %s to %s", generator.name, out.fail() ? "not saved" : "saved", path.string());
+	});
+}
+
+void MapGenTab::loadPreset()
+{
+	std::vector<std::string> names;
+	boost::system::error_code ec;
+	for(boost::filesystem::directory_iterator it(presetFolder(), ec), end; !ec && it != end; it.increment(ec))
+		if(boost::algorithm::iequals(it->path().extension().string(), ".json"))
+			names.push_back(it->path().stem().string());
+	std::sort(names.begin(), names.end());
+	if(names.empty())
+	{
+		ENGINE->statusbar()->write(tabText("presets.none"));
+		return;
+	}
+	ENGINE->windows().createAndPushWindow<CObjectListWindow>(names, nullptr, tabText("presets.loadTitle"), tabText("presets.loadHelp"),
+		[this, names](int index)
+		{
+			if(index < 0 || index >= static_cast<int>(names.size()))
+				return;
+			const auto path = presetFolder() / (names[index] + ".json");
+			std::ifstream in(path.c_str(), std::ios::binary);
+			const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+			const JsonNode preset(reinterpret_cast<const std::byte *>(text.data()), text.size(), path.string());
+			// the saved settings in place of the tab's, as they were saved
+			{
+				Settings map = persistentStorage.write["mapGen"]["map"];
+				*map.operator->() = preset["map"].isStruct() ? preset["map"] : JsonNode();
+				Settings params = persistentStorage.write["mapGen"]["params"];
+				*params.operator->() = preset["params"].isStruct() ? preset["params"] : JsonNode();
+				Settings chosenPreset = persistentStorage.write["mapGen"]["preset"];
+				chosenPreset->String() = preset["preset"].isString() ? preset["preset"].String() : std::string();
+			}
+			refreshPages();
+			updateMapInfoByHost();
+
+			MetaString loaded;
+			loaded.appendRawString(tabText("presets.loaded"));
+			loaded.replaceRawString(names[index]);
+			ENGINE->statusbar()->write(loaded.toString());
+			logGlobal->info("Map generator %s: settings loaded from %s", generator.name, path.string());
+		}, 0, std::vector<std::shared_ptr<IImage>>(), true);
 }
 
 void MapGenTab::clearCustomSize()

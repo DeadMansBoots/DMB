@@ -62,12 +62,17 @@ their values in `persistentStorage.json`. The callbacks `activateMapGenPage`, `r
 `chooseMapGenTeams` (VCMI's team grid, stored as `map/teams`, a team number per player in colour
 order; the grid's layout comes with the VCMI Extras mod, and without it the player is told so) and
 `chooseMapGenCustomSize` (VCMI's custom size window, stored as `map/width` and
-`map/height`; picking a size bound to `map/size` afterwards replaces it). The template chooser lists
-none, Random (stored as `random`) and every template installed. The texts the tab itself shows can
+`map/height`; picking a size bound to `map/size` afterwards replaces it), and `saveMapGenPreset` and
+`loadMapGenPreset` (the player's own saved settings, a JSON file each in the user folder's
+`MapGenPresets/<mod id>`, named as the player types; loading one puts it in place of the tab's
+settings). The template chooser lists none, Random (stored as `random`) and every template
+installed. The texts the tab itself shows can
 be reworded by the mod's translation: `vcmi.mapGen.generate.hover`, `.running`, `.failed`,
 `.refused` (two `%s`: the generator's name, then the reason), `.humans` (one `%d`: the players in
-the lobby), `.atBegin`, and `vcmi.mapGen.template.hover`, `.choose`, `.none`, `.random`. Where the
-mod brings none, DMB's generic wording shows (`vcmi.dmb.mapGenerator.*`).
+the lobby), `.atBegin`, `vcmi.mapGen.template.hover`, `.choose`, `.none`, `.random`,
+`vcmi.mapGen.teams.missing`, and `vcmi.mapGen.presets.saveTitle`, `.saved`, `.failed` (one `%s`
+each: the name), `.loadTitle`, `.loadHelp`, `.loaded` (one `%s`), `.none`. Where the mod brings
+none, DMB's generic wording shows (`vcmi.dmb.mapGenerator.*`).
 
 The command gets these arguments, and writes a `.vmap` at `--out`:
 

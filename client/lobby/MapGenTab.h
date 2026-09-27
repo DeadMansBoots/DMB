@@ -66,6 +66,11 @@ class MapGenTab : public InterfaceObjectConfigurable
 	/// VCMI's custom size window (callback chooseMapGenCustomSize), stored as map/width and map/height
 	void chooseCustomSize();
 	void clearCustomSize();
+	/// the player's own saved settings (callbacks saveMapGenPreset and loadMapGenPreset), a JSON file
+	/// each in the user folder's MapGenPresets/<mod id>, in place of the tab's
+	void savePreset();
+	void loadPreset();
+	boost::filesystem::path presetFolder() const;
 	void generate();
 
 	int mapSetting(const std::string & key) const;
