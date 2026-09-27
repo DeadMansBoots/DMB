@@ -1009,6 +1009,32 @@ std::shared_ptr<CIntObject> InterfaceObjectConfigurable::buildPages(const JsonNo
 	return std::make_shared<LayoutPages>(*this, config);
 }
 
+void InterfaceObjectConfigurable::acceptTabPages(const std::string & id, const std::set<std::string> & frame, const JsonNode & pagesConfig)
+{
+	bool wanted = false;
+	for(const auto & modID : LIBRARY->modh->getActiveMods())
+		for(const auto & entry : LIBRARY->modh->getModInfo(modID).getLocalValue("tabPages").Vector())
+			wanted = wanted || entry["target"].String() == id;
+	if(!wanted)
+		return; // nothing on the screen changes until a mod adds a page
+
+	OBJECT_CONSTRUCTION;
+	// the stock content moves into one object, so the pages widget can show and hide it as its first page
+	auto content = std::make_shared<CIntObject>();
+	content->pos = pos;
+	for(const auto & entry : widgets)
+	{
+		if(entry.second && !frame.count(entry.first) && entry.second->parent == this)
+			content->addChild(entry.second.get());
+	}
+	addWidget("dmbStockPage", content);
+
+	JsonNode config = pagesConfig;
+	config["id"].String() = id;
+	addWidget("dmbPages", std::make_shared<LayoutPages>(*this, config, content, pagesConfig["stockTitle"]));
+	logMod->info("The screen %s takes pages from mods", id);
+}
+
 std::shared_ptr<CIntObject> InterfaceObjectConfigurable::buildWidget(JsonNode config) const
 {
 	assert(!config.isNull());
@@ -1082,9 +1108,11 @@ LayoutPage::LayoutPage(const InterfaceObjectConfigurable & owner, const JsonNode
 		onPageBuilt(*this);
 }
 
-LayoutPages::LayoutPages(InterfaceObjectConfigurable & owner, const JsonNode & config)
+LayoutPages::LayoutPages(InterfaceObjectConfigurable & owner, const JsonNode & config,
+	std::shared_ptr<CIntObject> adoptedContent, const JsonNode & adoptedTitle)
 	: owner(owner)
 	, id(config["id"].String())
+	, adopted(std::move(adoptedContent))
 {
 	OBJECT_CONSTRUCTION;
 	setRedrawParent(true);
@@ -1092,6 +1120,8 @@ LayoutPages::LayoutPages(InterfaceObjectConfigurable & owner, const JsonNode & c
 	pos.h = owner.pos.h;
 	pagePosition = owner.readPosition(config["position"]);
 
+	if(adopted)
+		pages.push_back({JsonNode(), adoptedTitle, "", "the game"});
 	const std::string ownScope = owner.layoutScope;
 	for(const auto & entry : config["pages"].Vector())
 		pages.push_back({entry["layout"], entry["title"], ownScope, ownScope.empty() ? "the game" : ownScope});
@@ -1111,7 +1141,10 @@ LayoutPages::LayoutPages(InterfaceObjectConfigurable & owner, const JsonNode & c
 		}
 	}
 
-	if(!config["title"].isNull())
+	// the title is a label of its own, or, named by a string, a label the owner already has
+	if(config["title"].isString())
+		title = owner.widget<CLabel>(config["title"].String());
+	else if(!config["title"].isNull())
 		title = owner.buildLabel(config["title"]);
 
 	const auto arrow = [this](const JsonNode & spec, int direction, EShortcut key) -> std::shared_ptr<CButton>
@@ -1123,6 +1156,9 @@ LayoutPages::LayoutPages(InterfaceObjectConfigurable & owner, const JsonNode & c
 	};
 	previous = arrow(config["previous"], -1, EShortcut::MOVE_LEFT);
 	next = arrow(config["next"], 1, EShortcut::MOVE_RIGHT);
+	// a title too long for the room between the arrows is cut to fit it
+	if(title && previous && next)
+		title->setMaxWidth(next->pos.x - (previous->pos.x + previous->pos.w) - 8);
 
 	size_t first = 0;
 	if(config["remember"].isString())
@@ -1140,7 +1176,15 @@ LayoutPages::LayoutPages(InterfaceObjectConfigurable & owner, const JsonNode & c
 
 std::shared_ptr<CIntObject> LayoutPages::createPage(size_t index)
 {
-	if(index >= pages.size())
+	if(adopted)
+	{
+		// the stock screen's own content shows on its page only
+		if(index == 0)
+			adopted->enable();
+		else
+			adopted->disable();
+	}
+	if(index >= pages.size() || pages[index].layout.isNull())
 		return std::make_shared<CIntObject>();
 
 	const Page & page = pages[index];

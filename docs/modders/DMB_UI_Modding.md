@@ -68,7 +68,8 @@ pages.
 - `pages` lists the layout's own pages. Each layout path is found in the mod the tab comes from.
 - `position` is where the pages' layouts sit in the owner; the title and the arrows are placed in
   the owner's own coordinates.
-- `title` is a label; it shows the shown page's `title` text.
+- `title` is a label; it shows the shown page's `title` text. A title longer than the room between
+  the arrows is cut to fit, so keep page titles short: about 20 letters in the big font.
 - `previous` and `next` are buttons. They step through the pages and wrap around, the keyboard's
   left and right arrows press them, and their hover text names the page they lead to. With one
   page they are hidden. Either may be left out.
@@ -95,9 +96,13 @@ Pages ids in use:
 
 | id | Screen | Callbacks a page may use |
 | --- | --- | --- |
+| `randomMap` | the lobby's Random Map tab | `toggleMapSize`, `toggleTwoLevels`, `setPlayersCount`, `setTeamsCount`, `setCompOnlyPlayers`, `setCompOnlyTeams`, `setWaterContent`, `setMonsterStrength`, `teamAlignments` |
 | `mapGen` | OmniMapGen's tab, from its release that uses the pages widget | `activateMapGenPage`, `resetMapGenDefaults`, `generateMapGenMap`, `chooseMapGenTemplate` |
 
-The stock tabs, Random Map first, are to take pages next, and will be listed here with their ids.
+A stock screen has no pages of its own. Until a mod adds one, it looks as it always has; then its
+own content becomes page 1, its title shows the page's title between the arrows, and what belongs
+to every page stays: on the Random Map tab, the background, the title and Show Random Maps. More
+stock screens will be listed here as they take pages.
 
 ## Settings-bound widgets
 

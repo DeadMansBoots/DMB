@@ -56,8 +56,14 @@ protected:
 	/// what only code knows). Set it before build().
 	std::function<void(LayoutPage &)> onPageBuilt;
 
-	/// DMB: a "pages" widget's page gets its owner's callbacks, conditionals, variables and shortcuts
+	/// DMB: a "pages" widget's page gets its owner's callbacks, conditionals and variables
 	void inheritFrom(const InterfaceObjectConfigurable & owner);
+
+	/// DMB: lets mods add pages (mod.json "tabPages") to a stock screen, which has no pages widget of its
+	/// own. Only when an enabled mod targets `id`: everything built so far except the widgets named in
+	/// `frame` becomes page 1, and a pages widget, `pagesConfig` giving its title and arrows, pages
+	/// through it and the mods' pages. Call it after build().
+	void acceptTabPages(const std::string & id, const std::set<std::string> & frame, const JsonNode & pagesConfig);
 
 	/// Set blocked status for all buttons associated with provided shortcut
 	void setShortcutBlocked(EShortcut shortcut, bool isBlocked);
@@ -202,7 +208,7 @@ class LayoutPages : public CIntObject
 {
 	struct Page
 	{
-		JsonNode layout;   ///< the page entry's layout path
+		JsonNode layout;   ///< the page entry's layout path; null for an adopted first page
 		JsonNode title;    ///< a text key, or text
 		std::string scope; ///< the mod whose files the layout path resolves in
 		std::string from;  ///< the mod that added it, for the log
@@ -217,13 +223,17 @@ class LayoutPages : public CIntObject
 	std::shared_ptr<CLabel> title;
 	std::shared_ptr<CButton> previous;
 	std::shared_ptr<CButton> next;
+	/// a stock screen's own content, its first page (InterfaceObjectConfigurable::acceptTabPages)
+	std::shared_ptr<CIntObject> adopted;
 
 	std::shared_ptr<CIntObject> createPage(size_t index);
 	std::string pageTitle(size_t index) const;
 	void updateAround();
 
 public:
-	LayoutPages(InterfaceObjectConfigurable & owner, const JsonNode & config);
+	/// `adopted`, when given, is shown as the first page, titled `adoptedTitle`
+	LayoutPages(InterfaceObjectConfigurable & owner, const JsonNode & config,
+		std::shared_ptr<CIntObject> adopted = nullptr, const JsonNode & adoptedTitle = JsonNode());
 
 	size_t count() const;
 	size_t current() const;

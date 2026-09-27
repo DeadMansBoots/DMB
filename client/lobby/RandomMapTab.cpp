@@ -203,8 +203,21 @@ RandomMapTab::RandomMapTab():
 			ENGINE->windows().pushWindow(window);
 		});
 	}
-	
+
 	loadOptions();
+
+	// DMB: mods may add pages to this tab (mod.json "tabPages", target "randomMap"). The title and the
+	// Show Random Maps button stay on every page, and the arrows sit either side of the title.
+	JsonNode pagesConfig;
+	pagesConfig["title"].String() = "labelHeadlineBig";
+	pagesConfig["stockTitle"].String() = "core.genrltxt.738";
+	pagesConfig["previous"]["image"].String() = "SCNRBLF";
+	pagesConfig["previous"]["position"]["x"].Integer() = 66;
+	pagesConfig["previous"]["position"]["y"].Integer() = 28;
+	pagesConfig["next"]["image"].String() = "SCNRBRT";
+	pagesConfig["next"]["position"]["x"].Integer() = 362;
+	pagesConfig["next"]["position"]["y"].Integer() = 28;
+	acceptTabPages("randomMap", {"background", "labelHeadlineBig", "buttonShowRandomMaps"}, pagesConfig);
 }
 
 void RandomMapTab::onToggleMapSize(int btnId)
