@@ -804,9 +804,17 @@
 				"updateOnStartup",
 				"updateConfigUrl",
 				"trackClipboardState",
-				"dmbHomepage"
+				"dmbHomepage",
+				"theme"
 			],
 			"properties" : {
+				// DMB: the launcher's look (launcher/theme.h): the game's leather from the player's own
+				// files, dark, or the platform's own
+				"theme" : {
+					"type" : "string",
+					"enum" : [ "leather", "dark", "system" ],
+					"default" : "leather"
+				},
 				"defaultRepositoryEnabled" : {
 					"type" : "boolean",
 					"default" : true

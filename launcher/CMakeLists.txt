@@ -25,6 +25,7 @@ set(launcher_SRCS
 		helper.cpp
 		innoextract.cpp
 		mainwindow_moc.cpp
+		theme.cpp
 		languages.cpp
 		updatedialog_moc.cpp
 		prepare.cpp
@@ -62,6 +63,7 @@ set(launcher_HEADERS
 		firstLaunch/firstlaunch_moc.h
 		firstLaunch/progressoverlay.h
 		mainwindow_moc.h
+		theme.h
 		languages.h
 		updatedialog_moc.h
 		main.h

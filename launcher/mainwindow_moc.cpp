@@ -26,6 +26,7 @@
 #include "updatedialog_moc.h"
 #include "main.h"
 #include "helper.h"
+#include "theme.h"
 
 void MainWindow::load()
 {
@@ -81,6 +82,7 @@ MainWindow::MainWindow(QWidget * parent)
 	: QMainWindow(parent), ui(new Ui::MainWindow)
 {
 	load(); // load FS before UI
+	LauncherTheme::apply(); // DMB: the launcher's look, before any widget exists (theme.h)
 
 	bool setupCompleted = settings["launcher"]["setupCompleted"].Bool();
 
