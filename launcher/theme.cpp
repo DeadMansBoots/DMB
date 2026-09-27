@@ -19,8 +19,48 @@
 #include <QPixmap>
 #include <QStyleFactory>
 
+#ifdef VCMI_WINDOWS
+#include <windows.h>
+#endif
+
 namespace
 {
+/// whether windows get Windows' dark title bar: in the leather and dark looks
+bool darkFrames = false;
+
+/// A window's title bar in Windows' dark frame (Windows 10 1809 and later), or back in its light one;
+/// elsewhere the title bar is the window manager's
+void frameWindow(QWidget * window)
+{
+#ifdef VCMI_WINDOWS
+	using SetAttribute = HRESULT(WINAPI *)(HWND, DWORD, LPCVOID, DWORD);
+	static const auto setAttribute = reinterpret_cast<SetAttribute>(
+		reinterpret_cast<void *>(GetProcAddress(LoadLibraryW(L"dwmapi.dll"), "DwmSetWindowAttribute")));
+	if(!setAttribute || !window || !window->isWindow())
+		return;
+	const BOOL dark = darkFrames ? TRUE : FALSE;
+	const auto handle = reinterpret_cast<HWND>(window->winId());
+	setAttribute(handle, 20, &dark, sizeof(dark)); // DWMWA_USE_IMMERSIVE_DARK_MODE
+	// the frame repaints only when told it changed
+	SetWindowPos(handle, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+#else
+	(void)window;
+#endif
+}
+
+/// frames every window as it first shows, dialogs included
+class FrameEveryWindow : public QObject
+{
+public:
+	bool eventFilter(QObject * watched, QEvent * event) override
+	{
+		if(event->type() == QEvent::Show)
+			if(auto * widget = qobject_cast<QWidget *>(watched); widget && widget->isWindow())
+				frameWindow(widget);
+		return false;
+	}
+};
+
 /// A Heroes III PCX (8-bit with its palette at the end, or 24-bit), read as the map editor reads them
 QImage readH3Pcx(const ui8 * pcx, size_t size)
 {
@@ -131,8 +171,21 @@ void LauncherTheme::apply()
 	// the platform's own look, kept from the first call, for switching back to "system" from the Settings page
 	static const QString systemStyle = QApplication::style()->objectName(); // Qt 5 keeps the style's key there
 	static const QPalette systemPalette = QApplication::palette();
+	static FrameEveryWindow * const framer = []()
+	{
+		auto * filter = new FrameEveryWindow();
+		qApp->installEventFilter(filter);
+		return filter;
+	}();
+	(void)framer;
 
 	const std::string theme = settings["launcher"]["theme"].String();
+	// the title bars of windows already open follow at once; later ones as they show
+	darkFrames = theme != "system";
+	for(QWidget * window : QApplication::topLevelWidgets())
+		if(window->isVisible())
+			frameWindow(window);
+
 	if(theme == "system")
 	{
 		QApplication::setStyle(QStyleFactory::create(systemStyle));
