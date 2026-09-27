@@ -16,6 +16,7 @@
 #include <QJsonArray>
 #include <QCryptographicHash>
 #include <QRegularExpression>
+#include <QTabBar>
 
 #include "modstatemodel.h"
 #include "modstateitemmodel_moc.h"
@@ -169,6 +170,15 @@ CModListView::CModListView(QWidget * parent)
 	setupModModel();
 	setupFilterModel();
 	setupModsView();
+
+	// DMB: two tabs over the same list (K, September 26th): every mod, as VCMI shows them, or only
+	// DMB's own catalog additions
+	auto * origins = new QTabBar(this);
+	origins->addTab(tr("VCMI Mods"));
+	origins->addTab(tr("DMB Mods"));
+	origins->setExpanding(false);
+	ui->verticalLayout->insertWidget(0, origins);
+	connect(origins, &QTabBar::currentChanged, this, [this](int index) { filterModel->setDmbOnly(index == 1); });
 
 	ui->progressWidget->setVisible(false);
 	dlManager = nullptr;

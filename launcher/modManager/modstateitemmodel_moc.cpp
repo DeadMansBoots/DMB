@@ -277,10 +277,24 @@ void CModFilterModel::setTypeFilter(ModFilterMask newFilterMask)
 	invalidateFilter();
 }
 
+void CModFilterModel::setDmbOnly(bool only)
+{
+	dmbOnly = only;
+	invalidateFilter();
+}
+
 bool CModFilterModel::filterMatchesCategory(const QModelIndex & source) const
 {
 	QString modID =source.data(ModRoles::ModNameRole).toString();
 	ModState mod = base->model->getMod(modID);
+
+	if(dmbOnly)
+	{
+		// a submod goes with its top parent, the mod the catalog lists
+		const QString topID = mod.getTopParentID().isEmpty() ? modID : mod.getTopParentID();
+		if(!base->model->getMod(topID).isDmbCatalogEntry())
+			return false;
+	}
 
 	switch (filterMask)
 	{

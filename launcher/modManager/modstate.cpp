@@ -253,3 +253,9 @@ bool ModState::isKeptDisabled() const
 {
 	return impl.keepDisabled();
 }
+
+bool ModState::isDmbCatalogEntry() const
+{
+	const JsonNode & flag = impl.getRepositoryValue("dmbEntry");
+	return flag.isBool() && flag.Bool();
+}

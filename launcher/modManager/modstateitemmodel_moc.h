@@ -93,6 +93,8 @@ class CModFilterModel final : public QSortFilterProxyModel
 {
 	ModStateItemModel * base;
 	ModFilterMask filterMask;
+	/// DMB: only DMB's own catalog additions (the "DMB Mods" tab)
+	bool dmbOnly = false;
 
 	bool filterMatchesThis(const QModelIndex & source) const;
 	bool filterMatchesCategory(const QModelIndex & source) const;
@@ -103,6 +105,7 @@ class CModFilterModel final : public QSortFilterProxyModel
 
 public:
 	void setTypeFilter(ModFilterMask filterMask);
+	void setDmbOnly(bool only);
 
 	CModFilterModel(ModStateItemModel * model, QObject * parent = nullptr);
 };

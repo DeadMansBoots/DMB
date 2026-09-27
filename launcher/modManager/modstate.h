@@ -73,4 +73,7 @@ public:
 	bool isUpdateAvailable() const;
 	bool isCompatible() const;
 	bool isKeptDisabled() const;
+	/// DMB: one of DMB's own catalog additions, not an entry from VCMI's index (its catalog entry
+	/// carries "dmbEntry", which only DMB-Mods-Repository's builder sets)
+	bool isDmbCatalogEntry() const;
 };
