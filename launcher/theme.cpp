@@ -58,6 +58,25 @@ QPixmap playerLeather()
 	return QPixmap::fromImage(image);
 }
 
+/// Dark mode's background: the same leather tinted toward black, so the two looks share one grain
+/// (K, September 26th: one harvested texture in two tints, not a second dark design)
+QPixmap darkened(const QPixmap & leather)
+{
+	QImage image = leather.toImage().convertToFormat(QImage::Format_RGB32);
+	for(int y = 0; y < image.height(); ++y)
+	{
+		auto * line = reinterpret_cast<QRgb *>(image.scanLine(y));
+		for(int x = 0; x < image.width(); ++x)
+		{
+			// two thirds of the way to grey, then down to 30% of the brightness: the grain stays, the brown mostly goes
+			const int grey = qGray(line[x]);
+			const auto tint = [grey](int channel) { return (channel + 2 * grey) / 3 * 30 / 100; };
+			line[x] = qRgb(tint(qRed(line[x])), tint(qGreen(line[x])), tint(qBlue(line[x])));
+		}
+	}
+	return QPixmap::fromImage(image);
+}
+
 const QColor gold(217, 168, 62);
 const QColor parchment(243, 231, 201);
 
@@ -113,12 +132,10 @@ void LauncherTheme::apply()
 	if(theme == "system")
 		return;
 
-	QPixmap leather;
-	if(theme == "leather")
-		leather = playerLeather();
+	const QPixmap leather = playerLeather();
 
 	QApplication::setStyle(QStyleFactory::create("Fusion")); // the one style that follows the palette everywhere
-	if(!leather.isNull())
+	if(theme == "leather" && !leather.isNull())
 	{
 		// the tile itself behind every window; lists and text on a dark brown, so they stay readable
 		QApplication::setPalette(themedPalette(QBrush(leather), QColor(34, 22, 10), QColor(46, 30, 14), QColor(70, 46, 20)));
@@ -128,9 +145,12 @@ void LauncherTheme::apply()
 	}
 	else
 	{
-		QApplication::setPalette(themedPalette(QBrush(QColor(24, 24, 24)), QColor(16, 16, 16), QColor(30, 30, 30), QColor(44, 44, 44)));
+		// the same leather tinted near black; a flat near black only before the game files are imported
+		const QBrush window = leather.isNull() ? QBrush(QColor(24, 24, 24)) : QBrush(darkened(leather));
+		QApplication::setPalette(themedPalette(window, QColor(16, 16, 16), QColor(30, 30, 30), QColor(44, 44, 44)));
 		qApp->setStyleSheet(QString(commonStyle) +
 			"QTabBar::tab, QHeaderView::section { color: #f3e7c9; background: #2c2c2c; }");
-		logGlobal->info("Launcher look: dark%s", theme == "leather" ? " (no game files to read the leather from yet)" : "");
+		logGlobal->info("Launcher look: dark, %s", leather.isNull() ? "flat (no game files to read the leather from yet)"
+			: "the leather tinted near black");
 	}
 }
