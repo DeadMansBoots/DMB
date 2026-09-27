@@ -17,6 +17,7 @@
 #include "RandomMapTab.h"
 #include "SelectionTab.h"
 #include "BattleOnlyModeTab.h"
+#include "MapGenTab.h"
 
 #include "../CServerHandler.h"
 #include "../GameEngine.h"
@@ -35,6 +36,9 @@
 #include "../../lib/mapping/CMapInfo.h"
 #include "../../lib/networkPacks/PacksForLobby.h"
 #include "../../lib/rmg/CMapGenOptions.h"
+#include "../../lib/modding/CModHandler.h"
+#include "../../lib/modding/MapGenerators.h"
+#include "../../lib/modding/ModDescription.h"
 #include "../../lib/GameLibrary.h"
 
 CLobbyScreen::CLobbyScreen(ESelectionScreen screenType, bool hideScreen)
@@ -95,6 +99,34 @@ CLobbyScreen::CLobbyScreen(ESelectionScreen screenType, bool hideScreen)
 			if (getMapInfo() && !getMapInfo()->isRandomMap)
 				tabRand->updateMapInfoByHost();
 		});
+
+		// DMB: a map generator's tab, a peer of Scenarios and Random Map, when an enabled mod brings
+		// one (lib/modding/MapGenerators.h); with several, the last in load order, as later mods win
+		// in VCMI. Its button takes the free slot beside Random Map; a network lobby puts its chat
+		// button there and gets no generator (it runs on this machine).
+		{
+			std::optional<MapGeneratorInfo> generator;
+			for(const auto & found : MapGenerators::active())
+			{
+				if(!found.problem.empty())
+					logGlobal->warn("Map generator %s (mod %s) is not offered: %s", found.name, found.modID, found.problem);
+				else
+				{
+					if(generator)
+						logGlobal->info("Map generator %s (mod %s) takes the place of %s (mod %s)", found.name, found.modID, generator->name, generator->modID);
+					generator = found;
+				}
+			}
+			if(generator && !buttonChat)
+			{
+				mapGenName = generator->name;
+				tabMapGen = std::make_shared<MapGenTab>(*generator);
+				const std::string description = LIBRARY->modh->getModInfo(generator->modID).getLocalizedDescription().String();
+				buttonMapGen = std::make_shared<CButton>(Point(619, 105), AnimationPath::builtin("GSPButton2Arrow"),
+					CButton::tooltip(generator->name, "{" + generator->name + "}\n\n" + description),
+					[this]() { toggleTab(tabMapGen); }, EShortcut::LOBBY_MAP_GENERATOR);
+			}
+		}
 
 		card->iconDifficulty->addCallback(std::bind(&IServerAPI::setDifficulty, &GAME->server(), _1));
 
@@ -338,6 +370,11 @@ void CLobbyScreen::toggleMode(bool host)
 	{
 		buttonRMG->setTextOverlay("  " + LIBRARY->generaltexth->allTexts[740], FONT_SMALL, buttonColor);
 		buttonRMG->block(!host);
+	}
+	if(buttonMapGen)
+	{
+		buttonMapGen->setTextOverlay(mapGenName, FONT_SMALL, buttonColor);
+		buttonMapGen->block(!host);
 	}
 	buttonSelect->block(!host);
 	buttonOptions->block(!host);

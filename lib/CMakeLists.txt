@@ -195,6 +195,8 @@ set(lib_MAIN_SRCS
 	modding/ContentTypeHandler.cpp
 	modding/IdentifierStorage.cpp
 	modding/AIPlugins.cpp
+	modding/AddonCode.cpp
+	modding/MapGenerators.cpp
 	modding/ModDescription.cpp
 	modding/ModIncompatibility.cpp
 	modding/ModManager.cpp
@@ -645,6 +647,8 @@ set(lib_MAIN_HEADERS
 	modding/ContentTypeHandler.h
 	modding/IdentifierStorage.h
 	modding/AIPlugins.h
+	modding/AddonCode.h
+	modding/MapGenerators.h
 	modding/ModDescription.h
 	modding/ModIncompatibility.h
 	modding/ModManager.h

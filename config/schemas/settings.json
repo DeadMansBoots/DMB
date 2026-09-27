@@ -194,14 +194,22 @@
 			"type" : "object",
 			"additionalProperties" : false,
 			"default" : {},
-			"required" : [ 
-				"validation"
+			"required" : [
+				"validation",
+				"allowUnlistedCode"
 			],
 			"properties" : {
 				"validation" : {
 					"type" : "string",
 					"enum" : [ "off", "basic", "full" ],
 					"default" : "basic"
+				},
+				// DMB: an addon's code (an AI plugin, a map generator) runs only when DMB's mod catalog
+				// pins it (lib/modding/AddonCode.h). On, anything installed runs: for developers
+				// testing their own builds.
+				"allowUnlistedCode" : {
+					"type" : "boolean",
+					"default" : false
 				}
 			}
 		},

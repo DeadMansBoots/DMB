@@ -62,10 +62,11 @@ protected:
 
 	std::string getModLanguage(const std::string & modContext);
 
+public:
 	// returns true if identifier with such name was registered, even if not translated to current language
+	// DMB: public, so a map generator mod's tab can prefer the mod's own wording (client/lobby/MapGenTab.cpp)
 	bool identifierExists(const TextIdentifier & UID) const;
 
-public:
 	/// Loads translation from provided json
 	/// Any entries loaded by this will have priority over texts registered normally
 	void loadTranslationOverrides(const std::string & modContext, const std::string & language, JsonNode const & file);

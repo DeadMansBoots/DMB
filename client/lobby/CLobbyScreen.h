@@ -13,6 +13,7 @@
 
 class CBonusSelection;
 class GraphicalPrimitiveCanvas;
+class MapGenTab;
 
 class CLobbyScreen final : public CSelectionBase
 {
@@ -37,6 +38,10 @@ public:
 private:
 	std::shared_ptr<CButton> buttonChat;
 	std::shared_ptr<GraphicalPrimitiveCanvas> blackScreen;
+	// DMB: a map generator mod's tab (MapGenTab.h), its button, and the name the button shows
+	std::shared_ptr<MapGenTab> tabMapGen;
+	std::shared_ptr<CButton> buttonMapGen;
+	std::string mapGenName;
 
 	bool waitingForPlayersMessageShown = false;
 	bool compatibilityFilterInitialized = false;

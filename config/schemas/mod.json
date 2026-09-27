@@ -165,6 +165,26 @@
 				}
 			}
 		},
+		"mapGenerator" : {
+			"type" : "object",
+			"additionalProperties" : false,
+			"required" : [ "name", "command", "tab" ],
+			"description" : "DMB: this mod is a map generator with its own lobby tab; everything it runs sits in the mod's generator folder (lib/modding/MapGenerators.h)",
+			"properties" : {
+				"name" : {
+					"type" : "string",
+					"description" : "What the lobby's button for the tab says"
+				},
+				"command" : {
+					"type" : "string",
+					"description" : "The program the tab runs, from the mod's folder and inside its generator folder, such as generator/generate.cmd"
+				},
+				"tab" : {
+					"type" : "string",
+					"description" : "The tab's layout in the mod's Content, such as config/widgets/mapGen/mapGenTab.json"
+				}
+			}
+		},
 		"settings" : {
 			"description" : "List of changed game settings by mod",
 			"oneOf" : [

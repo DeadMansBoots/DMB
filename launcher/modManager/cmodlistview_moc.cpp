@@ -32,14 +32,43 @@
 #include "../../lib/filesystem/Filesystem.h"
 #include "../../lib/filesystem/CZipLoader.h"
 #include "../../lib/json/JsonUtils.h"
+#include "../../lib/modding/AddonCode.h"
 #include "../../lib/modding/CModVersion.h"
 #include "../../lib/modding/ModDescription.h"
 #include "../../lib/texts/CGeneralTextHandler.h"
 #include "../../lib/texts/Languages.h"
 
+#include "../vcmiqt/convpathqstring.h"
 #include "../vcmiqt/launcherdirs.h"
 
 #include <future>
+
+// DMB: whether a downloaded index is the default repository's, DMB's own catalog. loadRepositories
+// names each index file after the MD5 of its address.
+static bool isDefaultCatalog(const QString & filename)
+{
+	if(!settings["launcher"]["defaultRepositoryEnabled"].Bool())
+		return false;
+	const QString url = QString::fromStdString(settings["launcher"]["defaultRepositoryURL"].String());
+	const QString hashed = QString::fromUtf8(QCryptographicHash::hash(url.toUtf8(), QCryptographicHash::Md5).toHex());
+	return QFileInfo(filename).fileName() == hashed + ".json";
+}
+
+// DMB: every "codeSha256" the catalog gives, by mod, for the game to check addon code against
+// (lib/modding/AddonCode.h)
+static void saveCodePins(const JsonNode & availableMods)
+{
+	JsonNode pins;
+	pins.Struct();
+	for(const auto & [modName, modJson] : availableMods.Struct())
+		if(modJson["codeSha256"].isString() || modJson["codeSha256"].isVector())
+			pins[boost::algorithm::to_lower_copy(modName)] = modJson["codeSha256"];
+	const auto path = AddonCode::pinsFile();
+	boost::system::error_code ec;
+	boost::filesystem::create_directories(path.parent_path(), ec);
+	JsonUtils::jsonToFile(pathToQString(path), pins);
+	logGlobal->info("DMB's mod catalog pins the code of %d mods", static_cast<int>(pins.Struct().size()));
+}
 
 void CModListView::setupModModel()
 {
@@ -1007,6 +1036,12 @@ void CModListView::installFiles(QStringList files)
 
 					accumulatedRepositoryData[modNameLower] = modJson;
 				}
+
+				// DMB: the pins come from the default catalog's index alone and are kept apart: each
+				// mod's own mod.json, merged over its entry below, comes from the mod's author, who
+				// must not be able to vouch for their own code
+				if(isDefaultCatalog(filename))
+					saveCodePins(availableRepositoryMods);
 			}
 			else
 			{

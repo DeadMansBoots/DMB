@@ -18,7 +18,7 @@ class ModDescription;
 /// and the library sits in the mod's own "ai" folder (ai/OmniAI.dll, ai/libOmniAI.so, ai/libOmniAI.dylib),
 /// exporting VCMI's usual GetAiName plus GetNewAI and/or GetNewBattleAI. A C++ AI shares classes with
 /// the engine and has no stable binary interface, so a plugin loads only in the DMB version it was
-/// built for.
+/// built for, and only when DMB's mod catalog pins its "ai" folder (AddonCode.h).
 struct DLL_LINKAGE AIPluginInfo
 {
 	std::string modID;
