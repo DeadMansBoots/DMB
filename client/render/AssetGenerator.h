@@ -82,6 +82,11 @@ private:
 	AnimationLayoutMap createGSPButtonClear();
 	AnimationLayoutMap createGSPButton2Arrow();
 	AnimationLayoutMap createMapGenButton(int width);
+	/// DMB: a stock button without its baked-in word, at any width: `source`'s end caps as they are, and
+	/// between them two word-free column ranges of its middle, repeated in turn. A layout draws its own
+	/// text over it. `name` is the generated animation's name.
+	AnimationLayoutMap createBlankButton(const std::string & name, const std::string & source, int width, int cap,
+		std::pair<int, int> tileA, std::pair<int, int> tileB);
 	CanvasPtr createGateListColored(PlayerColor color, PlayerColor backColor) const;
 	CanvasPtr createHeroSlotsColored(PlayerColor backColor) const;
 	CanvasPtr createStackArtifactIndicator(const Point & size) const;

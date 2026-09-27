@@ -133,6 +133,22 @@ void AssetGenerator::initialize()
 	animationFiles[AnimationPath::builtin("SPRITES/GSPButton2Arrow")] = createGSPButton2Arrow();
 	animationFiles[AnimationPath::builtin("SPRITES/MapGenButton64")] = createMapGenButton(64); // beside Random Map in a network lobby
 	animationFiles[AnimationPath::builtin("SPRITES/MapGenButton80")] = createMapGenButton(80);
+	// DMB: the Random Map Setup's own buttons without their words, for layouts that write their own:
+	// RANWEAK's blue bevelled button at the widths of 2, 3, 4 and 5 to a row, and RANSHOW's gold bar
+	// at its full width and at half of it (docs/modders/DMB_UI_Modding.md). RANWEAK's middle comes from
+	// its word-free columns 6-14 and 70-76, the same in all four frames. RANSHOW's bar is brushed
+	// metal, streaked along its length, so one column of it (110, between two words) repeated reads
+	// as the bar itself; wider pieces left a seam every repeat and flecks of the letters' serifs.
+	for(int width : {150, 83, 62, 50})
+	{
+		const std::string name = "RanButton" + std::to_string(width);
+		animationFiles[AnimationPath::builtin("SPRITES/" + name)] = createBlankButton(name, "RANWEAK", width, 6, {6, 15}, {70, 77});
+	}
+	for(int width : {337, 166})
+	{
+		const std::string name = "RanShowButton" + std::to_string(width);
+		animationFiles[AnimationPath::builtin("SPRITES/" + name)] = createBlankButton(name, "RANSHOW", width, 21, {110, 111}, {110, 111});
+	}
 	animationFiles[AnimationPath::builtin("SPRITES/MapGenButton190")] = createMapGenButton(190);
 
 	for (PlayerColor color(-1); color < PlayerColor::PLAYER_LIMIT; ++color)
@@ -1170,6 +1186,44 @@ AssetGenerator::AnimationLayoutMap AssetGenerator::createMapGenButton(int width)
 			}
 
 			canvas.draw(frame, Point(width - capW, 0), Rect(srcW - capW, 0, capW, srcH));
+			return newImg;
+		};
+
+		layout[0].push_back(ImageLocator(spriteName, EImageBlitMode::SIMPLE));
+	}
+
+	return layout;
+}
+
+AssetGenerator::AnimationLayoutMap AssetGenerator::createBlankButton(const std::string & name, const std::string & source, int width,
+	int cap, std::pair<int, int> tileA, std::pair<int, int> tileB)
+{
+	auto baseImg = ENGINE->renderHandler().loadAnimation(AnimationPath::builtin(source), EImageBlitMode::OPAQUE);
+
+	AnimationLayoutMap layout;
+	for(size_t i = 0; i < baseImg->size(0); i++)
+	{
+		ImagePath spriteName = ImagePath::builtin(name + "_" + std::to_string(i) + ".png");
+
+		imageFiles[spriteName] = [baseImg, i, width, cap, tileA, tileB]()
+		{
+			auto frame = baseImg->getImage(i);
+			const Point size = frame->dimensions();
+			auto newImg = ENGINE->renderHandler().createImage(Point(width, size.y), CanvasScalingPolicy::IGNORE);
+			auto canvas = newImg->getCanvas();
+
+			canvas.draw(frame, Point(0, 0), Rect(0, 0, cap, size.y));
+			int drawn = cap;
+			bool first = true;
+			while(drawn < width - cap)
+			{
+				const auto & tile = first ? tileA : tileB;
+				const int chunk = std::min(tile.second - tile.first, width - cap - drawn);
+				canvas.draw(frame, Point(drawn, 0), Rect(tile.first, 0, chunk, size.y));
+				drawn += chunk;
+				first = !first;
+			}
+			canvas.draw(frame, Point(width - cap, 0), Rect(size.x - cap, 0, cap, size.y));
 			return newImg;
 		};
 
