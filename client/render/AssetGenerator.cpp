@@ -1133,9 +1133,9 @@ AssetGenerator::AnimationLayoutMap AssetGenerator::createMapGenButton(int width)
 {
 	// GSPBUT2 is the classic gold-on-blue button VCMI's own lobby already uses
 	// everywhere (Random Map, Options, chat toggle...) via setTextOverlay for
-	// a dynamic label, but it is a fixed 128x20. MapGenTab needs an 80-wide
-	// tab button and a 190-wide action button, neither of which exists as a
-	// real H3 asset. The fill is fine dithered noise bounded by a 1-2px top
+	// a dynamic label, but it is a fixed 128x20. A map generator mod's tab
+	// layout needs an 80-wide tab button and a 190-wide action button, neither
+	// of which exists as a real H3 asset. The fill is fine dithered noise bounded by a 1-2px top
 	// highlight and bottom shadow line, no large-scale pattern, so a real
 	// left/right edge cap plus a tiled real middle slice reads as authentic
 	// at any width instead of stretching or inventing pixels.

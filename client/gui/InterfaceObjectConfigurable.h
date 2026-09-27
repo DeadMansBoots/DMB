@@ -119,7 +119,7 @@ protected:
 	//composite widgets
 	std::shared_ptr<CIntObject> buildWidget(JsonNode config) const;
 	
-	/// Settings-bound widgets (testinstall patch, VCMIMapGen item 25): a
+	/// DMB: settings-bound widgets, for layouts a mod brings: a
 	/// toggleGroup, toggleButton or slider whose config names a "setting"
 	/// (a slash path into settings.json) opens on the stored value and
 	/// writes every change back, so a panel of options needs no C++ of its

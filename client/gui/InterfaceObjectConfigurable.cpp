@@ -41,8 +41,8 @@
 
 #include <boost/algorithm/string.hpp>
 
-// Settings-bound widgets (testinstall patch, VCMIMapGen queue item 25). A
-// widget config may carry "setting": "a/b/c", a slash path into settings.json.
+// DMB: settings-bound widgets, so a layout a mod brings can be a whole panel of
+// options. A widget config may carry "setting": "a/b/c", a slash path into settings.json.
 // The widget opens on the stored value and writes every change back, so a
 // panel of options needs no C++ of its own; the settings schema must declare
 // the path, or VCMI erases it on the next load.
