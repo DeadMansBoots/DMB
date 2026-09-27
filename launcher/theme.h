@@ -15,8 +15,8 @@
 ///    own look. Before any game files are imported there is no leather to read, and "dark" is used.
 ///  - "dark": black and dark grey with the same gold accents.
 ///  - "system": the platform's own look, as stock VCMI's launcher has it.
-/// Applied once, after the game's filesystem is loaded and before the main window builds its widgets;
-/// every window and dialog of the launcher follows.
+/// Applied after the game's filesystem is loaded and before the main window builds its widgets, and again
+/// whenever the Settings page's Launcher Look changes; every window and dialog of the launcher follows.
 namespace LauncherTheme
 {
 	void apply();

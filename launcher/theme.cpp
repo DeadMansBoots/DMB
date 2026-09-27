@@ -128,9 +128,19 @@ QPalette themedPalette(const QBrush & window, const QColor & base, const QColor 
 
 void LauncherTheme::apply()
 {
+	// the platform's own look, kept from the first call, for switching back to "system" from the Settings page
+	static const QString systemStyle = QApplication::style()->objectName(); // Qt 5 keeps the style's key there
+	static const QPalette systemPalette = QApplication::palette();
+
 	const std::string theme = settings["launcher"]["theme"].String();
 	if(theme == "system")
+	{
+		QApplication::setStyle(QStyleFactory::create(systemStyle));
+		QApplication::setPalette(systemPalette);
+		qApp->setStyleSheet(QString());
+		logGlobal->info("Launcher look: system");
 		return;
+	}
 
 	const QPixmap leather = playerLeather();
 

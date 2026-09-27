@@ -16,6 +16,7 @@
 
 #include "../modManager/cmodlistview_moc.h"
 #include "../helper.h"
+#include "../theme.h"
 #include "../vcmiqt/jsonutils.h"
 #include "../languages.h"
 
@@ -280,6 +281,17 @@ void CSettingsView::loadSettings()
 
 	Languages::fillLanguages(ui->comboBoxLanguage, false);
 	fillValidRenderers();
+
+	// DMB: the launcher's look (theme.h), switched on the spot
+	{
+		const QSignalBlocker quiet(ui->comboBoxLauncherLook);
+		ui->comboBoxLauncherLook->clear();
+		ui->comboBoxLauncherLook->addItem(tr("Leather"), QString("leather"));
+		ui->comboBoxLauncherLook->addItem(tr("Dark"), QString("dark"));
+		ui->comboBoxLauncherLook->addItem(tr("System"), QString("system"));
+		const int stored = ui->comboBoxLauncherLook->findData(QString::fromStdString(settings["launcher"]["theme"].String()));
+		ui->comboBoxLauncherLook->setCurrentIndex(std::max(0, stored));
+	}
 
 	std::string upscalingFilter = settings["video"]["upscalingFilter"].String();
 	int upscalingFilterIndex = vstd::find_pos(upscalingFilterTypes, upscalingFilter);
@@ -654,6 +666,13 @@ void CSettingsView::on_buttonAutoSave_toggled(bool value)
 	Settings node = settings.write["general"]["saveFrequency"];
 	node->Integer() = value ? 1 : 0;
 	updateCheckbuttonText(ui->buttonAutoSave);
+}
+
+void CSettingsView::on_comboBoxLauncherLook_currentIndexChanged(int index)
+{
+	Settings node = settings.write["launcher"]["theme"];
+	node->String() = ui->comboBoxLauncherLook->itemData(index).toString().toStdString();
+	LauncherTheme::apply();
 }
 
 void CSettingsView::on_comboBoxLanguage_currentIndexChanged(int index)
