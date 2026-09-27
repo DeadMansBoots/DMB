@@ -120,7 +120,9 @@ QPixmap darkened(const QPixmap & leather)
 const QColor gold(217, 168, 62);
 const QColor parchment(243, 231, 201);
 
-// Gold buttons with black text, as the game draws its own; the side menu and tabs in the same gold
+// Gold buttons with black text, as the game draws its own; the side menu and tabs in the same gold. The
+// Settings page's categories gold on black down its left, the category's settings framed in gold, its
+// dropdowns and its buttons that switch a setting in the game's gold (K, September 26th).
 const char * commonStyle = R"(
 QPushButton {
 	color: black;
@@ -140,6 +142,29 @@ QHeaderView::section { padding: 3px 6px; border: none; border-right: 1px solid #
 QToolTip { color: #f3e7c9; background: #2a1a0a; border: 1px solid #d9a83e; }
 QProgressBar { border: 1px solid #8a6a2a; text-align: center; }
 QProgressBar::chunk { background: #d9a83e; }
+#dmbSettingsCategories QPushButton {
+	color: #d9a83e;
+	background: black;
+	border: 1px solid #4a3008;
+	border-radius: 0;
+	padding: 6px 14px;
+	text-align: left;
+	font-weight: bold;
+}
+#dmbSettingsCategories QPushButton:hover { color: #fbe29a; background: #1c1307; }
+#dmbSettingsCategories QPushButton:checked { color: #fbe29a; background: #2b1d08; border: 1px solid #d9a83e; }
+#dmbSettingsPanel { border: 2px solid #d9a83e; border-radius: 3px; }
+QLabel[dmbSettingsTitle="true"] { color: #d9a83e; font-size: 13pt; font-weight: bold; }
+CSettingsView QComboBox { color: #f3e7c9; background: #24170a; border: 1px solid #d9a83e; border-radius: 3px; padding: 3px 8px; }
+CSettingsView QComboBox:hover { border-color: #fbe29a; }
+CSettingsView QComboBox QAbstractItemView { color: #f3e7c9; background: #1a1108; border: 1px solid #d9a83e; selection-color: black; selection-background-color: #d9a83e; }
+CSettingsView QToolButton { color: #f3e7c9; background: #24170a; border: 1px solid #8a6a2a; border-radius: 3px; padding: 3px 10px; }
+CSettingsView QToolButton:hover { border-color: #d9a83e; }
+CSettingsView QToolButton:checked {
+	color: black;
+	background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f3d27a, stop:0.5 #d9a83e, stop:1 #9c6d1c);
+	border: 1px solid #4a3008;
+}
 )";
 
 QPalette themedPalette(const QBrush & window, const QColor & base, const QColor & alternate, const QColor & button)

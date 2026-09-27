@@ -109,6 +109,22 @@ private slots:
 private:
 	Ui::CSettingsView * ui;
 
+	/// DMB: the settings in pages, one a category, picked from a narrow bar of categories on the left
+	/// (K, September 26th: real submenus, not one long scrolling list). The .ui keeps its one long
+	/// grid, and each header label there starts a category.
+	void buildCategoryPages();
+	/// a category's button shows while any of its settings shows, named as its header; the page shown
+	/// is one with a button
+	void updateCategoryButtons();
+	struct SettingsCategory
+	{
+		QLabel * header;
+		QPushButton * button;
+		std::vector<QWidget *> widgets;
+	};
+	std::vector<SettingsCategory> categories;
+	QStackedWidget * categoryPages = nullptr;
+
 	void fillValidRenderers();
 	void fillValidResolutionsForScreen(int screenIndex);
 	void fillValidScalingRange();

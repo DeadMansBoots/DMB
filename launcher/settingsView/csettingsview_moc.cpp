@@ -330,6 +330,7 @@ void CSettingsView::loadSettings()
 		ui->buttonValidationFull->setChecked(true);
 
 	loadToggleButtonSettings();
+	updateCategoryButtons(); // DMB: settings shown or hidden again may add or drop a category
 }
 
 void CSettingsView::loadToggleButtonSettings()
@@ -538,6 +539,139 @@ CSettingsView::CSettingsView(QWidget * parent)
 	Helper::enableScrollBySwiping(ui->settingsScrollArea);
 
 	loadSettings();
+	buildCategoryPages();
+}
+
+void CSettingsView::buildCategoryPages()
+{
+	QGridLayout * grid = ui->gridLayout;
+	const std::vector<QLabel *> headers = { ui->labelGeneral, ui->labelVideo, ui->labelAudio, ui->labelInputMouse,
+		ui->labelInputMouse_2, ui->labelInputMouse_3, ui->labelArtificialIntelligence, ui->labelNetwork, ui->labelMiscellaneous };
+	std::map<int, QLabel *> starts; // a header's row, in the grid's order
+	for(auto * header : headers)
+	{
+		const int index = grid->indexOf(header);
+		if(index < 0)
+			continue;
+		int row = 0, column = 0, rowSpan = 0, columnSpan = 0;
+		grid->getItemPosition(index, &row, &column, &rowSpan, &columnSpan);
+		starts[row] = header;
+	}
+	if(starts.empty())
+		return;
+
+	// every cell of the long grid, taken out with where it was
+	struct Cell
+	{
+		QLayoutItem * item;
+		int row, column, rowSpan, columnSpan;
+	};
+	std::vector<Cell> cells;
+	while(grid->count() > 0)
+	{
+		Cell cell{nullptr, 0, 0, 0, 0};
+		grid->getItemPosition(0, &cell.row, &cell.column, &cell.rowSpan, &cell.columnSpan);
+		cell.item = grid->takeAt(0);
+		cells.push_back(cell);
+	}
+
+	auto * bar = new QWidget(this);
+	bar->setObjectName("dmbSettingsCategories");
+	bar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+	auto * barLayout = new QVBoxLayout(bar);
+	barLayout->setContentsMargins(6, 6, 0, 6);
+	barLayout->setSpacing(3);
+
+	auto * panel = new QFrame(this);
+	panel->setObjectName("dmbSettingsPanel");
+	auto * panelLayout = new QVBoxLayout(panel);
+	panelLayout->setContentsMargins(4, 4, 4, 4);
+	categoryPages = new QStackedWidget(panel);
+	panelLayout->addWidget(categoryPages);
+
+	for(auto start = starts.begin(); start != starts.end(); ++start)
+	{
+		const int first = start->first;
+		const int end = std::next(start) == starts.end() ? std::numeric_limits<int>::max() : std::next(start)->first;
+
+		auto * page = new QWidget();
+		auto * pageGrid = new QGridLayout(page);
+		for(int column = 0; column < grid->columnCount(); ++column)
+			pageGrid->setColumnStretch(column, grid->columnStretch(column));
+		pageGrid->setHorizontalSpacing(grid->horizontalSpacing());
+		pageGrid->setVerticalSpacing(grid->verticalSpacing());
+
+		SettingsCategory category{start->second, nullptr, {}};
+		int lastRow = 0;
+		for(auto & cell : cells)
+		{
+			if(!cell.item || cell.row < first || cell.row >= end)
+				continue;
+			if(QWidget * widget = cell.item->widget())
+			{
+				// addWidget, which moves the widget onto the page as well (addItem would leave it where
+				// it was); one the code hid stays hidden
+				pageGrid->addWidget(widget, cell.row - first, cell.column, cell.rowSpan, cell.columnSpan, cell.item->alignment());
+				delete cell.item;
+				if(widget != start->second)
+					category.widgets.push_back(widget);
+			}
+			else
+				pageGrid->addItem(cell.item, cell.row - first, cell.column, cell.rowSpan, cell.columnSpan);
+			lastRow = std::max(lastRow, cell.row - first + cell.rowSpan - 1);
+			cell.item = nullptr;
+		}
+		pageGrid->setRowStretch(lastRow + 1, 1); // the settings at the top, the room below them
+		start->second->setProperty("dmbSettingsTitle", true); // the header titles its page
+
+		auto * scroll = new QScrollArea();
+		scroll->setWidgetResizable(true);
+		scroll->setFrameShape(QFrame::NoFrame);
+		scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+		scroll->setWidget(page);
+		Helper::enableScrollBySwiping(scroll);
+		const int index = categoryPages->addWidget(scroll);
+
+		category.button = new QPushButton(start->second->text(), bar);
+		category.button->setCheckable(true);
+		connect(category.button, &QPushButton::clicked, this, [this, index]()
+		{
+			categoryPages->setCurrentIndex(index);
+			updateCategoryButtons();
+		});
+		barLayout->addWidget(category.button);
+		categories.push_back(category);
+	}
+	barLayout->addStretch(1);
+	// the grid held nothing above its first header; a cell there would stay out of sight
+	for(auto & cell : cells)
+		delete cell.item;
+
+	ui->settingsScrollArea->hide();
+	ui->horizontalLayout->insertWidget(0, bar);
+	ui->horizontalLayout->insertWidget(1, panel, 1);
+	updateCategoryButtons();
+}
+
+void CSettingsView::updateCategoryButtons()
+{
+	if(!categoryPages)
+		return;
+	int current = categoryPages->currentIndex();
+	for(auto & category : categories)
+	{
+		const bool shown = std::any_of(category.widgets.begin(), category.widgets.end(), [](QWidget * widget) { return !widget->isHidden(); });
+		category.button->setVisible(shown);
+		category.button->setText(category.header->text());
+	}
+	if(current < 0 || current >= static_cast<int>(categories.size()) || categories[current].button->isHidden())
+	{
+		const auto found = std::find_if(categories.begin(), categories.end(), [](const SettingsCategory & category) { return !category.button->isHidden(); });
+		current = found == categories.end() ? 0 : static_cast<int>(found - categories.begin());
+	}
+	categoryPages->setCurrentIndex(current);
+	for(size_t i = 0; i < categories.size(); ++i)
+		categories[i].button->setChecked(static_cast<int>(i) == current);
 }
 
 CSettingsView::~CSettingsView()
@@ -692,6 +826,7 @@ void CSettingsView::changeEvent(QEvent *event)
 		Languages::fillLanguages(ui->comboBoxLanguage, false);
 		loadTranslation();
 		loadToggleButtonSettings();
+		updateCategoryButtons(); // DMB: the categories named in the new language
 	}
 	QWidget::changeEvent(event);
 }
