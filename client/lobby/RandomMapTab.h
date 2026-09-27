@@ -73,13 +73,20 @@ private:
 	int templateIndex;
 };
 
+/// DMB: a team for each player, in colour order, as the team grid's OK hands them on
+using TeamChoice = std::function<void(const std::vector<TeamID> &)>;
+
 class TeamAlignmentsWidget: public InterfaceObjectConfigurable
 {
 public:
-	TeamAlignmentsWidget(RandomMapTab & randomMapTab);
-	
+	/// DMB: the grid for the players `options` has; OK hands the teams to `apply` (RandomMapTab sets them
+	/// on its options, a map generator mod's tab stores them). `options` is read here only.
+	TeamAlignmentsWidget(const CMapGenOptions & options, TeamChoice apply);
+
 private:
 	void checkTeamCount();
+
+	TeamChoice apply;
 
 	std::shared_ptr<CFilledTexture> background;
 	std::shared_ptr<CLabelGroup> labels;
@@ -94,6 +101,7 @@ class TeamAlignments: public CWindowObject
 	std::shared_ptr<TeamAlignmentsWidget> widget;
 public:
 	TeamAlignments(RandomMapTab & randomMapTab);
+	TeamAlignments(const CMapGenOptions & options, TeamChoice apply);
 };
 
 class SetSizeWindow: public CWindowObject

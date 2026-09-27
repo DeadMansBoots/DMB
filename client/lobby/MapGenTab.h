@@ -58,13 +58,23 @@ class MapGenTab : public InterfaceObjectConfigurable
 
 	std::shared_ptr<CIntObject> createPage(size_t index);
 	void openPage(size_t index);
+	void refreshPages();
 	void resetToDefaults();
 	void chooseTemplate();
+	/// VCMI's team grid (callback chooseMapGenTeams), stored as map/teams
+	void chooseTeams();
+	/// VCMI's custom size window (callback chooseMapGenCustomSize), stored as map/width and map/height
+	void chooseCustomSize();
+	void clearCustomSize();
 	void generate();
 
 	int mapSetting(const std::string & key) const;
 	std::string templateName() const;
+	/// the chosen template as a label shows it: its name, "(Random)" or the tab's "none" text
+	std::string templateLabel() const;
 	std::string preset() const;
+	/// the lobby's random map as the tab's settings describe it, counts left on Random rolled
+	std::shared_ptr<CMapGenOptions> lobbyOptions() const;
 
 public:
 	explicit MapGenTab(const MapGeneratorInfo & generator);

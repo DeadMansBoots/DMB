@@ -123,7 +123,9 @@ page of options needs no code:
   with several they all move at once. On a page of a pages widget, and on a map generator's tab,
   sliders take no keys (the arrows turn the page); elsewhere `"keyboard": false` turns them off for
   one slider, and `"keyboard": true` turns them back on;
-- `label`: shows the stored text, or its `emptyText` while there is none (level 2).
+- `label`: shows the stored text, or its `emptyText` while there is none (level 2); a stored value
+  named in `valueTexts` shows that text instead, such as `"valueTexts": { "random":
+  "vcmi.myMod.random" }` (level 3).
 
 A `setting` is a path with `/` between its parts: `persistent:myMod/speed` in
 `persistentStorage.json`, or a plain path into `settings.json`, which the settings schema must

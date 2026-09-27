@@ -632,27 +632,40 @@ void TeamAlignmentsWidget::checkTeamCount()
 }
 
 TeamAlignments::TeamAlignments(RandomMapTab & randomMapTab)
+	: TeamAlignments(randomMapTab.obtainMapGenOptions(), [&randomMapTab](const std::vector<TeamID> & teams)
+	{
+		// DMB: a colour the options lack is skipped (the grid shows eight while a count is on Random)
+		for(size_t plId = 0; plId < teams.size(); ++plId)
+			if(vstd::contains(randomMapTab.obtainMapGenOptions().getPlayersSettings(), PlayerColor(plId)))
+				randomMapTab.obtainMapGenOptions().setPlayerTeam(PlayerColor(plId), teams[plId]);
+		randomMapTab.updateMapInfoByHost();
+	})
+{
+}
+
+TeamAlignments::TeamAlignments(const CMapGenOptions & options, TeamChoice apply)
 	: CWindowObject(BORDERED)
 {
 	OBJECT_CONSTRUCTION;
 
-	widget = std::make_shared<TeamAlignmentsWidget>(randomMapTab);
+	widget = std::make_shared<TeamAlignmentsWidget>(options, std::move(apply));
 	pos = widget->pos;
 
 	updateShadow();
 	center();
 }
 
-TeamAlignmentsWidget::TeamAlignmentsWidget(RandomMapTab & randomMapTab):
-	InterfaceObjectConfigurable()
+TeamAlignmentsWidget::TeamAlignmentsWidget(const CMapGenOptions & options, TeamChoice onOk):
+	InterfaceObjectConfigurable(),
+	apply(std::move(onOk))
 {
 	const JsonNode config(JsonPath::builtin("config/widgets/randomMapTeamsWidget.json"));
 	variables = config["variables"];
 	
-	//int totalPlayers = randomMapTab.obtainMapGenOptions().getPlayerLimit();
-	int totalPlayers = randomMapTab.obtainMapGenOptions().getMaxPlayersCount();
+	//int totalPlayers = options.getPlayerLimit();
+	int totalPlayers = options.getMaxPlayersCount();
 	assert(totalPlayers <= PlayerColor::PLAYER_LIMIT_I);
-	auto playerSettings = randomMapTab.obtainMapGenOptions().getPlayersSettings();
+	auto playerSettings = options.getPlayersSettings();
 	variables["totalPlayers"].Integer() = totalPlayers;
 	
 	pos.w = variables["windowSize"]["x"].Integer() + totalPlayers * variables["cellMargin"]["x"].Integer();
@@ -668,13 +681,12 @@ TeamAlignmentsWidget::TeamAlignmentsWidget(RandomMapTab & randomMapTab):
 	variables["cancelButtonPosition"]["x"].Integer() = variables["buttonsOffset"]["cancel"]["x"].Integer();
 	variables["cancelButtonPosition"]["y"].Integer() = variables["buttonsOffset"]["cancel"]["y"].Integer() + totalPlayers * variables["cellMargin"]["y"].Integer();
 	
-	addCallback("ok", [&](int)
+	addCallback("ok", [this](int)
 	{
-		for(int plId = 0; plId < players.size(); ++plId)
-		{
-			randomMapTab.obtainMapGenOptions().setPlayerTeam(PlayerColor(plId), TeamID(players[plId]->getSelected()));
-		}
-		randomMapTab.updateMapInfoByHost();
+		std::vector<TeamID> teams;
+		for(const auto & player : players)
+			teams.emplace_back(player->getSelected());
+		apply(teams);
 
 		for(auto & window : ENGINE->windows().findWindows<TeamAlignments>())
 			ENGINE->windows().popWindow(window);
@@ -697,7 +709,7 @@ TeamAlignmentsWidget::TeamAlignmentsWidget(RandomMapTab & randomMapTab):
 
 	if (totalPlayers > playerSettings.size())
 	{
-		auto savedPlayers = randomMapTab.obtainMapGenOptions().getSavedPlayersMap();
+		auto savedPlayers = options.getSavedPlayersMap();
 		for (const auto & player : savedPlayers)
 		{
 			if (!vstd::contains(playerSettings, player.first))

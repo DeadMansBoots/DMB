@@ -58,12 +58,16 @@ The tab layout is an ordinary VCMI widget layout. Its pages are a `pages` widget
 `defaults` hold the map settings (`map`), the generator's own settings (`params`) and an optional
 `preset`. Widgets bind to settings with `"setting": "persistent:mapGen/params/<name>"`, which keeps
 their values in `persistentStorage.json`. The callbacks `activateMapGenPage`, `resetMapGenDefaults`,
-`generateMapGenMap` and `chooseMapGenTemplate` are the tab's own. The texts the tab itself shows can
+`generateMapGenMap` and `chooseMapGenTemplate` are the tab's own, and from level 3
+`chooseMapGenTeams` (VCMI's team grid, stored as `map/teams`, a team number per player in colour
+order; the grid's layout comes with the VCMI Extras mod, and without it the player is told so) and
+`chooseMapGenCustomSize` (VCMI's custom size window, stored as `map/width` and
+`map/height`; picking a size bound to `map/size` afterwards replaces it). The template chooser lists
+none, Random (stored as `random`) and every template installed. The texts the tab itself shows can
 be reworded by the mod's translation: `vcmi.mapGen.generate.hover`, `.running`, `.failed`,
 `.refused` (two `%s`: the generator's name, then the reason), `.humans` (one `%d`: the players in
-the lobby), and `vcmi.mapGen.template.hover`,
-`.choose`, `.none`. Where the mod brings none, DMB's generic wording shows
-(`vcmi.dmb.mapGenerator.*`).
+the lobby), `.atBegin`, and `vcmi.mapGen.template.hover`, `.choose`, `.none`, `.random`. Where the
+mod brings none, DMB's generic wording shows (`vcmi.dmb.mapGenerator.*`).
 
 The command gets these arguments, and writes a `.vmap` at `--out`:
 

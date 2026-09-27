@@ -481,11 +481,17 @@ std::shared_ptr<CLabel> InterfaceObjectConfigurable::buildLabel(const JsonNode &
 	auto alignment = readTextAlignment(config["alignment"]);
 	auto color = readColor(config["color"]);
 	auto text = readText(config["text"]);
-	// DMB: a label bound to a setting shows the stored text, or its "emptyText" while there is none
+	// DMB: a label bound to a setting shows the stored text, or its "emptyText" while there is none; a
+	// stored value named in "valueTexts" shows that text instead ("random" as "(Random)", say)
 	if(config["setting"].isString())
 	{
 		const JsonNode & stored = settingValue(settingPath(config["setting"]));
-		text = stored.isString() && !stored.String().empty() ? stored.String() : readText(config["emptyText"]);
+		if(!stored.isString() || stored.String().empty())
+			text = readText(config["emptyText"]);
+		else if(config["valueTexts"][stored.String()].isString())
+			text = readText(config["valueTexts"][stored.String()]);
+		else
+			text = stored.String();
 	}
 	auto position = readPosition(config["position"]);
 	auto maxWidth = config["maxWidth"].Integer();

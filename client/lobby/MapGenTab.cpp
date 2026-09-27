@@ -42,6 +42,9 @@
 
 #include <boost/algorithm/string.hpp>
 
+/// the template a generator picks for itself from those that fit (OmniMapGen reads "random" so)
+static const std::string RANDOM_TEMPLATE = "random";
+
 /// One of the texts the tab itself shows: the mod's own wording ("vcmi.mapGen.<name>", from its
 /// translation) when it brings one, else DMB's generic text ("vcmi.dmb.mapGenerator.<name>"). The
 /// two never share a key, so the mod's wording wins whatever the mods' load order.
@@ -108,10 +111,14 @@ MapGenTab::MapGenTab(const MapGeneratorInfo & info)
 			ENGINE->statusbar()->write(tabText("generate.atBegin"));
 	});
 	addCallback("chooseMapGenTemplate", [this](int) { chooseTemplate(); });
+	addCallback("chooseMapGenTeams", [this](int) { chooseTeams(); });
+	addCallback("chooseMapGenCustomSize", [this](int) { chooseCustomSize(); });
 	// every setting the generator gets goes to the server with the lobby's random map, so a change puts
 	// that together again (at Begin it would be too late: a new map resets the towns picked)
 	onSettingChanged = [this](const std::string & setting)
 	{
+		if(setting == "persistent:mapGen/map/size")
+			clearCustomSize(); // a standard size picked after a custom one replaces it
 		if(boost::algorithm::starts_with(setting, "persistent:mapGen/"))
 			updateMapInfoByHost();
 	};
@@ -121,10 +128,7 @@ MapGenTab::MapGenTab(const MapGeneratorInfo & info)
 	onPageBuilt = [this](LayoutPage & page)
 	{
 		if(auto name = page.find<CLabel>("labelTemplateName"))
-		{
-			const std::string chosen = templateName();
-			name->setText(chosen.empty() ? tabText("template.none") : chosen);
-		}
+			name->setText(templateLabel());
 	};
 	build(config);
 
@@ -156,16 +160,14 @@ std::shared_ptr<CIntObject> MapGenTab::createPage(size_t index)
 		[this](MapGenPage & page)
 		{
 			page.setCallback("chooseMapGenTemplate", [this](int) { chooseTemplate(); });
+			page.setCallback("chooseMapGenTeams", [this](int) { chooseTeams(); });
+			page.setCallback("chooseMapGenCustomSize", [this](int) { chooseCustomSize(); });
 			page.setOnSettingChanged(onSettingChanged);
 		},
 		[this](MapGenPage & page)
 		{
 			if(auto name = page.label("labelTemplateName"))
-			{
-				const std::string chosen = templateName();
-				name->setText(chosen.empty()
-					? tabText("template.none") : chosen);
-			}
+				name->setText(templateLabel());
 		});
 }
 
@@ -203,12 +205,21 @@ void MapGenTab::resetToDefaults()
 		Settings chosenPreset = persistentStorage.write["mapGen"]["preset"];
 		chosenPreset->String() = defaults["preset"].isString() ? defaults["preset"].String() : std::string();
 	}
+	// a custom size the layout's defaults do not name goes too
+	const JsonNode & layoutDefaults = defaults;
+	if(!layoutDefaults["map"]["width"].isNumber() || !layoutDefaults["map"]["height"].isNumber())
+		clearCustomSize();
+	refreshPages();
+	updateMapInfoByHost();
+}
+
+void MapGenTab::refreshPages()
+{
 	if(pages)
 		pages->reset();
 	if(layoutPages)
 		layoutPages->refresh();
 	CIntObject::redraw();
-	updateMapInfoByHost();
 }
 
 const MapGeneratorInfo & MapGenTab::getGenerator() const
@@ -221,6 +232,16 @@ void MapGenTab::updateMapInfoByHost()
 	if(!generator.atBegin || GAME->server().isGuest())
 		return;
 
+	const auto options = lobbyOptions();
+	MetaString name;
+	name.appendRawString(generator.name);
+	MetaString description;
+	description.appendRawString(LIBRARY->modh->getModInfo(generator.modID).getLocalizedDescription().String());
+	GAME->server().setMapInfo(RandomMapTab::createRandomMapInfo(*options, name, description), options);
+}
+
+std::shared_ptr<CMapGenOptions> MapGenTab::lobbyOptions() const
+{
 	const JsonNode & stored = persistentStorage["mapGen"];
 	// read through a const reference, so a key the layout lacks is not added to it as null
 	const JsonNode & layoutDefaults = defaults;
@@ -280,12 +301,73 @@ void MapGenTab::updateMapInfoByHost()
 	chosen["params"] = stored["params"];
 	chosen["preset"].String() = preset();
 	options->setExternalGenerator(generator.modID, chosen);
+	return options;
+}
 
-	MetaString name;
-	name.appendRawString(generator.name);
-	MetaString description;
-	description.appendRawString(LIBRARY->modh->getModInfo(generator.modID).getLocalizedDescription().String());
-	GAME->server().setMapInfo(RandomMapTab::createRandomMapInfo(*options, name, description), options);
+void MapGenTab::chooseTeams()
+{
+	// VCMI's own team grid, whose layout base VCMI lacks: the VCMI Extras mod's extended lobby brings it
+	if(!CResourceHandler::get()->existsResource(JsonPath::builtin("config/widgets/randomMapTeamsWidget.json")))
+	{
+		logGlobal->warn("Map generator %s: the team grid's layout (config/widgets/randomMapTeamsWidget.json) is missing", generator.name);
+		ENGINE->statusbar()->write(tabText("teams.missing"));
+		return;
+	}
+	// the grid is for the players of the lobby's random map while it is this generator's (the counts as
+	// rolled), else of the tab's settings; the teams are stored a player each, in colour order
+	auto options = GAME->server().si->mapGenOptions;
+	if(!options || options->getExternalGenerator() != generator.modID)
+		options = lobbyOptions();
+	ENGINE->windows().createAndPushWindow<TeamAlignments>(*options, [this](const std::vector<TeamID> & teams)
+	{
+		{
+			Settings stored = persistentStorage.write["mapGen"]["map"]["teams"];
+			stored->Vector().clear();
+			for(const auto & team : teams)
+			{
+				JsonNode number;
+				number.Integer() = team.getNum();
+				stored->Vector().push_back(number);
+			}
+		}
+		refreshPages();
+		updateMapInfoByHost();
+	});
+}
+
+void MapGenTab::chooseCustomSize()
+{
+	// VCMI's own custom size window, with no template's limits: the generator fits any template to any size
+	const int width = mapSetting("width");
+	const int height = mapSetting("height");
+	const int size = std::clamp(mapSetting("size"), 36, 252);
+	const bool custom = width > 0 && height > 0;
+	const int3 current(custom ? width : size, custom ? height : size, mapSetting("underground") ? 2 : 1);
+	ENGINE->windows().createAndPushWindow<SetSizeWindow>(current, nullptr, [this](int3 chosen)
+	{
+		{
+			Settings width = persistentStorage.write["mapGen"]["map"]["width"];
+			width->Integer() = chosen.x;
+			Settings height = persistentStorage.write["mapGen"]["map"]["height"];
+			height->Integer() = chosen.y;
+			// a generator makes one or two levels
+			Settings underground = persistentStorage.write["mapGen"]["map"]["underground"];
+			underground->Integer() = chosen.z > 1 ? 1 : 0;
+			// no standard size is picked now, so the size row shows none, and picking one there replaces this
+			Settings size = persistentStorage.write["mapGen"]["map"]["size"];
+			size->Integer() = 0;
+		}
+		refreshPages();
+		updateMapInfoByHost();
+	});
+}
+
+void MapGenTab::clearCustomSize()
+{
+	Settings width = persistentStorage.write["mapGen"]["map"]["width"];
+	width->Integer() = 0;
+	Settings height = persistentStorage.write["mapGen"]["map"]["height"];
+	height->Integer() = 0;
 }
 
 int MapGenTab::mapSetting(const std::string & key) const
@@ -300,6 +382,14 @@ std::string MapGenTab::templateName() const
 {
 	const JsonNode & stored = persistentStorage["mapGen"]["map"]["template"];
 	return stored.isString() ? stored.String() : std::string();
+}
+
+std::string MapGenTab::templateLabel() const
+{
+	const std::string chosen = templateName();
+	if(chosen.empty())
+		return tabText("template.none");
+	return chosen == RANDOM_TEMPLATE ? tabText("template.random") : chosen;
 }
 
 std::string MapGenTab::preset() const
@@ -322,14 +412,15 @@ void MapGenTab::chooseTemplate()
 	std::sort(fits.begin(), fits.end());
 	fits.erase(std::unique(fits.begin(), fits.end()), fits.end());
 
-	std::vector<std::string> names { tabText("template.none") };
-	size_t current = 0;
+	// then Random, which the generator rolls from the templates that fit (MapGen's "random"), then each
+	std::vector<std::string> names { tabText("template.none"), tabText("template.random") };
 	const std::string chosen = templateName();
+	size_t current = chosen == RANDOM_TEMPLATE ? 1 : 0;
 	for(size_t i = 0; i < fits.size(); ++i)
 	{
 		names.push_back(fits[i]);
 		if(fits[i] == chosen)
-			current = i + 1;
+			current = i + 2;
 	}
 	ENGINE->windows().createAndPushWindow<CObjectListWindow>(names, nullptr,
 		tabText("template.hover"),
@@ -338,13 +429,12 @@ void MapGenTab::chooseTemplate()
 		{
 			{
 				Settings entry = persistentStorage.write["mapGen"]["map"]["template"];
-				entry->String() = index <= 0 || index > static_cast<int>(fits.size()) ? "" : fits[index - 1];
+				if(index == 1)
+					entry->String() = RANDOM_TEMPLATE;
+				else
+					entry->String() = index <= 1 || index > static_cast<int>(fits.size()) + 1 ? "" : fits[index - 2];
 			}
-			if(pages)
-				pages->reset();
-			if(layoutPages)
-				layoutPages->refresh();
-			CIntObject::redraw();
+			refreshPages();
 			updateMapInfoByHost();
 		}, current, std::vector<std::shared_ptr<IImage>>(), true);
 }
