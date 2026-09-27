@@ -1,6 +1,6 @@
 # Dead Man's Boots
 
-Dead Man's Boots (DMB) is a Heroes of Might and Magic III engine built on [VCMI](https://github.com/vcmi/vcmi) 1.7.5. It plays the game as VCMI does, keeps its settings, saves and mods apart from any VCMI you already have, and adds a few things of its own.
+Dead Man's Boots (DMB) is a Heroes of Might and Magic III engine built on [VCMI](https://github.com/vcmi/vcmi) 1.7.5. It plays the game as VCMI does, keeps its settings, saves and mods apart from any VCMI you already have, and is built to be extended through mods.
 
 ## Download
 
@@ -10,9 +10,10 @@ The installer is not signed yet, so Windows may say it protected your PC. Choose
 
 ## What DMB adds to VCMI
 
+- A wider mod framework. Besides new content, a mod can bring an AI player or a random map generator with its own lobby tab, installed and updated from the launcher like any other mod. DMB runs code from a mod only when its mod catalog vouches for that exact code. The first addons arrive with DMB 0.1.1.
+- Its own mod catalog, [DMB-Mods-Repository](https://github.com/DeadMansBoots/DMB-Mods-Repository): VCMI's mods, plus mods made for DMB, all installed from the launcher.
 - Its own user folder, `Documents\My Games\DMB`, so DMB and VCMI never share settings, saves or mods.
 - A dark interface option in the game's settings.
-- Its own mod list, [DMB-Mods-Repository](https://github.com/DeadMansBoots/DMB-Mods-Repository): VCMI's mods, plus mods made for DMB, all installed from the launcher.
 - A notice in the launcher when a new release is out.
 
 ## Bugs and ideas
@@ -21,11 +22,11 @@ Use the forms on the [Issues](https://github.com/DeadMansBoots/Dead-Mans-Boots/i
 
 ## Mods
 
-Every mod lives in its own repository, wherever its author keeps it, and DMB's own team works the same way. To list a mod in DMB's launcher, open a pull request that adds its entry to [DMB-Mods-Repository](https://github.com/DeadMansBoots/DMB-Mods-Repository/tree/main/entries).
+Every mod lives in its own repository, wherever its author keeps it, and DMB's own team works the same way: the AI player [OmniAI](https://github.com/Renegade1993/OmniAI) and the map generator [OmniMapGen](https://github.com/Renegade1993/OmniMapGen) have pages of their own. To list a mod in DMB's launcher, open a pull request that adds its entry to [DMB-Mods-Repository](https://github.com/DeadMansBoots/DMB-Mods-Repository/tree/main/entries).
 
 ## Building from source
 
-The `dmb` branch holds DMB's changes on top of VCMI 1.7.5, and it builds the way VCMI does: see VCMI's [Windows build guide](docs/developers/Building_Windows.md) and the other guides beside it. The map generator comes in as the `mapgen` submodule. VCMI's own readme is still in [docs](docs/Readme.md).
+The `dmb` branch holds DMB's changes on top of VCMI 1.7.5, and it builds the way VCMI does: see VCMI's [Windows build guide](docs/developers/Building_Windows.md) and the other guides beside it. VCMI's own readme is still in [docs](docs/Readme.md).
 
 ## Credits and license
 
