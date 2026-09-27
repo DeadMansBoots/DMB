@@ -1011,6 +1011,7 @@
 	"vcmi.dmb.mapGenerator.generate.running" : "Generating a map...",
 	"vcmi.dmb.mapGenerator.generate.failed" : "The map generator failed. See extmapgen_log.txt in the logs folder.",
 	"vcmi.dmb.mapGenerator.generate.refused" : "%s cannot run: %s.",
+	"vcmi.dmb.mapGenerator.generate.humans" : "%d players are in this lobby, so the map has a human slot for each.",
 	"vcmi.dmb.mapGenerator.template.hover" : "Template",
 	"vcmi.dmb.mapGenerator.template.choose" : "Templates that take this map size, level count and player count. With none, the generator lays out the zones itself.",
 	"vcmi.dmb.mapGenerator.template.none" : "No template: the generator's own layout",

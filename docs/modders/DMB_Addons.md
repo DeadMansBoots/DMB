@@ -52,7 +52,8 @@ its `defaults` hold the map settings (`map`), the generator's own settings (`par
 their values in `persistentStorage.json`. The callbacks `activateMapGenPage`, `resetMapGenDefaults`,
 `generateMapGenMap` and `chooseMapGenTemplate` are the tab's own. The texts the tab itself shows can
 be reworded by the mod's translation: `vcmi.mapGen.generate.hover`, `.running`, `.failed`,
-`.refused` (two `%s`: the generator's name, then the reason), and `vcmi.mapGen.template.hover`,
+`.refused` (two `%s`: the generator's name, then the reason), `.humans` (one `%d`: the players in
+the lobby), and `vcmi.mapGen.template.hover`,
 `.choose`, `.none`. Where the mod brings none, DMB's generic wording shows
 (`vcmi.dmb.mapGenerator.*`).
 
@@ -73,6 +74,10 @@ with `Error:` is what the player is shown. The generator must write nothing insi
 (caches belong under `--vcmiuserdir`), because DMB checks that folder before every run, as below.
 With several generator mods enabled, the last one in load order gets the tab. The new map lands in
 the player's `Maps/RandomMaps`, and the lobby selects it.
+
+When more players are in the lobby than the tab's human players setting (friends who joined, or
+hotseat names), `--humans` is raised to one per player, and `--players` with it if needed: a map
+with fewer human slots cannot be played there, and a multiplayer lobby does not list it.
 
 The tab's button sits beside Random Map in every lobby: single player, hotseat, and network games.
 In a network lobby it is 64 pixels wide, so a name of about eight letters fits; only the host can

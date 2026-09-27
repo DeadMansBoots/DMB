@@ -13,7 +13,9 @@
 #include "CLobbyScreen.h"
 #include "SelectionTab.h"
 
+#include "../CServerHandler.h"
 #include "../GameEngine.h"
+#include "../GameInstance.h"
 #include "../gui/WindowHandler.h"
 #include "../widgets/Buttons.h"
 #include "../widgets/ObjectLists.h"
@@ -239,8 +241,24 @@ void MapGenTab::generate()
 	std::mt19937 rng(std::random_device{}());
 	const int seed = static_cast<int>(rng() & 0x7fffffff);
 	const int size = std::clamp(mapSetting("size"), 36, 252);
-	const int players = std::clamp(mapSetting("players"), 1, 8);
-	const int humans = std::clamp(mapSetting("humans"), 1, players);
+	int players = std::clamp(mapSetting("players"), 1, 8);
+	int humans = std::clamp(mapSetting("humans"), 1, players);
+	// DMB: a map with fewer human slots than the players in the lobby cannot be played there, and a
+	// multiplayer lobby does not even list it, so the host saw the map made and then never offered. It
+	// gets a human slot for everyone in the lobby (friends who joined, or hotseat names), and more
+	// players if that takes more.
+	std::string humansNote;
+	const int inLobby = std::clamp(static_cast<int>(GAME->server().playerNames.size()), 1, 8);
+	if(humans < inLobby)
+	{
+		logGlobal->info("Map generator: %d players are in the lobby, so the map gets %d human slots instead of %d", inLobby, inLobby, humans);
+		MetaString note;
+		note.appendRawString(tabText("generate.humans"));
+		note.replaceNumber(inLobby);
+		humansNote = " " + note.toString();
+		humans = inLobby;
+		players = std::max(players, humans);
+	}
 
 	const boost::filesystem::path outDir = VCMIDirs::get().userDataPath() / "Maps" / "RandomMaps";
 	const boost::filesystem::path outPath = outDir /
@@ -307,7 +325,7 @@ void MapGenTab::generate()
 	boost::filesystem::create_directories(outDir, dirEc);
 	const boost::filesystem::path logPath = VCMIDirs::get().userLogsPath() / "extmapgen_log.txt";
 
-	const std::string runningText = tabText("generate.running");
+	const std::string runningText = tabText("generate.running") + humansNote;
 	ENGINE->statusbar()->write(runningText);
 	generating = std::make_shared<bool>(true);
 	auto flag = generating;
