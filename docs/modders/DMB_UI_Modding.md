@@ -25,6 +25,8 @@ not be offered to them.
 | --- | --- |
 | 1 | AI plugins, map generators, the mod catalog's code pins |
 | 2 | the `pages` widget, `tabPages`, settings-bound labels, this check |
+| 3 | map generators that make the game's map at Begin ([DMB_Addons.md](DMB_Addons.md)), `valueTexts` |
+| 4 | chooser buttons, `valueTexts` for numbers |
 
 ## Rules every UI mod follows
 
@@ -125,7 +127,22 @@ page of options needs no code:
   one slider, and `"keyboard": true` turns them back on;
 - `label`: shows the stored text, or its `emptyText` while there is none (level 2); a stored value
   named in `valueTexts` shows that text instead, such as `"valueTexts": { "random":
-  "vcmi.myMod.random" }` (level 3).
+  "vcmi.myMod.random" }` (level 3). A number is named as it would be written, `"2"` or `"0.5"`
+  (level 4);
+- `button` with `options`: a chooser (level 4). Pressed, it lists the options' texts under its
+  `title` (and `help`, when given) and stores the value picked; labels on the same layout bound to
+  the setting show the new value at once. Each option is `[value, text]`, the value a number or a
+  string:
+
+```json
+{ "type" : "button", "image" : "RanButton150", "position" : { "x" : 40, "y" : 150 },
+  "setting" : "persistent:myMod/waterShape",
+  "options" : [ [ 0, "vcmi.myMod.waterShape.lakes" ], [ 1, "vcmi.myMod.waterShape.seas" ] ],
+  "title" : "vcmi.myMod.waterShape.title" }
+```
+
+  A chooser needs no `callback`; OmniMapGen's layouts name it `chooseMapGenOption`, which is the
+  same.
 
 A `setting` is a path with `/` between its parts: `persistent:myMod/speed` in
 `persistentStorage.json`, or a plain path into `settings.json`, which the settings schema must

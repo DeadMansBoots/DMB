@@ -17,6 +17,7 @@
 #include "../GameInstance.h"
 #include "../gui/ShortcutHandler.h"
 #include "../gui/Shortcut.h"
+#include "../gui/WindowHandler.h"
 #include "../render/Graphics.h"
 #include "../render/IFont.h"
 #include "../render/IRenderHandler.h"
@@ -480,22 +481,78 @@ std::shared_ptr<CLabel> InterfaceObjectConfigurable::buildLabel(const JsonNode &
 	auto font = readFont(config["font"]);
 	auto alignment = readTextAlignment(config["alignment"]);
 	auto color = readColor(config["color"]);
-	auto text = readText(config["text"]);
-	// DMB: a label bound to a setting shows the stored text, or its "emptyText" while there is none; a
-	// stored value named in "valueTexts" shows that text instead ("random" as "(Random)", say)
-	if(config["setting"].isString())
-	{
-		const JsonNode & stored = settingValue(settingPath(config["setting"]));
-		if(!stored.isString() || stored.String().empty())
-			text = readText(config["emptyText"]);
-		else if(config["valueTexts"][stored.String()].isString())
-			text = readText(config["valueTexts"][stored.String()]);
-		else
-			text = stored.String();
-	}
+	auto text = config["setting"].isString() ? settingLabelText(config) : readText(config["text"]);
 	auto position = readPosition(config["position"]);
 	auto maxWidth = config["maxWidth"].Integer();
-	return std::make_shared<CLabel>(position.x, position.y, font, alignment, color, text, maxWidth);
+	auto label = std::make_shared<CLabel>(position.x, position.y, font, alignment, color, text, maxWidth);
+	if(config["setting"].isString())
+		settingLabels.emplace_back(label, config);
+	return label;
+}
+
+std::string InterfaceObjectConfigurable::settingLabelText(const JsonNode & config) const
+{
+	// DMB: a label bound to a setting shows the stored value, or its "emptyText" while there is none; a
+	// value named in "valueTexts" shows that text instead ("random" as "(Random)", 0 as "Few", say). A
+	// number is named as the layout writes it: "2", "0.5".
+	const JsonNode & stored = settingValue(settingPath(config["setting"]));
+	std::string key;
+	if(stored.isString())
+		key = stored.String();
+	else if(stored.isNumber())
+	{
+		std::ostringstream number;
+		number << stored.Float();
+		key = number.str();
+	}
+	if(key.empty())
+		return readText(config["emptyText"]);
+	if(config["valueTexts"][key].isString())
+		return readText(config["valueTexts"][key]);
+	return key;
+}
+
+void InterfaceObjectConfigurable::refreshSettingLabels() const
+{
+	for(const auto & [label, config] : settingLabels)
+		if(auto shown = label.lock())
+			shown->setText(settingLabelText(config));
+}
+
+void InterfaceObjectConfigurable::chooseOption(const JsonNode & config) const
+{
+	const auto path = settingPath(config["setting"]);
+	const JsonNode & stored = settingValue(path);
+	std::vector<std::string> names;
+	std::vector<JsonNode> values;
+	size_t current = 0;
+	for(const auto & option : config["options"].Vector())
+	{
+		if(!option.isVector() || option.Vector().size() < 2)
+			continue;
+		const JsonNode & value = option.Vector()[0];
+		if(value == stored || (value.isNumber() && stored.isNumber() && value.Float() == stored.Float()))
+			current = names.size();
+		values.push_back(value);
+		names.push_back(readText(option.Vector()[1]));
+	}
+	if(names.empty())
+	{
+		logGlobal->error("The chooser for %s lists no options", config["setting"].String());
+		return;
+	}
+	const std::string title = readText(config["title"]);
+	ENGINE->windows().createAndPushWindow<CObjectListWindow>(names, nullptr, title,
+		config["help"].isNull() ? title : readText(config["help"]),
+		[this, path, values, spec = config["setting"].String()](int index)
+		{
+			if(index < 0 || index >= static_cast<int>(values.size()))
+				return;
+			writeSetting(path, values[index]);
+			refreshSettingLabels();
+			if(onSettingChanged)
+				onSettingChanged(spec);
+		}, current, std::vector<std::shared_ptr<IImage>>(), true);
 }
 
 std::shared_ptr<CMultiLineLabel> InterfaceObjectConfigurable::buildMultiLineLabel(const JsonNode & config) const
@@ -639,6 +696,18 @@ std::shared_ptr<CButton> InterfaceObjectConfigurable::buildButton(const JsonNode
 	}
 
 	loadButtonBorderColor(button, config["borderColor"]);
+	// DMB: a chooser: a button bound to a "setting" with "options", [value, text] pairs, lists the texts
+	// under its "title" and stores the value picked; labels bound to the setting show it by their
+	// "valueTexts". MapGen's layouts name its callback "chooseMapGenOption".
+	if(config["options"].isVector() && config["setting"].isString())
+	{
+		button->addCallback([this, config]() { chooseOption(config); });
+		if(config["callback"].isNull() || config["callback"].String() == "chooseMapGenOption")
+		{
+			loadButtonHotkey(button, config["hotkey"]);
+			return button;
+		}
+	}
 	loadButtonCallback(button, config["callback"]);
 	loadButtonHotkey(button, config["hotkey"]);
 	return button;

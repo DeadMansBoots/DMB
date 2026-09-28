@@ -163,6 +163,15 @@ protected:
 	/// own. A slider may name a "valueLabel" widget that shows its value.
 	void refreshBoundLabels() const;
 
+	/// DMB: what a label bound to a "setting" shows (its value, "valueTexts" or "emptyText"), and the
+	/// labels of this layout bound to one shown again after a change
+	std::string settingLabelText(const JsonNode & config) const;
+	void refreshSettingLabels() const;
+
+	/// DMB: a chooser button's list ("options" of [value, text]), which stores the value picked in the
+	/// button's "setting"
+	void chooseOption(const JsonNode & config) const;
+
 private:
 	struct ShortcutState
 	{
@@ -179,6 +188,8 @@ private:
 	};
 	mutable std::vector<BoundLabel> boundLabels;
 	std::string formatBoundValue(double value, const JsonNode & format) const;
+	/// DMB: the labels bound to a setting, with their layout entries (refreshSettingLabels)
+	mutable std::vector<std::pair<std::weak_ptr<CLabel>, JsonNode>> settingLabels;
 	
 	int unnamedObjectId = 0;
 	std::map<std::string, BuilderFunction> builders;
