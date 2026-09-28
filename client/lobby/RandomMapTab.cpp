@@ -787,6 +787,17 @@ void RandomMapTab::saveOptions(const CMapGenOptions & options)
 	rmgSettings["rmg"] = data;
 }
 
+void RandomMapTab::showHeadline(bool shown)
+{
+	if(const auto headline = widget<CLabel>("labelHeadlineBig"))
+	{
+		if(shown)
+			headline->enable();
+		else
+			headline->disable();
+	}
+}
+
 void RandomMapTab::loadOptions()
 {
 	JsonNode rmgSettings = persistentStorage["rmg"]["rmg"];

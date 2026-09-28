@@ -38,14 +38,26 @@ public:
 private:
 	std::shared_ptr<CButton> buttonChat;
 	std::shared_ptr<GraphicalPrimitiveCanvas> blackScreen;
-	// DMB: a map generator mod's tab (MapGenTab.h), and whether the Random Map button's mode is that
-	// generator (else VCMI's own random map)
-	std::shared_ptr<MapGenTab> tabMapGen;
-	bool randomByGenerator = false;
+	// DMB: the tabs of the map generator mods (MapGenTab.h), in load order, and the map generation mode:
+	// 0 for VCMI's own random map, n for the nth generator
+	std::vector<std::shared_ptr<MapGenTab>> generatorTabs;
+	size_t randomMode = 0;
+	// DMB: the mode's golden arrows and name, at the top of the random map window, where the window's
+	// own headline sits (its first row of settings is lower: config/widgets/randomMapTab.json)
+	static constexpr int MODE_ARROW_LEFT = 66;
+	static constexpr int MODE_ARROW_RIGHT = 362;
+	static constexpr int MODE_ARROW_TOP = 30;
+	static constexpr int MODE_NAME_CENTRE = 222;
+	std::shared_ptr<CButton> modePrevious;
+	std::shared_ptr<CButton> modeNext;
+	std::shared_ptr<CLabel> modeName;
 
 	void pressRandomMap();
+	void stepRandomMode(int step);
 	void showRandomMode(bool modeChanged);
-	std::string randomModeLabel() const;
+	std::shared_ptr<MapGenTab> modeGenerator() const;
+	bool randomWindowShown() const;
+	void updateModeBar();
 
 	bool waitingForPlayersMessageShown = false;
 	bool compatibilityFilterInitialized = false;

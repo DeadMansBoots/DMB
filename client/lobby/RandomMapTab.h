@@ -48,6 +48,10 @@ public:
 	void saveOptions(const CMapGenOptions & options);
 	void loadOptions();
 	CMapGenOptions & obtainMapGenOptions() {return *mapGenOptions;}
+
+	/// DMB: the window's big headline, hidden while the lobby's map generation mode names the window in
+	/// its place (CLobbyScreen::updateModeBar)
+	void showHeadline(bool shown);
 	bool isCustomMapSizeMode() const { return customMapSizeMode; }
 	size_t getCustomMapSizeIconFrame() const;
 
