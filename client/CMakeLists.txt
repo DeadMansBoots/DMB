@@ -100,6 +100,7 @@ set(vcmiclientcommon_SRCS
 	render/Canvas.cpp
 	render/CanvasImage.cpp
 	render/ColorFilter.cpp
+	render/GameLettering.cpp
 	render/Colors.cpp
 	render/Graphics.cpp
 	render/IFont.cpp
@@ -338,6 +339,7 @@ set(vcmiclientcommon_HEADERS
 	render/Canvas.h
 	render/CanvasImage.h
 	render/ColorFilter.h
+	render/GameLettering.h
 	render/Colors.h
 	render/EFont.h
 	render/Graphics.h

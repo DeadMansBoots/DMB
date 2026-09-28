@@ -484,7 +484,12 @@ std::shared_ptr<CLabel> InterfaceObjectConfigurable::buildLabel(const JsonNode &
 	auto text = config["setting"].isString() ? settingLabelText(config) : readText(config["text"]);
 	auto position = readPosition(config["position"]);
 	auto maxWidth = config["maxWidth"].Integer();
-	auto label = std::make_shared<CLabel>(position.x, position.y, font, alignment, color, text, maxWidth);
+	// DMB: "style": "engraved" carves the text into the gold as the game's gold buttons carve theirs
+	std::shared_ptr<CLabel> label;
+	if(config["style"].String() == "engraved")
+		label = std::make_shared<CEngravedLabel>(position.x, position.y, font, alignment, text, maxWidth);
+	else
+		label = std::make_shared<CLabel>(position.x, position.y, font, alignment, color, text, maxWidth);
 	if(config["setting"].isString())
 		settingLabels.emplace_back(label, config);
 	return label;

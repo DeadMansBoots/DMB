@@ -66,6 +66,20 @@ public:
 	void showAll(Canvas & to) override; //shows statusbar (with current text)
 };
 
+/// DMB: a label carved into the gold as the game's own gold buttons carve their words
+/// (GameLettering::carved), for text over gold bars; a layout asks for it with "style": "engraved"
+/// (K, September 27th: "we missed the mark on the black on gold font")
+class CEngravedLabel : public CLabel
+{
+	std::shared_ptr<IImage> carving;
+	std::string carvedText;
+	Point carvedSize; ///< the text's own box, without the carving's one-pixel rim
+
+public:
+	CEngravedLabel(int x, int y, EFonts font, ETextAlignment align, const std::string & text, int maxWidth = 0);
+	void showAll(Canvas & to) override;
+};
+
 /// Small helper class to manage group of similar labels
 class CLabelGroup : public CIntObject
 {

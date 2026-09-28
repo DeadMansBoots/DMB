@@ -87,6 +87,9 @@ private:
 	/// text over it. `name` is the generated animation's name.
 	AnimationLayoutMap createBlankButton(const std::string & name, const std::string & source, int width, int cap,
 		std::pair<int, int> tileA, std::pair<int, int> tileB);
+	/// DMB: a map size button in the Random Map Setup's own style (RANSIZS..RANSIZX): `source`'s frames as
+	/// they are when `text` is empty, else the XL button with `text` lettered in place of its letters
+	AnimationLayoutMap createSizeButton(const std::string & name, const std::string & source, const std::string & text);
 	CanvasPtr createGateListColored(PlayerColor color, PlayerColor backColor) const;
 	CanvasPtr createHeroSlotsColored(PlayerColor backColor) const;
 	CanvasPtr createStackArtifactIndicator(const Point & size) const;

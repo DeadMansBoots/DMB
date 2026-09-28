@@ -158,11 +158,15 @@ and a layout names them like any image. They are shared: use them, never replace
 | `RanButton150`, `RanButton83`, `RanButton62`, `RanButton50` | that wide, 32 high | RANWEAK, without its word | a row of 2, 3, 4 or 5 choices, as the Random Map Setup's |
 | `RanShowButton337`, `RanShowButton166` | that wide, 40 high | RANSHOW, without its words | the big gold button, full width or two side by side |
 | `MapGenButton64`, `MapGenButton80`, `MapGenButton190` | that wide, 20 high | GSPBUT2 | lobby-style buttons |
+| `DmbSizeS`, `DmbSizeM`, `DmbSizeL`, `DmbSizeXL` | 44 by 33 | RANSIZS to RANSIZX, as they are | map sizes, as the Random Map Setup's |
+| `DmbSizeH`, `DmbSizeXH`, `DmbSizeG`, `DmbSizeC` | 44 by 33 | RANSIZX, lettered anew from the game's BIGFONT capitals, embossed as its letters are | sizes past XL, and a custom size (level 4) |
 
 The Ran buttons have RANWEAK's four frames; as toggle buttons they take `"imageOrder": [0, 1, 1, 3]`,
 as the Random Map Setup's do, so a selected one wears the gold frame. A button's word is a label in
-its `items`, centred on it; the stock look is `"font": "big"`, yellow on the blue buttons and black on
-the gold, written `"color": [0, 0, 0, 255]` (a color name VCMI knows, or red, green, blue and alpha).
+its `items`, centred on it; the stock look is `"font": "big"`, yellow on the blue buttons, and on the
+gold carved as the game carves its own gold buttons' words: `"style": "engraved"` (level 4), black
+letters with a brown edge on their left and a light on their right and underneath. A plain color is
+written `"color": [0, 0, 0, 255]` (a color name VCMI knows, or red, green, blue and alpha).
 
 ## Asking for a hook
 

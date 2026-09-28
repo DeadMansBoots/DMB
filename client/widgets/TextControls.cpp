@@ -21,6 +21,7 @@
 #include "../adventureMap/CInGameConsole.h"
 #include "../eventsSDL/InputHandler.h"
 #include "../render/Canvas.h"
+#include "../render/GameLettering.h"
 #include "../render/Graphics.h"
 #include "../render/IFont.h"
 #include "../render/IRenderHandler.h"
@@ -363,6 +364,69 @@ Rect CMultiLineLabel::getTextLocation()
 	}
 	assert(0);
 	return Rect();
+}
+
+CEngravedLabel::CEngravedLabel(int x, int y, EFonts font, ETextAlignment align, const std::string & text, int maxWidth)
+	: CLabel(x, y, font, align, Colors::BLACK, text, maxWidth)
+{
+}
+
+void CEngravedLabel::showAll(Canvas & to)
+{
+	CIntObject::showAll(to);
+	const std::string shown = visibleText();
+	if(shown.empty())
+		return;
+	if(!carving || carvedText != shown)
+	{
+		carving = GameLettering::carved(font, shown);
+		const auto box = GameLettering::letters(font, shown, false);
+		carvedSize = Point(box.width, box.height);
+		carvedText = shown;
+	}
+	if(!carving)
+	{
+		// no font file to carve from: plain black text, as a label draws it
+		blitLine(to, pos, shown);
+		return;
+	}
+
+	// where CTextContainer::blitLine puts the text's box, and the carving's rim around it
+	Point where = pos.topLeft();
+	const Point border = getBorderSize();
+	switch(alignment)
+	{
+		case ETextAlignment::TOPLEFT:
+		case ETextAlignment::CENTERLEFT:
+		case ETextAlignment::BOTTOMLEFT:
+			where.x += border.x;
+			break;
+		case ETextAlignment::CENTER:
+		case ETextAlignment::TOPCENTER:
+		case ETextAlignment::BOTTOMCENTER:
+			where.x += (pos.w - carvedSize.x) / 2;
+			break;
+		default:
+			where.x += border.x + pos.w - carvedSize.x;
+			break;
+	}
+	switch(alignment)
+	{
+		case ETextAlignment::TOPLEFT:
+		case ETextAlignment::TOPCENTER:
+		case ETextAlignment::TOPRIGHT:
+			where.y += border.y;
+			break;
+		case ETextAlignment::CENTERLEFT:
+		case ETextAlignment::CENTER:
+		case ETextAlignment::CENTERRIGHT:
+			where.y += (pos.h - carvedSize.y) / 2;
+			break;
+		default:
+			where.y += border.y + pos.h - carvedSize.y;
+			break;
+	}
+	to.draw(carving, where - Point(1, 1));
 }
 
 CLabelGroup::CLabelGroup(EFonts Font, ETextAlignment Align, const ColorRGBA & Color)

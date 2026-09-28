@@ -19,6 +19,8 @@
 #include "../render/IRenderHandler.h"
 #include "../render/CAnimation.h"
 #include "../render/Colors.h"
+#include "../render/EFont.h"
+#include "../render/GameLettering.h"
 
 #include "../lib/filesystem/Filesystem.h"
 #include "../lib/GameSettings.h"
@@ -151,6 +153,17 @@ void AssetGenerator::initialize()
 		animationFiles[AnimationPath::builtin("SPRITES/" + name)] = createBlankButton(name, "RANSHOW", width, 21, {110, 111}, {110, 111});
 	}
 	animationFiles[AnimationPath::builtin("SPRITES/MapGenButton190")] = createMapGenButton(190);
+	// DMB: map size buttons for generators with sizes past XL (K, September 27th: lettered to match the
+	// game's own). S to XL are the game's own buttons under the same set of names, so a layout names one
+	// set and needs no other mod's art.
+	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeS")] = createSizeButton("DmbSizeS", "RANSIZS", "");
+	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeM")] = createSizeButton("DmbSizeM", "RANSIZM", "");
+	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeL")] = createSizeButton("DmbSizeL", "RANSIZL", "");
+	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeXL")] = createSizeButton("DmbSizeXL", "RANSIZX", "");
+	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeH")] = createSizeButton("DmbSizeH", "RANSIZX", "H");
+	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeXH")] = createSizeButton("DmbSizeXH", "RANSIZX", "XH");
+	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeG")] = createSizeButton("DmbSizeG", "RANSIZX", "G");
+	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeC")] = createSizeButton("DmbSizeC", "RANSIZX", "C");
 
 	for (PlayerColor color(-1); color < PlayerColor::PLAYER_LIMIT; ++color)
 	{
@@ -1225,6 +1238,190 @@ AssetGenerator::AnimationLayoutMap AssetGenerator::createBlankButton(const std::
 				first = !first;
 			}
 			canvas.draw(frame, Point(width - cap, 0), Rect(size.x - cap, 0, cap, size.y));
+			return newImg;
+		};
+
+		layout[0].push_back(ImageLocator(spriteName, EImageBlitMode::SIMPLE));
+	}
+
+	return layout;
+}
+
+namespace
+{
+// the letters of the game's own map size buttons, read pixel by pixel from RANSIZX's L: lit on its
+// upper left, gold, a hard dark edge on its lower right and a soft brown shadow beyond
+const ColorRGBA SIZE_HIGHLIGHT(255, 244, 216);
+const ColorRGBA SIZE_GOLD_TOP(238, 209, 134);
+const ColorRGBA SIZE_GOLD_BOTTOM(218, 191, 119);
+const ColorRGBA SIZE_OUTLINE(101, 82, 29);
+const ColorRGBA SIZE_EDGE(31, 26, 13);
+const ColorRGBA SIZE_SHADOW_NEAR(85, 74, 48);
+const ColorRGBA SIZE_SHADOW_FAR(160, 142, 94);
+// the gold area inside RANSIZX's dotted border (left, top, right and bottom, the last two past it),
+// and the width the game's own "XL" takes in it
+constexpr int SIZE_LEFT = 8, SIZE_TOP = 5, SIZE_RIGHT = 35, SIZE_BOTTOM = 26;
+constexpr int SIZE_TEXT_WIDTH = 23;
+
+ColorRGBA blended(const ColorRGBA & a, const ColorRGBA & b, double k)
+{
+	const auto mix = [k](uint8_t x, uint8_t y) { return static_cast<uint8_t>(std::clamp(x * (1 - k) + y * k, 0.0, 255.0)); };
+	return ColorRGBA(mix(a.r, b.r), mix(a.g, b.g), mix(a.b, b.b), 255);
+}
+
+int luminance(const ColorRGBA & c)
+{
+	return (c.r * 299 + c.g * 587 + c.b * 114) / 1000;
+}
+
+/// `text`'s letters in the game's BIGFONT at its own size (GameLettering), narrowed to the width the
+/// game's own XL takes
+std::vector<std::vector<bool>> sizeLetters(const std::string & text)
+{
+	const auto letters = GameLettering::letters(FONT_BIG, text, true);
+	if(letters.width <= 0)
+		return {};
+	const int narrowed = std::min(letters.width, SIZE_TEXT_WIDTH);
+	std::vector<std::vector<bool>> result;
+	for(const auto & row : letters.pixels)
+	{
+		std::vector<bool> narrow;
+		for(int x = 0; x < narrowed; ++x)
+			narrow.push_back(row[x * letters.width / narrowed]);
+		result.push_back(narrow);
+	}
+	return result;
+}
+
+/// The XL button's frame on `canvas` with `text` lettered in place of XL: the gold area filled from its
+/// own edges (their colours blended across it, the dotted border's dots smoothed out), then the letters
+/// embossed as the game's are; a pressed frame's letters sit a pixel lower and to the right
+void letterSizeButton(Canvas & canvas, const std::string & text, bool pressed)
+{
+	// the pressed frame moves the whole face: find the dotted border, the brightest row near its place
+	int dx = 0, dy = 0, best = -1;
+	for(int oy = -2; oy <= 2; ++oy)
+		for(int ox = -2; ox <= 2; ++ox)
+		{
+			int score = 0;
+			for(int x = 8; x < 34; ++x)
+				score += luminance(canvas.getPixel(Point(x + ox, 4 + oy)));
+			if(score > best)
+			{
+				best = score;
+				dx = ox;
+				dy = oy;
+			}
+		}
+	const int l = SIZE_LEFT + dx, t = SIZE_TOP + dy, r = SIZE_RIGHT + dx, b = SIZE_BOTTOM + dy;
+
+	const auto edge = [&canvas](std::vector<Point> points)
+	{
+		std::vector<ColorRGBA> colours;
+		for(const auto & point : points)
+			colours.push_back(canvas.getPixel(point));
+		std::vector<ColorRGBA> smooth;
+		for(size_t i = 0; i < colours.size(); ++i)
+		{
+			int sum[3] = {0, 0, 0};
+			int count = 0;
+			for(size_t j = i >= 3 ? i - 3 : 0; j <= std::min(colours.size() - 1, i + 3); ++j, ++count)
+			{
+				sum[0] += colours[j].r;
+				sum[1] += colours[j].g;
+				sum[2] += colours[j].b;
+			}
+			smooth.emplace_back(sum[0] / count, sum[1] / count, sum[2] / count, 255);
+		}
+		return smooth;
+	};
+	std::vector<Point> leftPoints, rightPoints, topPoints, bottomPoints;
+	for(int y = t; y < b; ++y)
+	{
+		leftPoints.emplace_back(l + 1, y);
+		rightPoints.emplace_back(r - 2, y);
+	}
+	for(int x = l; x < r; ++x)
+	{
+		topPoints.emplace_back(x, t + 1);
+		bottomPoints.emplace_back(x, b - 2);
+	}
+	const auto leftEdge = edge(leftPoints), rightEdge = edge(rightPoints), topEdge = edge(topPoints), bottomEdge = edge(bottomPoints);
+	const double w = r - l - 1, h = b - t - 1;
+	for(int y = t + 1; y < b - 1; ++y)
+		for(int x = l + 1; x < r - 1; ++x)
+		{
+			const double u = (x - l) / w, v = (y - t) / h;
+			const auto channel = [&](auto member)
+			{
+				const double sides = (1 - u) * (leftEdge[y - t].*member) + u * (rightEdge[y - t].*member);
+				const double ends = (1 - v) * (topEdge[x - l].*member) + v * (bottomEdge[x - l].*member);
+				const double corners = (1 - u) * (1 - v) * (topEdge.front().*member) + u * (1 - v) * (topEdge.back().*member)
+					+ (1 - u) * v * (bottomEdge.front().*member) + u * v * (bottomEdge.back().*member);
+				return static_cast<uint8_t>(std::clamp(sides + ends - corners, 0.0, 255.0));
+			};
+			canvas.drawPoint(Point(x, y), ColorRGBA(channel(&ColorRGBA::r), channel(&ColorRGBA::g), channel(&ColorRGBA::b), 255));
+		}
+
+	const auto letters = sizeLetters(text);
+	if(letters.empty())
+		return;
+	const int textHeight = static_cast<int>(letters.size());
+	const int textWidth = static_cast<int>(letters.front().size());
+	const int ox = l + (r - l - textWidth) / 2 + (pressed ? 1 : 0);
+	const int oy = t + (b - t - textHeight) / 2 + (pressed ? 1 : 0);
+	const auto face = [&letters, textWidth, textHeight](int y, int x)
+	{
+		return y >= 0 && y < textHeight && x >= 0 && x < textWidth && letters[y][x];
+	};
+	const auto put = [&canvas, l, t, r, b, ox, oy](int x, int y, const ColorRGBA & colour, double k)
+	{
+		const Point at(ox + x, oy + y);
+		if(at.x >= l && at.x < r && at.y >= t && at.y < b)
+			canvas.drawPoint(at, blended(canvas.getPixel(at), colour, k));
+	};
+	for(int y = -2; y < textHeight + 3; ++y)
+		for(int x = -2; x < textWidth + 3; ++x)
+		{
+			if(face(y, x))
+				continue;
+			if(face(y - 1, x) || face(y, x - 1) || face(y - 1, x - 1))
+				put(x, y, SIZE_EDGE, 1.0);
+			else if(face(y - 2, x) || face(y, x - 2) || face(y - 2, x - 2) || face(y - 1, x - 2) || face(y - 2, x - 1))
+				put(x, y, SIZE_SHADOW_NEAR, 0.85);
+			else if(face(y - 3, x - 3) || face(y, x - 3) || face(y - 3, x))
+				put(x, y, SIZE_SHADOW_FAR, 0.5);
+			else if(face(y + 1, x) || face(y, x + 1))
+				put(x, y, SIZE_OUTLINE, 0.6);
+		}
+	for(int y = 0; y < textHeight; ++y)
+		for(int x = 0; x < textWidth; ++x)
+		{
+			if(!face(y, x))
+				continue;
+			const bool lit = !face(y - 1, x) || !face(y, x - 1);
+			put(x, y, lit ? SIZE_HIGHLIGHT : blended(SIZE_GOLD_TOP, SIZE_GOLD_BOTTOM, y / std::max(1.0, textHeight - 1.0)), 1.0);
+		}
+}
+}
+
+AssetGenerator::AnimationLayoutMap AssetGenerator::createSizeButton(const std::string & name, const std::string & source, const std::string & text)
+{
+	auto baseImg = ENGINE->renderHandler().loadAnimation(AnimationPath::builtin(source), EImageBlitMode::OPAQUE);
+
+	AnimationLayoutMap layout;
+	for(size_t i = 0; i < baseImg->size(0); i++)
+	{
+		ImagePath spriteName = ImagePath::builtin(name + "_" + std::to_string(i) + ".png");
+
+		imageFiles[spriteName] = [baseImg, i, text]()
+		{
+			auto frame = baseImg->getImage(i);
+			auto newImg = ENGINE->renderHandler().createImage(frame->dimensions(), CanvasScalingPolicy::IGNORE);
+			auto canvas = newImg->getCanvas();
+			canvas.draw(frame, Point(0, 0));
+			if(!text.empty())
+				letterSizeButton(canvas, text, i == 1);
 			return newImg;
 		};
 
