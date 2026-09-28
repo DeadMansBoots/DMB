@@ -22,8 +22,10 @@
 #include <QIcon>
 #include <QPalette>
 #include <QPixmap>
+#include <QPointer>
 #include <QPushButton>
 #include <QStyleFactory>
+#include <QTimer>
 
 #ifdef VCMI_WINDOWS
 #include <windows.h>
@@ -62,21 +64,35 @@ void frameWindow(QWidget * window)
 /// DMB: carves every QPushButton under `window` into the game's gold-button lettering, or plain if the
 /// look is not leather or dark; defined with the rest of that work, further down this file
 void carveEveryButtonUnder(QWidget * window, bool active);
+void applyCarvedButtonWord(QPushButton * button, bool active);
 
-/// frames every window as it first shows, dialogs included; the same moment its own buttons' layout is
-/// first real (widths of 0 or a Qt placeholder before this), so their lettering is carved here too, on
-/// whichever look was last chosen (darkFrames, the same flag the framing above already keeps current)
+/// frames every window as it first shows, dialogs included, and carves every button's word into the
+/// game's gold-button lettering (K's testing found the first cut of this missed the Settings page's
+/// own category buttons, September 28th: they sit on a tab that is not the one shown first, so the
+/// main window's own Show, the only signal read before this, came and went before they existed on a
+/// visible page at all). A button not yet on a shown page still fires its own Show once it is (Qt
+/// shows every descendant of a newly-current QStackedWidget page); read one event loop turn late
+/// (QTimer::singleShot(0, ...)), since its layout, and so its width, is not real any earlier than that
+/// either (found testing the very first buttons this same morning).
 class FrameEveryWindow : public QObject
 {
 public:
 	bool eventFilter(QObject * watched, QEvent * event) override
 	{
-		if(event->type() == QEvent::Show)
-			if(auto * widget = qobject_cast<QWidget *>(watched); widget && widget->isWindow())
+		if(event->type() != QEvent::Show)
+			return false;
+		if(auto * widget = qobject_cast<QWidget *>(watched); widget && widget->isWindow())
+			frameWindow(widget);
+		if(auto * button = qobject_cast<QPushButton *>(watched))
+		{
+			QPointer<QPushButton> guarded(button);
+			const bool active = darkFrames;
+			QTimer::singleShot(0, [guarded, active]()
 			{
-				frameWindow(widget);
-				carveEveryButtonUnder(widget, darkFrames);
-			}
+				if(guarded)
+					applyCarvedButtonWord(guarded, active);
+			});
+		}
 		return false;
 	}
 };
@@ -416,6 +432,15 @@ QImage carvedButtonWord(const QString & text)
 	return image.scaledToHeight(scaledHeight, Qt::SmoothTransformation);
 }
 
+// the bar's own scrollwork ends, kept clear on each side (gameButtonStyle's own 21 px at RANSHOW's
+// native size, scaled the same amount the carved word already is), and a little headroom the
+// button's own frame needs top and bottom
+int carvedBarEnds()
+{
+	return std::max(1, static_cast<int>(std::lround(21 * BAR_HEIGHT / 40.0)));
+}
+constexpr int carvedClear = 2;
+
 /// `button` in the exact carved-gold lettering (K, overnight into September 28th: "i want to get that
 /// exact look in the DMB launcher") where `active` (the look is leather or dark, not "system") and its
 /// own word fits and every letter of it is there; back to its own plain text otherwise, whether that is
@@ -429,13 +454,8 @@ void applyCarvedButtonWord(QPushButton * button, bool active)
 	if(!stored.isValid())
 		button->setProperty("dmbCarvedFrom", original);
 	const QImage carved = active ? carvedButtonWord(original) : QImage();
-	// the bar's own scrollwork ends, kept clear on each side (gameButtonStyle's own 21 px at RANSHOW's
-	// native size, scaled the same amount the carved word already is), and a little headroom the
-	// button's own frame needs top and bottom
-	const int barEnds = std::max(1, static_cast<int>(std::lround(21 * BAR_HEIGHT / 40.0)));
-	constexpr int clear = 2;
-	const bool fits = !carved.isNull() && carved.width() + 2 * (barEnds + clear) <= button->width()
-		&& carved.height() + clear <= button->height();
+	const bool fits = !carved.isNull() && carved.width() + 2 * (carvedBarEnds() + carvedClear) <= button->width()
+		&& carved.height() + carvedClear <= button->height();
 	if(fits)
 	{
 		button->setIcon(QIcon(QPixmap::fromImage(carved)));
@@ -693,6 +713,14 @@ static QString gameFontStyle()
 	if(!title.family.isEmpty())
 		style += QString("QLabel[dmbSettingsTitle=\"true\"] { font-family: \"%1\"; font-size: %2px; }").arg(title.family).arg(title.height);
 	return style;
+}
+
+int LauncherTheme::minimumCarvedButtonWidth(const QString & text)
+{
+	const QImage carved = carvedButtonWord(text);
+	if(carved.isNull())
+		return 0;
+	return carved.width() + 2 * (carvedBarEnds() + carvedClear);
 }
 
 void LauncherTheme::apply()

@@ -647,6 +647,20 @@ void CSettingsView::buildCategoryPages()
 		barLayout->addWidget(category.button);
 		categories.push_back(category);
 	}
+	// Qt sizes the bar to whichever category name is widest in its own, plain font (General fits
+	// easily; Artificial Intelligence does not once carved: K, September 28th, live testing, found
+	// carving landing on some category buttons and not others in the very same list under the very
+	// same look). The carved-gold word is the game's own bitmap font, not Qt's, and wider per letter;
+	// reserve room for the widest one now, so every button here is wide enough once carving turns on,
+	// whichever look that ends up being and whichever category name turns out longest.
+	int widestCarved = 0;
+	for(const auto & category : categories)
+		widestCarved = std::max(widestCarved, LauncherTheme::minimumCarvedButtonWidth(category.button->text()));
+	if(widestCarved > 0)
+	{
+		const QMargins barMargins = barLayout->contentsMargins();
+		bar->setMinimumWidth(widestCarved + barMargins.left() + barMargins.right());
+	}
 	barLayout->addStretch(1);
 	// the grid held nothing above its first header; a cell there would stay out of sight
 	for(auto & cell : cells)

@@ -9,6 +9,8 @@
  */
 #pragma once
 
+class QString;
+
 /// DMB: the launcher's look (K, September 26th), the setting launcher.theme:
 ///  - "leather": the leather Heroes III fills its windows with, read from the player's own game files
 ///    (DIBOXBCK; DMB ships no game art), gold buttons with black text and gold lettering, the game's
@@ -20,4 +22,11 @@
 namespace LauncherTheme
 {
 	void apply();
+
+	/// the least a button can be and still carve `text` in gold-button lettering; 0 if there is
+	/// nothing to carve it with yet (the language is not English, a letter is missing, or nothing has
+	/// been harvested). For a row of buttons laid out to one shared width before any look is chosen
+	/// (CSettingsView's category bar): reserve this now, rather than fight a layout already computed
+	/// to Qt's own narrower default once carving turns on.
+	int minimumCarvedButtonWidth(const QString & text);
 }
