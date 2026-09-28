@@ -1768,7 +1768,12 @@ void CObjectListWindow::init(std::shared_ptr<CIntObject> titleWidget_, std::stri
 	titleWidget = titleWidget_;
 
 	title = std::make_shared<CLabel>(152, titleWidget_ ? 27 : 51, FONT_BIG, ETextAlignment::CENTER, Colors::YELLOW, _title);
-	descr = std::make_shared<CLabel>(145, 133, FONT_SMALL, ETextAlignment::CENTER, Colors::WHITE, _descr);
+	// a plain CLabel never wraps: every other caller's _descr fits this window's width on one line,
+	// but DMB's saved-preset dialog does not, and the text ran off both edges of the window (K,
+	// September 28th, live testing). Wrapped and bounded within the space above the list (which
+	// starts at y=151) instead; a _descr short enough to fit one line renders exactly as before,
+	// centered the same way.
+	descr = std::make_shared<CMultiLineLabel>(Rect(20, 106, pos.w - 40, 44), FONT_SMALL, ETextAlignment::CENTER, Colors::WHITE, _descr);
 	exit = std::make_shared<CButton>( Point(228, 402), AnimationPath::builtin(blue ? "MuBcanc" : "ICANCEL.DEF"), CButton::tooltip(), std::bind(&CObjectListWindow::exitPressed, this), EShortcut::GLOBAL_CANCEL);
 
 	if(titleWidget)
