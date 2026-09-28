@@ -15,7 +15,9 @@ VCMI_LIB_NAMESPACE_BEGIN
 /// runs only when DMB's mod catalog vouches for it (K, September 26th). A catalog entry pins its mod's
 /// code with "codeSha256", one hash or a list of them; the launcher saves the pins of the default
 /// catalog (the one DMB ships with), and the game checks the folder against them before it runs
-/// anything from it. The setting mods.allowUnlistedCode lets developers run code they built themselves.
+/// anything from it. A tester's PC may also hold builds approved there before the catalog lists them
+/// (testedPinsFile), each by its exact hash. The setting mods.allowUnlistedCode lets developers run
+/// code they built themselves.
 namespace AddonCode
 {
 	/// The addon API level this DMB offers mods; mod.json's "dmb": { "api": N } asks for at least N.
@@ -37,6 +39,10 @@ namespace AddonCode
 
 	/// Where the launcher keeps the default catalog's pins: <user cache>/downloads/dmbCodePins.json
 	DLL_LINKAGE boost::filesystem::path pinsFile();
+
+	/// Builds approved for testing on this PC, in the same form as the catalog's pins, by those who hand
+	/// a tester a build before its release: <user config>/dmbTestedCode.json. The launcher never writes it.
+	DLL_LINKAGE boost::filesystem::path testedPinsFile();
 
 	/// Why the code in the folder, from the mod modID, may not run; empty when it may
 	DLL_LINKAGE std::string trustProblem(const std::string & modID, const boost::filesystem::path & folder);

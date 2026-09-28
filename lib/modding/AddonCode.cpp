@@ -185,36 +185,64 @@ boost::filesystem::path AddonCode::pinsFile()
 	return VCMIDirs::get().userCachePath() / "downloads" / "dmbCodePins.json";
 }
 
+boost::filesystem::path AddonCode::testedPinsFile()
+{
+	return VCMIDirs::get().userConfigPath() / "dmbTestedCode.json";
+}
+
 std::string AddonCode::trustProblem(const std::string & modID, const boost::filesystem::path & folder)
 {
 	if(settings["mods"]["allowUnlistedCode"].Bool())
 		return {};
 
-	std::ifstream in(pinsFile().c_str(), std::ios::binary);
-	if(!in)
-		return "DMB's mod catalog has not been downloaded yet (the launcher downloads it)";
-	const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-	const JsonNode pins(text.data(), text.size(), pinsFile().string());
-	if(!pins.isStruct())
-		return "DMB's mod catalog could not be read (the launcher downloads it again)";
+	// a pins file as JSON; nothing when it is not there
+	const auto read = [](const boost::filesystem::path & file) -> std::optional<JsonNode>
+	{
+		std::ifstream in(file.c_str(), std::ios::binary);
+		if(!in)
+			return std::nullopt;
+		const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+		return JsonNode(text.data(), text.size(), file.string());
+	};
+	// the hashes a pins file accepts for the mod: one, or a list of them
+	const auto hashesFor = [&modID](const std::optional<JsonNode> & pins)
+	{
+		std::vector<std::string> accepted;
+		if(!pins || !pins->isStruct())
+			return accepted;
+		const JsonNode & pin = (*pins)[boost::to_lower_copy(modID)];
+		if(pin.isString())
+			accepted.push_back(boost::to_lower_copy(pin.String()));
+		else if(pin.isVector())
+			for(const auto & entry : pin.Vector())
+				if(entry.isString())
+					accepted.push_back(boost::to_lower_copy(entry.String()));
+		return accepted;
+	};
 
-	const JsonNode & pin = pins[boost::to_lower_copy(modID)];
-	std::vector<std::string> accepted;
-	if(pin.isString())
-		accepted.push_back(pin.String());
-	else if(pin.isVector())
-		for(const auto & entry : pin.Vector())
-			if(entry.isString())
-				accepted.push_back(entry.String());
-	if(accepted.empty())
+	const auto catalog = read(pinsFile());
+	const std::vector<std::string> accepted = hashesFor(catalog);
+	// builds a tester runs before the catalog lists them, each approved on this PC by its exact hash
+	const std::vector<std::string> tested = hashesFor(read(testedPinsFile()));
+	if(accepted.empty() && tested.empty())
+	{
+		if(!catalog)
+			return "DMB's mod catalog has not been downloaded yet (the launcher downloads it)";
+		if(!catalog->isStruct())
+			return "DMB's mod catalog could not be read (the launcher downloads it again)";
 		return "it is not in DMB's mod catalog";
+	}
 
 	const std::string hash = folderHash(folder);
 	if(hash.empty())
 		return "its code could not be read";
-	for(auto & entry : accepted)
-		if(boost::to_lower_copy(entry) == hash)
-			return {};
+	if(vstd::contains(accepted, hash))
+		return {};
+	if(vstd::contains(tested, hash))
+	{
+		logMod->info("Mod %s: its code is a build approved for testing on this PC (%s)", modID, testedPinsFile().string());
+		return {};
+	}
 	// the numbers are for the log, where a mod's author looks; the player is told what to do
 	logMod->warn("Mod %s: its code in %s hashes to %s, and DMB's mod catalog pins %s", modID, folder.string(), hash,
 		boost::algorithm::join(accepted, ", "));

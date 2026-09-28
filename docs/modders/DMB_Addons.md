@@ -162,6 +162,11 @@ the catalog's pins whenever it downloads the catalog. Before an AI plugin loads 
 generator run, the game hashes the folder and compares. A mod the catalog does not list, or whose
 files differ from the pinned ones, is refused, and the player is told why.
 
+A build handed to a tester before the catalog lists it runs on that tester's PC once its pin is in
+the user config folder's `dmbTestedCode.json`, in the same form as the catalog's (`{ "mod-id":
+["<pin>"] }`). The launcher never writes that file, and a build approved there is still refused if
+its files change afterwards.
+
 While you build and test your own addon, switch the check off in your `settings.json`:
 
 ```json
