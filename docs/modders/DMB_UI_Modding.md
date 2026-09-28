@@ -160,6 +160,7 @@ and a layout names them like any image. They are shared: use them, never replace
 | `MapGenButton64`, `MapGenButton80`, `MapGenButton190` | that wide, 20 high | GSPBUT2 | lobby-style buttons |
 | `DmbSizeS`, `DmbSizeM`, `DmbSizeL`, `DmbSizeXL` | 44 by 33 | RANSIZS to RANSIZX, as they are | map sizes, as the Random Map Setup's |
 | `DmbSizeH`, `DmbSizeXH`, `DmbSizeG`, `DmbSizeC` | 44 by 33 | RANSIZX, lettered anew from the game's BIGFONT capitals, embossed as its letters are | sizes past XL, and a custom size (level 4) |
+| `DmbSizeS33` to `DmbSizeC33` (S, M, L, XL, H, XH, G, C) | 33 by 33 | RANSIZX with eleven columns out of its middle, every size lettered as H to C are | all eight and the game's two-level button (`RANUNDR`, 44 wide) in one 312 pixel row (level 4) |
 
 The Ran buttons have RANWEAK's four frames; as toggle buttons they take `"imageOrder": [0, 1, 1, 3]`,
 as the Random Map Setup's do, so a selected one wears the gold frame. A button's word is a label in

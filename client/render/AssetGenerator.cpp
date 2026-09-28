@@ -164,6 +164,14 @@ void AssetGenerator::initialize()
 	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeXH")] = createSizeButton("DmbSizeXH", "RANSIZX", "XH");
 	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeG")] = createSizeButton("DmbSizeG", "RANSIZX", "G");
 	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeC")] = createSizeButton("DmbSizeC", "RANSIZX", "C");
+	// the same eight, 33 wide instead of 44, for a row of all of them and the game's two-level button
+	// (RANUNDR, 44 wide) in 312 pixels (MapGen's Map page); every size lettered, S to XL included, as the
+	// game's own letters would be cut through
+	for(const char * size : {"S", "M", "L", "XL", "H", "XH", "G", "C"})
+	{
+		const std::string name = "DmbSize" + std::string(size) + "33";
+		animationFiles[AnimationPath::builtin("SPRITES/" + name)] = createSizeButton(name, "RANSIZX", size, 33);
+	}
 
 	for (PlayerColor color(-1); color < PlayerColor::PLAYER_LIMIT; ++color)
 	{
@@ -1274,14 +1282,14 @@ int luminance(const ColorRGBA & c)
 	return (c.r * 299 + c.g * 587 + c.b * 114) / 1000;
 }
 
-/// `text`'s letters in the game's BIGFONT at its own size (GameLettering), narrowed to the width the
-/// game's own XL takes
-std::vector<std::vector<bool>> sizeLetters(const std::string & text)
+/// `text`'s letters in the game's BIGFONT at its own size (GameLettering), narrowed to `widest`: the
+/// width the game's own XL takes, or less on a narrower button
+std::vector<std::vector<bool>> sizeLetters(const std::string & text, int widest)
 {
 	const auto letters = GameLettering::letters(FONT_BIG, text, true);
 	if(letters.width <= 0)
 		return {};
-	const int narrowed = std::min(letters.width, SIZE_TEXT_WIDTH);
+	const int narrowed = std::min(letters.width, widest);
 	std::vector<std::vector<bool>> result;
 	for(const auto & row : letters.pixels)
 	{
@@ -1295,8 +1303,9 @@ std::vector<std::vector<bool>> sizeLetters(const std::string & text)
 
 /// The XL button's frame on `canvas` with `text` lettered in place of XL: the gold area filled from its
 /// own edges (their colours blended across it, the dotted border's dots smoothed out), then the letters
-/// embossed as the game's are; a pressed frame's letters sit a pixel lower and to the right
-void letterSizeButton(Canvas & canvas, const std::string & text, bool pressed)
+/// embossed as the game's are; a pressed frame's letters sit a pixel lower and to the right. `narrower`:
+/// how many columns the frame lost out of its middle
+void letterSizeButton(Canvas & canvas, const std::string & text, bool pressed, int narrower = 0)
 {
 	// the pressed frame moves the whole face: find the dotted border, the brightest row near its place
 	int dx = 0, dy = 0, best = -1;
@@ -1304,7 +1313,7 @@ void letterSizeButton(Canvas & canvas, const std::string & text, bool pressed)
 		for(int ox = -2; ox <= 2; ++ox)
 		{
 			int score = 0;
-			for(int x = 8; x < 34; ++x)
+			for(int x = 8; x < 34 - narrower; ++x)
 				score += luminance(canvas.getPixel(Point(x + ox, 4 + oy)));
 			if(score > best)
 			{
@@ -1313,7 +1322,7 @@ void letterSizeButton(Canvas & canvas, const std::string & text, bool pressed)
 				dy = oy;
 			}
 		}
-	const int l = SIZE_LEFT + dx, t = SIZE_TOP + dy, r = SIZE_RIGHT + dx, b = SIZE_BOTTOM + dy;
+	const int l = SIZE_LEFT + dx, t = SIZE_TOP + dy, r = SIZE_RIGHT - narrower + dx, b = SIZE_BOTTOM + dy;
 
 	const auto edge = [&canvas](std::vector<Point> points)
 	{
@@ -1363,7 +1372,8 @@ void letterSizeButton(Canvas & canvas, const std::string & text, bool pressed)
 			canvas.drawPoint(Point(x, y), ColorRGBA(channel(&ColorRGBA::r), channel(&ColorRGBA::g), channel(&ColorRGBA::b), 255));
 		}
 
-	const auto letters = sizeLetters(text);
+	// the game's XL width on its own button; three columns short of the face on a narrower one
+	const auto letters = sizeLetters(text, narrower ? r - l - 3 : SIZE_TEXT_WIDTH);
 	if(letters.empty())
 		return;
 	const int textHeight = static_cast<int>(letters.size());
@@ -1405,7 +1415,7 @@ void letterSizeButton(Canvas & canvas, const std::string & text, bool pressed)
 }
 }
 
-AssetGenerator::AnimationLayoutMap AssetGenerator::createSizeButton(const std::string & name, const std::string & source, const std::string & text)
+AssetGenerator::AnimationLayoutMap AssetGenerator::createSizeButton(const std::string & name, const std::string & source, const std::string & text, int width)
 {
 	auto baseImg = ENGINE->renderHandler().loadAnimation(AnimationPath::builtin(source), EImageBlitMode::OPAQUE);
 
@@ -1414,14 +1424,21 @@ AssetGenerator::AnimationLayoutMap AssetGenerator::createSizeButton(const std::s
 	{
 		ImagePath spriteName = ImagePath::builtin(name + "_" + std::to_string(i) + ".png");
 
-		imageFiles[spriteName] = [baseImg, i, text]()
+		imageFiles[spriteName] = [baseImg, i, text, width]()
 		{
 			auto frame = baseImg->getImage(i);
-			auto newImg = ENGINE->renderHandler().createImage(frame->dimensions(), CanvasScalingPolicy::IGNORE);
+			const Point size = frame->dimensions();
+			const int narrower = width > 0 && width < size.x ? size.x - width : 0;
+			auto newImg = ENGINE->renderHandler().createImage(Point(size.x - narrower, size.y), CanvasScalingPolicy::IGNORE);
 			auto canvas = newImg->getCanvas();
-			canvas.draw(frame, Point(0, 0));
+			// a narrower cut: the frame's two sides, the columns between them out of the middle of the gold
+			// face (x 8 to 35), which the lettering fills again from its edges
+			const int cut = 21 - narrower / 2;
+			canvas.draw(frame, Point(0, 0), Rect(0, 0, narrower ? cut : size.x, size.y));
+			if(narrower)
+				canvas.draw(frame, Point(cut, 0), Rect(cut + narrower, 0, size.x - cut - narrower, size.y));
 			if(!text.empty())
-				letterSizeButton(canvas, text, i == 1);
+				letterSizeButton(canvas, text, i == 1, narrower);
 			return newImg;
 		};
 
