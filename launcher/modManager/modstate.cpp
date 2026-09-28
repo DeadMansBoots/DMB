@@ -259,3 +259,8 @@ bool ModState::isDmbCatalogEntry() const
 	const JsonNode & flag = impl.getRepositoryValue("dmbEntry");
 	return flag.isBool() && flag.Bool();
 }
+
+bool ModState::isDmbMod() const
+{
+	return isDmbCatalogEntry() || impl.getLocalValue("dmb").isStruct() || impl.getRepositoryValue("dmb").isStruct();
+}

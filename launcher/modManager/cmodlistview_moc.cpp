@@ -44,6 +44,9 @@
 
 #include <future>
 
+// DMB: where the mod list's column layout is kept; VCMI's key held a layout without the origin column
+static const QString MODS_VIEW_STATE = "AllModsView/StateWithOrigin";
+
 // DMB: whether a downloaded index is the default repository's, DMB's own catalog. loadRepositories
 // names each index file after the MD5 of its address.
 static bool isDefaultCatalog(const QString & filename)
@@ -117,22 +120,26 @@ void CModListView::setupModsView()
 
 	ui->allModsView->header()->setSectionResizeMode(ModFields::STATUS_ENABLED, QHeaderView::Fixed);
 	ui->allModsView->header()->setSectionResizeMode(ModFields::STATUS_UPDATE, QHeaderView::Fixed);
+	ui->allModsView->header()->setSectionResizeMode(ModFields::ORIGIN, QHeaderView::Fixed);
 	ui->allModsView->header()->setSectionResizeMode(ModFields::STARS, QHeaderView::Fixed);
 
+	// DMB: its own key, since the origin column makes a column more than VCMI's saved layout has
 	QSettings s = CLauncherDirs::getSettings(Ui::appName);
-	auto state = s.value("AllModsView/State").toByteArray();
+	auto state = s.value(MODS_VIEW_STATE).toByteArray();
 	if(!state.isNull()) //read last saved settings
 	{
 		ui->allModsView->header()->restoreState(state);
 	}
 	else //default //TODO: default high-DPI scaling
 	{
-		ui->allModsView->setColumnWidth(ModFields::NAME, 220);
-		ui->allModsView->setColumnWidth(ModFields::TYPE, 75);
+		// DMB: room for the game's font, which is wider than the platform's (theme.cpp)
+		ui->allModsView->setColumnWidth(ModFields::NAME, 200);
+		ui->allModsView->setColumnWidth(ModFields::TYPE, 110);
 	}
 
 	ui->allModsView->resizeColumnToContents(ModFields::STATUS_ENABLED);
 	ui->allModsView->resizeColumnToContents(ModFields::STATUS_UPDATE);
+	ui->allModsView->resizeColumnToContents(ModFields::ORIGIN);
 	ui->allModsView->resizeColumnToContents(ModFields::STARS);
 
 	ui->allModsView->setUniformRowHeights(true);
@@ -171,14 +178,15 @@ CModListView::CModListView(QWidget * parent)
 	setupFilterModel();
 	setupModsView();
 
-	// DMB: two tabs over the same list (K, September 26th): every mod, as VCMI shows them, or only
-	// DMB's own catalog additions
+	// DMB: tabs over the same list (K, September 26th and 27th): every mod on one page, VCMI's, or
+	// DMB's (its catalog's own and any mod made for DMB); the list's origin column tells them apart
 	auto * origins = new QTabBar(this);
+	origins->addTab(tr("All Mods"));
 	origins->addTab(tr("VCMI Mods"));
 	origins->addTab(tr("DMB Mods"));
 	origins->setExpanding(false);
 	ui->verticalLayout->insertWidget(0, origins);
-	connect(origins, &QTabBar::currentChanged, this, [this](int index) { filterModel->setDmbOnly(index == 1); });
+	connect(origins, &QTabBar::currentChanged, this, [this](int index) { filterModel->setOrigins(index); });
 
 	ui->progressWidget->setVisible(false);
 	dlManager = nullptr;
@@ -252,7 +260,7 @@ void CModListView::loadRepositories()
 CModListView::~CModListView()
 {
 	QSettings s = CLauncherDirs::getSettings(Ui::appName);
-	s.setValue("AllModsView/State", ui->allModsView->header()->saveState());
+	s.setValue(MODS_VIEW_STATE, ui->allModsView->header()->saveState());
 
 	delete ui;
 }

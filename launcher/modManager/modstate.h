@@ -76,4 +76,7 @@ public:
 	/// DMB: one of DMB's own catalog additions, not an entry from VCMI's index (its catalog entry
 	/// carries "dmbEntry", which only DMB-Mods-Repository's builder sets)
 	bool isDmbCatalogEntry() const;
+	/// DMB: a mod of DMB's: one of its catalog's own entries, or a mod made for DMB, whose mod.json names
+	/// the addon API it needs ("dmb"), however it was installed. The rest are VCMI's.
+	bool isDmbMod() const;
 };

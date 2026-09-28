@@ -78,6 +78,9 @@ QVariant ModStateItemModel::getValue(const ModState & mod, int field) const
 		case ModFields::TYPE:
 			return modTypeName(mod.getType());
 
+		case ModFields::ORIGIN:
+			return isDmbMod(mod) ? QString("DMB") : QString("VCMI");
+
 		case ModFields::STARS:
 			return mod.getGithubStars() == -1 ? QVariant("") : mod.getGithubStars();
 
@@ -92,10 +95,18 @@ QVariant ModStateItemModel::getText(const ModState & mod, int field) const
 	{
 	case ModFields::STATUS_ENABLED:
 	case ModFields::STATUS_UPDATE:
+	case ModFields::ORIGIN:
 		return "";
 	default:
 		return getValue(mod, field);
 	}
+}
+
+bool ModStateItemModel::isDmbMod(const ModState & mod) const
+{
+	// a submod goes with its top parent, the mod a catalog lists
+	const QString topID = mod.getTopParentID();
+	return topID.isEmpty() ? mod.isDmbMod() : model->getMod(topID).isDmbMod();
 }
 
 QVariant ModStateItemModel::getIcon(const ModState & mod, int field) const
@@ -136,6 +147,10 @@ QVariant ModStateItemModel::getIcon(const ModState & mod, int field) const
 		if (!model->isModInstalled(mod.getID()))
 			return QIcon(iconDownload);
 	}
+
+	// DMB: where the mod comes from, as K drew it: VCMI's shield, or DMB's boots
+	if(field == ModFields::ORIGIN)
+		return QIcon(isDmbMod(mod) ? ":/icons/menu-game.png" : ":/icons/origin-vcmi.png");
 
 	return QVariant();
 }
@@ -194,6 +209,7 @@ QVariant ModStateItemModel::headerData(int section, Qt::Orientation orientation,
 		QT_TRANSLATE_NOOP("ModFields", "Name"),
 		QT_TRANSLATE_NOOP("ModFields", ""), // status icon
 		QT_TRANSLATE_NOOP("ModFields", ""), // status icon
+		QT_TRANSLATE_NOOP("ModFields", ""), // DMB: origin icon
 		QT_TRANSLATE_NOOP("ModFields", "Type"),
 		QT_TRANSLATE_NOOP("ModFields", ""), // star icon
 	};
@@ -207,6 +223,8 @@ QVariant ModStateItemModel::headerData(int section, Qt::Orientation orientation,
 		}
 		else if(role == Qt::DisplayRole)
 			return QCoreApplication::translate("ModFields", header[section]);
+		else if(role == Qt::ToolTipRole && section == ModFields::ORIGIN)
+			return tr("Where the mod comes from: VCMI's mod list (the shield) or Dead Man's Boots' own (the boots)");
 	}
 	return QVariant();
 }
@@ -277,9 +295,9 @@ void CModFilterModel::setTypeFilter(ModFilterMask newFilterMask)
 	invalidateFilter();
 }
 
-void CModFilterModel::setDmbOnly(bool only)
+void CModFilterModel::setOrigins(int tab)
 {
-	dmbOnly = only;
+	origins = tab;
 	invalidateFilter();
 }
 
@@ -288,13 +306,8 @@ bool CModFilterModel::filterMatchesCategory(const QModelIndex & source) const
 	QString modID =source.data(ModRoles::ModNameRole).toString();
 	ModState mod = base->model->getMod(modID);
 
-	if(dmbOnly)
-	{
-		// a submod goes with its top parent, the mod the catalog lists
-		const QString topID = mod.getTopParentID().isEmpty() ? modID : mod.getTopParentID();
-		if(!base->model->getMod(topID).isDmbCatalogEntry())
-			return false;
-	}
+	if(origins != 0 && base->isDmbMod(mod) != (origins == 2))
+		return false;
 
 	switch (filterMask)
 	{

@@ -22,6 +22,7 @@ enum EModFields
 	NAME,
 	STATUS_ENABLED,
 	STATUS_UPDATE,
+	ORIGIN, ///< DMB: VCMI's shield or DMB's boots (ModState::isDmbMod)
 	TYPE,
 	STARS,
 	COUNT
@@ -69,6 +70,8 @@ class ModStateItemModel final : public QAbstractItemModel
 	QVariant getValue(const ModState & mod, int field) const;
 	QVariant getText(const ModState & mod, int field) const;
 	QVariant getIcon(const ModState & mod, int field) const;
+	/// DMB: a mod of DMB's, a submod going with its top parent (ModState::isDmbMod)
+	bool isDmbMod(const ModState & mod) const;
 
 public:
 	explicit ModStateItemModel(std::shared_ptr<ModStateModel> model, QObject * parent);
@@ -93,8 +96,8 @@ class CModFilterModel final : public QSortFilterProxyModel
 {
 	ModStateItemModel * base;
 	ModFilterMask filterMask;
-	/// DMB: only DMB's own catalog additions (the "DMB Mods" tab)
-	bool dmbOnly = false;
+	/// DMB: the mods page's tabs: 0 every mod, 1 VCMI's, 2 DMB's (ModState::isDmbMod)
+	int origins = 0;
 
 	bool filterMatchesThis(const QModelIndex & source) const;
 	bool filterMatchesCategory(const QModelIndex & source) const;
@@ -105,7 +108,8 @@ class CModFilterModel final : public QSortFilterProxyModel
 
 public:
 	void setTypeFilter(ModFilterMask filterMask);
-	void setDmbOnly(bool only);
+	/// DMB: which of the mods page's tabs is shown: 0 every mod, 1 VCMI's, 2 DMB's
+	void setOrigins(int tab);
 
 	CModFilterModel(ModStateItemModel * model, QObject * parent = nullptr);
 };
