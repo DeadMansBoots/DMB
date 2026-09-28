@@ -10,6 +10,7 @@
 #pragma once
 
 #include "EFont.h"
+#include "../../lib/Rect.h"
 
 class IImage;
 
@@ -34,4 +35,19 @@ namespace GameLettering
 	/// pixel): black letters, a brown edge on their left, a white light on their right and underneath,
 	/// transparent around. At the screen's scale, one pixel wider than the text's box on every side.
 	std::shared_ptr<IImage> carved(EFonts font, const std::string & text);
+
+	struct ButtonWords
+	{
+		std::shared_ptr<IImage> image; ///< at the screen's scale; transparent where the gold shows through
+		Rect letters; ///< the letters' black in the image: the words' width, and the lettering's height
+	};
+
+	/// `text` in capitals in the lettering of the game's gold buttons (K, September 27th: "its a bold, and
+	/// specific font (that we should match)"), 22 pixels tall as on the game's 40 pixel bars. No bitmap
+	/// font of the game's has it: each letter is lifted from a button whose word has it (BEGIN, BACK,
+	/// LOAD, NEXT, SAVE, EXIT, RESTART) as its black and white over the bar's gold, so it lands on any
+	/// gold bar as the game drew it. F, H, M, P, U, W and Y are built from those letters' strokes. No
+	/// image when the text needs anything else (J, Q, Z, digits, marks), or when the game's files or the
+	/// player's language are not English: those buttons carry other words.
+	ButtonWords buttonWords(const std::string & text);
 }

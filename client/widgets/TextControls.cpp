@@ -10,6 +10,7 @@
 #include "StdInc.h"
 #include "TextControls.h"
 
+#include "Buttons.h"
 #include "Slider.h"
 #include "Images.h"
 
@@ -379,10 +380,28 @@ void CEngravedLabel::showAll(Canvas & to)
 		return;
 	if(!carving || carvedText != shown)
 	{
-		carving = GameLettering::carved(font, shown);
-		const auto box = GameLettering::letters(font, shown, false);
-		carvedSize = Point(box.width, box.height);
 		carvedText = shown;
+		carving = nullptr;
+		// a gold button's big words in the game's own lettering, where the button has room for it (K,
+		// September 27th: "the text also almost takes up the whole vertical width in the game i believe,
+		// and its a bold, and specific font (that we should match)")
+		if(font == FONT_BIG)
+		{
+			const auto words = GameLettering::buttonWords(shown);
+			if(words.image && fitsButton(words.letters))
+			{
+				carving = words.image;
+				carvedSize = words.letters.dimensions();
+				carvedOrigin = words.letters.topLeft();
+			}
+		}
+		if(!carving)
+		{
+			carving = GameLettering::carved(font, shown);
+			const auto box = GameLettering::letters(font, shown, false);
+			carvedSize = Point(box.width, box.height);
+			carvedOrigin = Point(1, 1);
+		}
 	}
 	if(!carving)
 	{
@@ -426,7 +445,18 @@ void CEngravedLabel::showAll(Canvas & to)
 			where.y += border.y + pos.h - carvedSize.y;
 			break;
 	}
-	to.draw(carving, where - Point(1, 1));
+	to.draw(carving, where - carvedOrigin);
+}
+
+bool CEngravedLabel::fitsButton(const Rect & letters) const
+{
+	// the game's gold bars keep their words off the scrollwork at their ends, 21 pixels each (RANSHOW),
+	// and six rows clear above and below at least (its own words have nine on a 40 pixel bar)
+	constexpr int barEnds = 21;
+	constexpr int clear = 2;
+	if(const auto * button = dynamic_cast<const ButtonBase *>(parent))
+		return letters.w + 2 * (barEnds + clear) <= button->pos.w && letters.h + 12 <= button->pos.h;
+	return maxWidth <= 0 || letters.w <= maxWidth;
 }
 
 CLabelGroup::CLabelGroup(EFonts Font, ETextAlignment Align, const ColorRGBA & Color)

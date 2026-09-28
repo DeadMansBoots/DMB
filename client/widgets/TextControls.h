@@ -73,7 +73,12 @@ class CEngravedLabel : public CLabel
 {
 	std::shared_ptr<IImage> carving;
 	std::string carvedText;
-	Point carvedSize; ///< the text's own box, without the carving's one-pixel rim
+	Point carvedSize; ///< the text's own box: the font's line, or the lettering's letters
+	Point carvedOrigin; ///< where that box starts in the carving
+
+	/// whether words in the game's gold button lettering, `letters` their black, fit the button this label
+	/// is on, between the ends of its bar (or within the label's own width, off a button)
+	bool fitsButton(const Rect & letters) const;
 
 public:
 	CEngravedLabel(int x, int y, EFonts font, ETextAlignment align, const std::string & text, int maxWidth = 0);

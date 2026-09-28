@@ -164,9 +164,19 @@ and a layout names them like any image. They are shared: use them, never replace
 The Ran buttons have RANWEAK's four frames; as toggle buttons they take `"imageOrder": [0, 1, 1, 3]`,
 as the Random Map Setup's do, so a selected one wears the gold frame. A button's word is a label in
 its `items`, centred on it; the stock look is `"font": "big"`, yellow on the blue buttons, and on the
-gold carved as the game carves its own gold buttons' words: `"style": "engraved"` (level 4), black
-letters with a brown edge on their left and a light on their right and underneath. A plain color is
-written `"color": [0, 0, 0, 255]` (a color name VCMI knows, or red, green, blue and alpha).
+gold `"style": "engraved"` (level 4), the words written as the game writes its own gold buttons'. A
+plain color is written `"color": [0, 0, 0, 255]` (a color name VCMI knows, or red, green, blue and
+alpha).
+
+An engraved label in the big font is drawn in the lettering of the game's gold buttons (BEGIN, SAVE,
+RESTART): capitals 22 pixels tall, lifted from the player's own copies of those buttons, so they match
+the game's to the pixel. No font of the game's has that lettering, and it has these letters only: A to
+Z without J, Q and Z, and the space. It needs room: the words stay off the scrollwork at the bar's
+ends, 21 pixels at each, so `RanShowButton166` holds about five letters and `RanShowButton337` about
+thirteen. Some widths, in pixels: Begin 106, Reset 107, Create 133, Defaults 178, Generate 183.
+Words that do not fit, or need a letter it lacks, or a game in another language, are carved in the
+font instead: black letters with a brown edge on their left and a light on their right and underneath.
+Any other font is carved that way too.
 
 ## Asking for a hook
 
