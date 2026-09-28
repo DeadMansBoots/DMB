@@ -9,6 +9,7 @@
  */
 #include "StdInc.h"
 #include "theme.h"
+#include "gamefont.h"
 
 #include "../lib/CConfigHandler.h"
 #include "../lib/VCMIDirs.h"
@@ -241,21 +242,47 @@ QImage wordlessChoice(const QImage & frame)
 	return piece;
 }
 
+/// The game's gold in silver, for the dark look (K, September 27th: "a dark-silver/grey that's still
+/// light enough to contrast the black font"): the grey of each pixel, a little lighter and cooler
+QImage silvered(const QImage & image)
+{
+	QImage result = image.convertToFormat(QImage::Format_ARGB32);
+	for(int y = 0; y < result.height(); ++y)
+	{
+		auto * line = reinterpret_cast<QRgb *>(result.scanLine(y));
+		for(int x = 0; x < result.width(); ++x)
+		{
+			const int grey = qGray(line[x]);
+			const auto channel = [grey](int lift) { return std::clamp(grey * 86 / 100 + lift, 0, 255); };
+			line[x] = qRgba(channel(0), channel(3), channel(8), qAlpha(line[x]));
+		}
+	}
+	return result;
+}
+
 /// The launcher's buttons as the game's own gold bars (K, September 26th: "these buttons need to
 /// actually mimic the heroes 3 buttons exactly"), from the player's own game files, written to the
-/// user's cache for the style sheet to name. Empty before an import: then they keep the painted gold.
-QString gameButtonStyle()
+/// user's cache for the style sheet to name, in silver for the dark look unless the player keeps gold.
+/// The Settings page's categories are the same bars (K, September 27th). Empty before an import: then
+/// they keep the painted gold.
+QString gameButtonStyle(bool silver)
 {
 	const AnimationPath path = AnimationPath::builtin("SPRITES/RANSHOW");
 	if(!CResourceHandler::get()->existsResource(path))
 		return {};
 	const auto data = CResourceHandler::get()->load(path)->readAll();
 	const auto * bytes = reinterpret_cast<const ui8 *>(data.first.get());
-	const QImage normal = wordlessBar(readH3DefFrame(bytes, data.second, 0));
-	const QImage pressed = wordlessBar(readH3DefFrame(bytes, data.second, 1));
-	const QImage lit = wordlessBar(readH3DefFrame(bytes, data.second, 3));
+	QImage normal = wordlessBar(readH3DefFrame(bytes, data.second, 0));
+	QImage pressed = wordlessBar(readH3DefFrame(bytes, data.second, 1));
+	QImage lit = wordlessBar(readH3DefFrame(bytes, data.second, 3));
 	if(normal.isNull() || pressed.isNull() || lit.isNull())
 		return {};
+	if(silver)
+	{
+		normal = silvered(normal);
+		pressed = silvered(pressed);
+		lit = silvered(lit);
+	}
 	// a button that cannot be pressed: the normal bar, dimmed
 	QImage dimmed = normal;
 	for(int y = 0; y < dimmed.height(); ++y)
@@ -273,7 +300,9 @@ QString gameButtonStyle()
 		const QString file = QString::fromStdString((folder / (name + ".png")).string());
 		return image.save(file, "PNG") ? QDir::fromNativeSeparators(file) : QString();
 	};
-	const QString files[] = { write(normal, "dmb-button"), write(pressed, "dmb-button-pressed"), write(lit, "dmb-button-lit"), write(dimmed, "dmb-button-disabled") };
+	const std::string metal = silver ? "-silver" : "";
+	const QString files[] = { write(normal, "dmb-button" + metal), write(pressed, "dmb-button-pressed" + metal),
+		write(lit, "dmb-button-lit" + metal), write(dimmed, "dmb-button-disabled" + metal) };
 	for(const auto & file : files)
 		if(file.isEmpty())
 			return {};
@@ -288,7 +317,12 @@ QString gameButtonStyle()
 		"QPushButton { color: black; background: transparent; border-radius: 0; border-width: 4px %1px; padding: 1px 2px; %2 }"
 		"QPushButton:hover { %3 }"
 		"QPushButton:pressed { %4 }"
-		"QPushButton:disabled { color: #2a1c0c; %5 }")
+		"QPushButton:disabled { color: #2a1c0c; %5 }"
+		// the Settings page's categories: the same bars, the open one pressed in
+		"#dmbSettingsCategories QPushButton { color: black; background: transparent; border-radius: 0; border-width: 4px %1px;"
+		" padding: 3px 6px; text-align: center; font-weight: bold; %2 }"
+		"#dmbSettingsCategories QPushButton:hover { color: black; background: transparent; %3 }"
+		"#dmbSettingsCategories QPushButton:checked { color: black; background: transparent; %4 }")
 		.arg(end).arg(face(files[0]), face(files[2]), face(files[1]), face(files[3]));
 
 	// the Settings page's switches as the Random Map Setup's choices: blue, and framed in gold when on;
@@ -381,28 +415,77 @@ CSettingsView QToolButton:checked {
 }
 )";
 
-QPalette themedPalette(const QBrush & window, const QColor & base, const QColor & alternate, const QColor & button)
+QPalette themedPalette(const QBrush & window, const QColor & base, const QColor & alternate, const QColor & button,
+	const QColor & accent = gold, const QColor & text = parchment)
 {
 	QPalette palette;
 	palette.setBrush(QPalette::Window, window);
-	palette.setColor(QPalette::WindowText, parchment);
+	palette.setColor(QPalette::WindowText, text);
 	palette.setColor(QPalette::Base, base);
 	palette.setColor(QPalette::AlternateBase, alternate);
-	palette.setColor(QPalette::Text, parchment);
+	palette.setColor(QPalette::Text, text);
 	palette.setColor(QPalette::PlaceholderText, QColor(170, 150, 110));
 	palette.setColor(QPalette::Button, button);
-	palette.setColor(QPalette::ButtonText, parchment);
-	palette.setColor(QPalette::BrightText, gold);
-	palette.setColor(QPalette::Highlight, gold);
+	palette.setColor(QPalette::ButtonText, text);
+	palette.setColor(QPalette::BrightText, accent);
+	palette.setColor(QPalette::Highlight, accent);
 	palette.setColor(QPalette::HighlightedText, Qt::black);
-	palette.setColor(QPalette::Link, gold);
+	palette.setColor(QPalette::Link, accent);
 	palette.setColor(QPalette::ToolTipBase, QColor(42, 26, 10));
-	palette.setColor(QPalette::ToolTipText, parchment);
+	palette.setColor(QPalette::ToolTipText, text);
 	palette.setColor(QPalette::Disabled, QPalette::WindowText, QColor(150, 135, 105));
 	palette.setColor(QPalette::Disabled, QPalette::Text, QColor(150, 135, 105));
 	palette.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(150, 135, 105));
 	return palette;
 }
+
+/// The style sheet's gold, its browns and its parchment text in the silver and greys of the dark look
+QString inSilver(QString style)
+{
+	static const std::vector<std::pair<const char *, const char *>> colours = {
+		{"#f3d27a", "#c6cad1"}, {"#d9a83e", "#9fa4ac"}, {"#9c6d1c", "#686c73"}, {"#fbe29a", "#d9dce1"},
+		{"#e8bc55", "#b2b6bd"}, {"#ae7e2a", "#7b7f86"}, {"#8a6a2a", "#5c6067"}, {"#4a3008", "#2f3237"},
+		{"#3a2a12", "#2a2c30"}, {"#7d6a4c", "#686b70"}, {"#1c1307", "#1a1a1b"}, {"#2b1d08", "#2a2b2d"},
+		{"#24170a", "#202122"}, {"#1a1108", "#171718"}, {"#2a1a0a", "#1e1e1f"}, {"#e8c86a", "#d7dbe1"},
+		{"#fff0b0", "#ffffff"}, {"#2a1c0c", "#222326"}, {"#f3e7c9", "#e8eaed"},
+	};
+	for(const auto & [goldColour, silverColour] : colours)
+		style.replace(goldColour, silverColour, Qt::CaseInsensitive);
+	return style;
+}
+}
+
+// the kinds of widget Qt gives a platform font of their own (QApplication's widget font table)
+const char * const WIDGETS_WITH_OWN_FONTS[] = { "QAbstractItemView", "QListView", "QHeaderView", "QMenu", "QMenuItem", "QMenuBar",
+	"QTipLabel", "QMessageBox", "QStatusBar", "QComboMenuItem", "QComboLineEdit", "QLabel", "QPushButton", "QCheckBox",
+	"QRadioButton", "QToolButton", "QTabBar", "QMdiSubWindowTitleBar", "QDockWidgetTitle", "QSmallFont", "QMiniFont" };
+
+/// The game's own fonts for the leather and dark looks (gamefont.h): its MEDFONT for text and BIGFONT
+/// for titles, each at the one size that draws the game's pixels exactly, without smoothing, as the
+/// game draws them. Empty before the game's files are imported: the platform's font stays.
+static QString gameFontStyle()
+{
+	const GameFont::Font text = GameFont::load("MEDFONT", "DMB Heroes");
+	const GameFont::Font title = GameFont::load("BIGFONT", "DMB Heroes Big");
+	if(text.family.isEmpty())
+		return {};
+	QFont font(text.family);
+	font.setPixelSize(text.height);
+	font.setStyleStrategy(QFont::NoAntialias);
+	QApplication::setFont(font);
+	// the platform gives some kinds of widget fonts of their own (a list's column headers, menus,
+	// tooltips, message boxes), which the application's font does not reach
+	for(const char * kind : WIDGETS_WITH_OWN_FONTS)
+		QApplication::setFont(font, kind);
+	// the style sheet's bold and point sizes would smear the game's pixels: its own weight and size
+	QString style = QString(
+		"#dmbSettingsCategories QPushButton { font-weight: normal; }"
+		"QLabel[dmbSettingsTitle=\"true\"] { font-weight: normal; font-size: %1px; }"
+		// lists and their column headers keep a platform font of their own otherwise
+		"QAbstractItemView, QHeaderView::section { font-family: \"%2\"; font-size: %1px; }").arg(text.height).arg(text.family);
+	if(!title.family.isEmpty())
+		style += QString("QLabel[dmbSettingsTitle=\"true\"] { font-family: \"%1\"; font-size: %2px; }").arg(title.family).arg(title.height);
+	return style;
 }
 
 void LauncherTheme::apply()
@@ -410,6 +493,14 @@ void LauncherTheme::apply()
 	// the platform's own look, kept from the first call, for switching back to "system" from the Settings page
 	static const QString systemStyle = QApplication::style()->objectName(); // Qt 5 keeps the style's key there
 	static const QPalette systemPalette = QApplication::palette();
+	static const QFont systemFont = QApplication::font();
+	static const std::map<std::string, QFont> systemFonts = []()
+	{
+		std::map<std::string, QFont> fonts;
+		for(const char * kind : WIDGETS_WITH_OWN_FONTS)
+			fonts[kind] = QApplication::font(kind);
+		return fonts;
+	}();
 	static FrameEveryWindow * const framer = []()
 	{
 		auto * filter = new FrameEveryWindow();
@@ -429,6 +520,9 @@ void LauncherTheme::apply()
 	{
 		QApplication::setStyle(QStyleFactory::create(systemStyle));
 		QApplication::setPalette(systemPalette);
+		QApplication::setFont(systemFont);
+		for(const auto & [kind, font] : systemFonts)
+			QApplication::setFont(font, kind.c_str());
 		qApp->setStyleSheet(QString());
 		logGlobal->info("Launcher look: system");
 		return;
@@ -441,18 +535,22 @@ void LauncherTheme::apply()
 	{
 		// the tile itself behind every window; lists and text on a dark brown, so they stay readable
 		QApplication::setPalette(themedPalette(QBrush(leather), QColor(34, 22, 10), QColor(46, 30, 14), QColor(70, 46, 20)));
-		qApp->setStyleSheet(QString(commonStyle) + gameButtonStyle() +
-			"QTabBar::tab, QHeaderView::section { color: #f3e7c9; background: #3a2410; }");
+		qApp->setStyleSheet(QString(commonStyle) + gameButtonStyle(false) +
+			"QTabBar::tab, QHeaderView::section { color: #f3e7c9; background: #3a2410; }" + gameFontStyle());
 		logGlobal->info("Launcher look: leather, from the player's game files");
 	}
 	else
 	{
-		// the same leather tinted near black; a flat near black only before the game files are imported
+		// the same leather tinted near black; a flat near black only before the game files are imported.
+		// Its buttons and edges in silver, unless the player keeps the gold (launcher.darkAccent)
+		const bool silver = settings["launcher"]["darkAccent"].String() != "gold";
 		const QBrush window = leather.isNull() ? QBrush(QColor(24, 24, 24)) : QBrush(darkened(leather));
-		QApplication::setPalette(themedPalette(window, QColor(16, 16, 16), QColor(30, 30, 30), QColor(44, 44, 44)));
-		qApp->setStyleSheet(QString(commonStyle) + gameButtonStyle() +
-			"QTabBar::tab, QHeaderView::section { color: #f3e7c9; background: #2c2c2c; }");
-		logGlobal->info("Launcher look: dark, %s", leather.isNull() ? "flat (no game files to read the leather from yet)"
-			: "the leather tinted near black");
+		const QString style = QString(commonStyle) + gameButtonStyle(silver) +
+			"QTabBar::tab, QHeaderView::section { color: #f3e7c9; background: #2c2c2c; }" + gameFontStyle();
+		QApplication::setPalette(themedPalette(window, QColor(16, 16, 16), QColor(30, 30, 30), QColor(44, 44, 44),
+			silver ? QColor(159, 164, 172) : gold, silver ? QColor(232, 234, 237) : parchment));
+		qApp->setStyleSheet(silver ? inSilver(style) : style);
+		logGlobal->info("Launcher look: dark in %s, %s", silver ? "silver" : "gold", leather.isNull()
+			? "flat (no game files to read the leather from yet)" : "the leather tinted near black");
 	}
 }

@@ -282,14 +282,19 @@ void CSettingsView::loadSettings()
 	Languages::fillLanguages(ui->comboBoxLanguage, false);
 	fillValidRenderers();
 
-	// DMB: the launcher's look (theme.h), switched on the spot
+	// DMB: the launcher's look (theme.h), switched on the spot; the dark look in silver, or keeping the
+	// game's gold (launcher.darkAccent)
 	{
 		const QSignalBlocker quiet(ui->comboBoxLauncherLook);
 		ui->comboBoxLauncherLook->clear();
 		ui->comboBoxLauncherLook->addItem(tr("Leather"), QString("leather"));
-		ui->comboBoxLauncherLook->addItem(tr("Dark"), QString("dark"));
+		ui->comboBoxLauncherLook->addItem(tr("Dark, silver"), QString("dark:silver"));
+		ui->comboBoxLauncherLook->addItem(tr("Dark, gold"), QString("dark:gold"));
 		ui->comboBoxLauncherLook->addItem(tr("System"), QString("system"));
-		const int stored = ui->comboBoxLauncherLook->findData(QString::fromStdString(settings["launcher"]["theme"].String()));
+		QString look = QString::fromStdString(settings["launcher"]["theme"].String());
+		if(look == "dark")
+			look += ":" + QString::fromStdString(settings["launcher"]["darkAccent"].String());
+		const int stored = ui->comboBoxLauncherLook->findData(look);
 		ui->comboBoxLauncherLook->setCurrentIndex(std::max(0, stored));
 	}
 
@@ -804,8 +809,16 @@ void CSettingsView::on_buttonAutoSave_toggled(bool value)
 
 void CSettingsView::on_comboBoxLauncherLook_currentIndexChanged(int index)
 {
-	Settings node = settings.write["launcher"]["theme"];
-	node->String() = ui->comboBoxLauncherLook->itemData(index).toString().toStdString();
+	const QStringList look = ui->comboBoxLauncherLook->itemData(index).toString().split(':');
+	{
+		Settings node = settings.write["launcher"]["theme"];
+		node->String() = look.value(0).toStdString();
+	}
+	if(look.size() > 1)
+	{
+		Settings accent = settings.write["launcher"]["darkAccent"];
+		accent->String() = look.value(1).toStdString();
+	}
 	LauncherTheme::apply();
 }
 

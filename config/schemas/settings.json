@@ -800,7 +800,8 @@
 				"updateConfigUrl",
 				"trackClipboardState",
 				"dmbHomepage",
-				"theme"
+				"theme",
+				"darkAccent"
 			],
 			"properties" : {
 				// DMB: the launcher's look (launcher/theme.h): the game's leather from the player's own
@@ -809,6 +810,12 @@
 					"type" : "string",
 					"enum" : [ "leather", "dark", "system" ],
 					"default" : "leather"
+				},
+				// DMB: the dark look's buttons and edges: silver, or the game's gold (K, September 27th)
+				"darkAccent" : {
+					"type" : "string",
+					"enum" : [ "silver", "gold" ],
+					"default" : "silver"
 				},
 				"defaultRepositoryEnabled" : {
 					"type" : "boolean",
