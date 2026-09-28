@@ -315,6 +315,16 @@ void CLobbyScreen::updateModeBar()
 	}
 	const auto tab = modeGenerator();
 	modeName->setText(tab ? tab->getGenerator().name : LIBRARY->generaltexth->translate("vcmi.dmb.randomMode.vcmi"));
+	// K, September 27th/28th: "omni map gen needs centered in the box at the top, as do the arrows, and
+	// the arrows should land just a few mm (maybe 5) from the text on each side, and should scale
+	// dynamically with the text of whatever menu name is being displayed." The name is already centered
+	// on MODE_NAME_CENTRE (CENTER alignment centers on its own x); only the arrows, fixed before, move
+	// to the name's own rendered width so they sit the same close gap from it at any length.
+	constexpr int nameArrowGap = 8;
+	constexpr int arrowWidth = 16;
+	const int halfName = static_cast<int>(modeName->getWidth() + 1) / 2;
+	modePrevious->moveTo(Point(MODE_NAME_CENTRE - halfName - nameArrowGap - arrowWidth, MODE_ARROW_TOP));
+	modeNext->moveTo(Point(MODE_NAME_CENTRE + halfName + nameArrowGap, MODE_ARROW_TOP));
 	// VCMI's random map window names itself in the headline where the mode's name goes; the mode's
 	// name takes its place while the arrows show
 	tabRand->showHeadline(!shown);
