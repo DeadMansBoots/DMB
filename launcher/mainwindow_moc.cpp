@@ -42,6 +42,8 @@ void MainWindow::load()
 #endif
 
 	logConfigurator.configureDefault();
+	for(const auto & step : VCMIDirs::get().earlierFolderSteps())
+		logGlobal->info("User folders: %s", step);
 
 	try
 	{
@@ -127,9 +129,28 @@ MainWindow::MainWindow(QWidget * parent)
 		enterSetup();
 
 	ui->settingsView->setDisplayList();
-	
+
 	if(settings["launcher"]["updateOnStartup"].Bool())
 		UpdateDialog::showUpdateDialog(false);
+
+	// DMB: says so when this start moved an earlier DMB's user folder to its current name, or could
+	// not; says nothing when there was nothing to move (VCMIDirs.h)
+	const auto & dirs = VCMIDirs::get();
+	if(!dirs.earlierFolderSteps().empty())
+	{
+		QStringList steps;
+		for(const auto & step : dirs.earlierFolderSteps())
+			steps << QString::fromStdString(step);
+		const QString text = dirs.keptEarlierFolders()
+			? tr("Dead Man's Boots could not move your saves, settings and mods to its new folder this time, so it is using the old folder. It tries again the next time it starts.")
+			: tr("Dead Man's Boots moved your saves, settings and mods to its new folder:\n\n%1").arg(QDir::toNativeSeparators(pathToQString(dirs.userDataPath())));
+		QTimer::singleShot(0, this, [this, text, steps]()
+		{
+			QMessageBox box(QMessageBox::Information, tr("Your Dead Man's Boots folder"), text, QMessageBox::Ok, this);
+			box.setDetailedText(steps.join("\n"));
+			box.exec();
+		});
+	}
 }
 
 void MainWindow::detectPreferredLanguage()

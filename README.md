@@ -12,8 +12,8 @@ The installer is not signed yet, so Windows may say it protected your PC. Choose
 
 - Compatibility for mods that change the game's interface, on top of the VCMI layer, installed and updated from the launcher like any other mod. A mod that brings code runs only when DMB's mod catalog vouches for that exact code.
 - Its own mod catalog, [DMB-Mods-Repository](https://github.com/DeadMansBoots/DMB-Mods-Repository): VCMI's mods, plus mods made for DMB, all installed from the launcher.
-- Its own user folder, `Documents\My Games\DMB`, so DMB and VCMI never share settings, saves or mods.
-- A dark interface option in the game's settings.
+- Its own user folder, `Documents\My Games\Dead Man's Boots`, so DMB and VCMI never share settings, saves or mods. Earlier versions called it `Documents\My Games\DMB`; the installer and the game move that folder to the new name, once they have checked DMB made it.
+- A launcher in the game's leather, or dark, with the game's own buttons.
 - A notice in the launcher when a new release is out.
 
 ## Bugs and ideas

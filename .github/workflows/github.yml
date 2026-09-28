@@ -637,8 +637,8 @@ jobs:
       run: |
         data_url="https://github.com/vcmi-mods/vcmi-test-data/releases/download/v2.0/heroes3.7z"
         wget --progress=dot:giga "$data_url" -O heroes3.7z
-        mkdir -p ~/.local/share/dmb/
-        7za x -o"$HOME/.local/share/dmb/" heroes3.7z
+        mkdir -p ~/.local/share/dead-mans-boots/
+        7za x -o"$HOME/.local/share/dead-mans-boots/" heroes3.7z
 
     - name: Configure
       run: |

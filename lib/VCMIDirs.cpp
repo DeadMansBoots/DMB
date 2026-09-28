@@ -23,9 +23,16 @@ VCMI_LIB_NAMESPACE_BEGIN
 namespace bfs = boost::filesystem;
 
 // Dead Man's Boots keeps its own user folders beside stock VCMI's, so the two never share settings,
-// mods or saves (stock VCMI drops every setting its schema does not list).
-static const char * const USER_DIR_NAME = "DMB"; // Windows (Documents\My Games) and macOS
-static const char * const USER_DIR_NAME_XDG = "dmb"; // Linux, lower case like the XDG folders around it
+// mods or saves (stock VCMI drops every setting its schema does not list). They were "DMB" and "dmb"
+// until K ruled the acronym too likely to be another program's folder (September 27th); an earlier
+// DMB's folders take the new names on the first start (renameEarlierFolders).
+static const char * const USER_DIR_NAME = "Dead Man's Boots"; // Windows (Documents\My Games) and macOS
+static const char * const USER_DIR_NAME_XDG = "dead-mans-boots"; // Linux, lower case and plain like the XDG folders around it
+static const char * const EARLIER_USER_DIR_NAME = "DMB";
+static const char * const EARLIER_USER_DIR_NAME_XDG = "dmb";
+
+const char * IVCMIDirs::userDirName() const { return keptEarlierNames ? EARLIER_USER_DIR_NAME : USER_DIR_NAME; }
+const char * IVCMIDirs::userDirNameXdg() const { return keptEarlierNames ? EARLIER_USER_DIR_NAME_XDG : USER_DIR_NAME_XDG; }
 
 bfs::path IVCMIDirs::userLogsPath() const { return userCachePath(); }
 
@@ -65,7 +72,7 @@ bfs::path IVCMIDirs::stockVcmiPath(const bfs::path & path) const
 	std::vector<bfs::path> parts(path.begin(), path.end());
 	for(auto it = parts.rbegin(); it != parts.rend(); ++it)
 	{
-		if(*it == USER_DIR_NAME || *it == USER_DIR_NAME_XDG)
+		if(*it == USER_DIR_NAME || *it == USER_DIR_NAME_XDG || *it == EARLIER_USER_DIR_NAME || *it == EARLIER_USER_DIR_NAME_XDG)
 		{
 			*it = "vcmi";
 			bfs::path result;
@@ -77,8 +84,193 @@ bfs::path IVCMIDirs::stockVcmiPath(const bfs::path & path) const
 	return {};
 }
 
+namespace
+{
+/// Whether a folder by DMB's earlier name was made by DMB: it holds what no other program leaves there
+/// (K: an upgrade checks a folder's contents, not its name). Every DMB since 0.1.0-rc.1 leaves at least
+/// one: the catalog's pins, a map generator's log, a build approved for testing, or a line only DMB
+/// logs (the launcher's catalog pins and look, the client's OmniAI folder). The paths cover Windows,
+/// where logs and cache are inside the data folder, and the separate cache and logs folders elsewhere.
+bool madeByDmb(const bfs::path & folder)
+{
+	boost::system::error_code ec;
+	for(const char * trace : {"cache/downloads/dmbCodePins.json", "downloads/dmbCodePins.json", "logs/extmapgen_log.txt", "extmapgen_log.txt",
+		"config/dmbTestedCode.json", "dmbTestedCode.json"})
+		if(bfs::is_regular_file(folder / trace, ec))
+			return true;
+	const std::vector<std::pair<const char *, std::vector<std::string>>> logs = {
+		{"VCMI_Launcher_log.txt", {"DMB's mod catalog", "Launcher look:"}},
+		{"VCMI_Client_log.txt", {"OmniAI's folder:"}},
+	};
+	for(const auto & [log, lines] : logs)
+		for(const auto & path : {folder / "logs" / log, folder / log})
+		{
+			std::ifstream in(path.c_str(), std::ios::binary);
+			std::string head(1 << 20, '\0');
+			in.read(head.data(), static_cast<std::streamsize>(head.size()));
+			head.resize(static_cast<size_t>(in.gcount()));
+			for(const auto & line : lines)
+				if(head.find(line) != std::string::npos)
+					return true;
+		}
+	return false;
+}
+
+/// A path for a message. Never throws: a path this system cannot convert must not keep DMB from starting.
+std::string pathText(const bfs::path & path)
+{
+	try
+	{
+		return path.string();
+	}
+	catch(const std::exception &)
+	{
+		return "(a path this system cannot show)";
+	}
+}
+
+/// Whether a current folder holds settings of its own, and not only game files an installer copied in
+bool hasOwnSettings(const bfs::path & folder)
+{
+	boost::system::error_code ec;
+	return bfs::exists(folder / "config" / "settings.json", ec) || bfs::exists(folder / "settings.json", ec);
+}
+}
+
+namespace VCMIDirs
+{
+bool renameEarlierUserFolders(const std::vector<std::pair<bfs::path, bfs::path>> & folders, std::vector<std::string> & steps, std::vector<std::string> & standing)
+{
+	boost::system::error_code ec;
+	std::vector<std::pair<bfs::path, bfs::path>> earlier;
+	bool dmbMadeThem = false;
+	for(const auto & pair : folders)
+	{
+		if(vstd::contains(earlier, pair) || !bfs::is_directory(pair.first, ec))
+			continue;
+		earlier.push_back(pair);
+		// one trace in any of them is enough: on Linux the pins are in the cache folder, the saves in the data folder
+		dmbMadeThem = dmbMadeThem || madeByDmb(pair.first);
+	}
+	if(earlier.empty())
+		return true;
+	if(!dmbMadeThem)
+	{
+		for(const auto & folder : earlier)
+			standing.push_back("left alone, as nothing in it is DMB's: " + pathText(folder.first));
+		return true;
+	}
+
+	std::vector<std::pair<bfs::path, bfs::path>> renamed;
+	for(const auto & [from, to] : earlier)
+	{
+		if(bfs::exists(to, ec) && hasOwnSettings(to))
+		{
+			standing.push_back("both " + pathText(from) + " and " + pathText(to) + " exist; the second is used and the first left as it is");
+			continue;
+		}
+		if(bfs::exists(to, ec))
+		{
+			// only game files an installer copied in: the earlier folder's contents join them, whatever
+			// is in both staying as the current folder has it
+			std::vector<bfs::path> entries;
+			for(bfs::directory_iterator it(from, ec), end; !ec && it != end; it.increment(ec))
+				entries.push_back(it->path());
+			for(const auto & entry : entries)
+			{
+				boost::system::error_code moveError;
+				if(!bfs::exists(to / entry.filename(), moveError))
+					bfs::rename(entry, to / entry.filename(), moveError);
+				if(moveError)
+					steps.push_back("could not move " + pathText(entry) + ": " + moveError.message());
+			}
+			boost::system::error_code removeError;
+			if(bfs::is_empty(from, removeError) && bfs::remove(from, removeError))
+				steps.push_back("moved the contents of " + pathText(from) + " into " + pathText(to));
+			else
+				steps.push_back("moved what " + pathText(to) + " lacked from " + pathText(from) + ", where the rest stays");
+			continue;
+		}
+		bfs::rename(from, to, ec);
+		boost::system::error_code checkError;
+		if(ec && !bfs::exists(from, checkError) && bfs::exists(to, checkError))
+		{
+			steps.push_back(pathText(from) + " was renamed by another DMB program starting at the same time");
+			continue;
+		}
+		if(ec)
+		{
+			steps.push_back("could not rename " + pathText(from) + " to " + pathText(to) + ": " + ec.message());
+			// all or nothing: this run keeps the earlier names, and the next start tries again
+			for(const auto & [back, done] : renamed)
+			{
+				boost::system::error_code backError;
+				bfs::rename(done, back, backError);
+				if(backError)
+					steps.push_back("could not rename " + pathText(done) + " back: " + backError.message());
+			}
+			steps.push_back("this run uses the earlier name; the next start tries again");
+			return false;
+		}
+		renamed.emplace_back(from, to);
+		steps.push_back("renamed " + pathText(from) + " to " + pathText(to));
+	}
+	return true;
+}
+}
+
+std::vector<bfs::path> IVCMIDirs::namedUserFolders() const { return {}; }
+
+void IVCMIDirs::renameEarlierFolders()
+{
+	// each default folder carrying DMB's name, beside the earlier name in the same place: one on
+	// Windows, where every other folder is inside it; data, config and cache on Linux; data and logs on macOS
+	std::vector<std::pair<bfs::path, bfs::path>> folders; // earlier, current
+	for(const auto & folder : namedUserFolders())
+	{
+		const auto name = folder.filename();
+		if(name == USER_DIR_NAME || name == USER_DIR_NAME_XDG)
+			folders.emplace_back(folder.parent_path() / (name == USER_DIR_NAME ? EARLIER_USER_DIR_NAME : EARLIER_USER_DIR_NAME_XDG), folder);
+	}
+	std::vector<std::string> steps;
+	std::vector<std::string> standing;
+	keptEarlierNames = !VCMIDirs::renameEarlierUserFolders(folders, steps, standing);
+	renameSteps = steps;
+	if(steps.empty() && standing.empty())
+		return;
+
+	// the steps go to the logs folder of the names now in use; a standing line only once
+	boost::system::error_code ec;
+	bfs::create_directories(userLogsPath(), ec);
+	const auto reportPath = userLogsPath() / "rename_log.txt";
+	std::string written;
+	{
+		std::ifstream in(reportPath.c_str(), std::ios::binary);
+		written.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+	}
+	for(const auto & line : standing)
+		if(written.find(line + "\n") == std::string::npos)
+			steps.push_back(line);
+	if(steps.empty())
+		return;
+	std::ofstream report(reportPath.c_str(), std::ios::app | std::ios::binary);
+	for(const auto & step : steps)
+	{
+		logGlobal->info("User folders: %s", step);
+		report << step << "\n";
+	}
+}
+
 void IVCMIDirs::init()
 {
+	try
+	{
+		renameEarlierFolders();
+	}
+	catch(const std::exception &)
+	{
+		// a path the system cannot convert, say: the folders keep their names, and DMB still starts
+	}
 	// TODO: Log errors
 	bfs::create_directories(userDataPath());
 	bfs::create_directories(userCachePath());
@@ -124,6 +316,7 @@ class VCMIDirsWIN32 final : public IVCMIDirs
 	protected:
 		std::unique_ptr<JsonNode> dirsConfig;
 
+		std::vector<bfs::path> namedUserFolders() const override;
 		bfs::path getPathFromConfigOrDefault(const std::string& key, const std::function<bfs::path()>& fallbackFunc) const;
 		bfs::path getDefaultUserDataPath() const;
 
@@ -191,8 +384,15 @@ bfs::path VCMIDirsWIN32::getDefaultUserDataPath() const
 {
 	wchar_t profileDir[MAX_PATH];
 	if (SHGetSpecialFolderPathW(nullptr, profileDir, CSIDL_MYDOCUMENTS, FALSE) != FALSE)
-		return bfs::path(profileDir) / "My Games" / USER_DIR_NAME;
+		return bfs::path(profileDir) / "My Games" / userDirName();
 	return bfs::path(".");
+}
+
+std::vector<bfs::path> VCMIDirsWIN32::namedUserFolders() const
+{
+	if(dirsConfig && dirsConfig->isStruct() && (*dirsConfig)["userDataPath"].isString())
+		return {};
+	return {getDefaultUserDataPath()};
 }
 
 bfs::path VCMIDirsWIN32::userDataPath() const
@@ -326,6 +526,9 @@ public:
 	bfs::path binaryPath() const override;
 
 	void init() override;
+
+protected:
+	std::vector<bfs::path> namedUserFolders() const override { return {userDataPath(), userLogsPath()}; }
 };
 
 void VCMIDirsOSX::init()
@@ -381,7 +584,7 @@ bfs::path VCMIDirsOSX::userDataPath() const
 	const char* homeDir = getenv("HOME"); // Should be std::getenv?
 	if (homeDir == nullptr)
 		homeDir = ".";
-	return bfs::path(homeDir) / "Library" / "Application Support" / USER_DIR_NAME;
+	return bfs::path(homeDir) / "Library" / "Application Support" / userDirName();
 }
 bfs::path VCMIDirsOSX::userCachePath() const { return userDataPath(); }
 
@@ -389,7 +592,7 @@ bfs::path VCMIDirsOSX::userLogsPath() const
 {
 	// TODO: use proper objc code from Foundation framework
 	if(const auto homeDir = std::getenv("HOME"))
-		return bfs::path{homeDir} / "Library" / "Logs" / USER_DIR_NAME;
+		return bfs::path{homeDir} / "Library" / "Logs" / userDirName();
 	return IVCMIDirsUNIX::userLogsPath();
 }
 
@@ -560,6 +763,9 @@ public:
 	bfs::path binaryPath() const override;
 
 	std::string libraryName(const std::string& basename) const override;
+
+protected:
+	std::vector<bfs::path> namedUserFolders() const override { return {userDataPath(), userCachePath(), userConfigPath()}; }
 };
 
 bfs::path VCMIDirsXDG::userDataPath() const
@@ -567,9 +773,9 @@ bfs::path VCMIDirsXDG::userDataPath() const
 	// $XDG_DATA_HOME, default: $HOME/.local/share
 	const char* homeDir;
 	if((homeDir = getenv("XDG_DATA_HOME")))
-		return bfs::path(homeDir) / USER_DIR_NAME_XDG;
+		return bfs::path(homeDir) / userDirNameXdg();
 	else if((homeDir = getenv("HOME")))
-		return bfs::path(homeDir) / ".local" / "share" / USER_DIR_NAME_XDG;
+		return bfs::path(homeDir) / ".local" / "share" / userDirNameXdg();
 	else
 		return ".";
 }
@@ -578,9 +784,9 @@ bfs::path VCMIDirsXDG::userCachePath() const
 	// $XDG_CACHE_HOME, default: $HOME/.cache
 	const char * tempResult;
 	if ((tempResult = getenv("XDG_CACHE_HOME")))
-		return bfs::path(tempResult) / USER_DIR_NAME_XDG;
+		return bfs::path(tempResult) / userDirNameXdg();
 	else if ((tempResult = getenv("HOME")))
-		return bfs::path(tempResult) / ".cache" / USER_DIR_NAME_XDG;
+		return bfs::path(tempResult) / ".cache" / userDirNameXdg();
 	else
 		return ".";
 }
@@ -589,11 +795,11 @@ bfs::path VCMIDirsXDG::userConfigPath() const
 	// $XDG_CONFIG_HOME, default: $HOME/.config
 	const char * tempResult = getenv("XDG_CONFIG_HOME");
 	if (tempResult)
-		return bfs::path(tempResult) / USER_DIR_NAME_XDG;
+		return bfs::path(tempResult) / userDirNameXdg();
 
 	tempResult = getenv("HOME");
 	if (tempResult)
-		return bfs::path(tempResult) / ".config" / USER_DIR_NAME_XDG;
+		return bfs::path(tempResult) / ".config" / userDirNameXdg();
 
 	return ".";
 }

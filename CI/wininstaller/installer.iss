@@ -84,13 +84,25 @@
 ; #define SmallLogo "C:\_VCMI_Source\CI\wininstaller\vcmismalllogo.bmp"
 ; #define WizardLogo "C:\_VCMI_Source\CI\wininstaller\vcmilogo.bmp"
 
+; DMB: the name the wizard, the Start menu, Windows' list of installed apps, the install folder, the
+; registry key and the firewall rules show. The installer id stays the short VCMIFolder ("DMB"), so an
+; install over an earlier one still replaces it.
+#define DMBName "Dead Man's Boots"
+
 ; DMB: its own user folder, so an install never touches stock VCMI's (the uninstaller's "delete user
 ; data" option removes this folder)
-#define VCMIFilesFolder "My Games\DMB"
+#define VCMIFilesFolder "My Games\" + DMBName
 
-; DMB: the name the wizard, the Start menu and Windows' list of installed apps show; the folder,
-; registry key and installer id stay the short VCMIFolder ("DMB")
-#define DMBName "Dead Man's Boots"
+; DMB: the name DMB used on disk until September 27th, 2026, when K ruled "DMB" too likely to be some
+; other program's. An install over an earlier DMB renames its user folder and moves an install folder
+; of that name, once it has checked they are DMB's (UserFolderMadeByDmb, DmbProgramsIn); the game
+; renames the user folder the same way on its first start (lib/VCMIDirs.cpp).
+#define EarlierName "DMB"
+#define EarlierFilesFolder "My Games\" + EarlierName
+
+; the names inside Pascal strings, where an apostrophe is written twice
+#define DMBNamePas StringChange(DMBName, "'", "''")
+#define FilesFolderPas StringChange(VCMIFilesFolder, "'", "''")
 
 #define AppComment "Dead Man's Boots, built on VCMI, the open-source engine for Heroes III."
 #define VCMITeam "Dead Man's Boots"
@@ -192,13 +204,19 @@ Name: "firewallrules"; Description: "{cm:AddFirewallRules}"; GroupDescription: "
 Name: "h3copyfiles"; Description: "{cm:CopyH3Files}"; GroupDescription: "{cm:VCMISettings}"; Check: not IsPRInstaller and IsHeroes3Installed and IsCopyFilesNeeded
 
 [Registry]
-Root: HKCU; Subkey: "Software\{#VCMIFolder}"; ValueType: string; ValueName: "InstallPath"; ValueData: "{app}"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\{#DMBName}"; ValueType: string; ValueName: "InstallPath"; ValueData: "{app}"; Flags: uninsdeletekey
 
 
 
 [Run]
-Filename: "netsh.exe"; Parameters: "advfirewall firewall add rule name=dmb_server dir=in action=allow program=""{app}\vcmi_server.exe"" enable=yes profile=public,private"; Flags: runhidden; Tasks: firewallrules; Check: IsAdmin
-Filename: "netsh.exe"; Parameters: "advfirewall firewall add rule name=dmb_client dir=in action=allow program=""{app}\vcmi_client.exe"" enable=yes profile=public,private"; Flags: runhidden; Tasks: firewallrules; Check: IsAdmin
+; DMB: the earlier rules (dmb_server, dmb_client) go when they are for this install's programs, and a
+; rule of the current name is replaced, so an upgrade never leaves two
+Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=dmb_server program=""{code:EarlierAppDir}\vcmi_server.exe"""; Flags: runhidden; Check: IsAdmin
+Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=dmb_client program=""{code:EarlierAppDir}\vcmi_client.exe"""; Flags: runhidden; Check: IsAdmin
+Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#DMBName} server"""; Flags: runhidden; Tasks: firewallrules; Check: IsAdmin
+Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#DMBName} client"""; Flags: runhidden; Tasks: firewallrules; Check: IsAdmin
+Filename: "netsh.exe"; Parameters: "advfirewall firewall add rule name=""{#DMBName} server"" dir=in action=allow program=""{app}\vcmi_server.exe"" enable=yes profile=public,private"; Flags: runhidden; Tasks: firewallrules; Check: IsAdmin
+Filename: "netsh.exe"; Parameters: "advfirewall firewall add rule name=""{#DMBName} client"" dir=in action=allow program=""{app}\vcmi_client.exe"" enable=yes profile=public,private"; Flags: runhidden; Tasks: firewallrules; Check: IsAdmin
 
 Filename: "{app}\VCMI_launcher.exe"; Description: "{cm:RunVCMILauncherAfterInstall}"; Flags: nowait postinstall; Check: ShouldRunLauncher
 
@@ -207,9 +225,22 @@ Filename: "{app}\VCMI_launcher.exe"; Description: "{cm:RunVCMILauncherAfterInsta
 ; DMB: no taskkill by program name here. DMB's programs share stock VCMI's file names, so that
 ; would end a running stock VCMI game too; files still in use make the uninstaller ask instead.
 
-; Remove firewall rules
-Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=dmb_server"; Flags: runhidden; Check: IsAdmin; RunOnceId: "RemoveFirewallDMBServer"
-Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=dmb_client"; Flags: runhidden; Check: IsAdmin; RunOnceId: "RemoveFirewallDMBClient"
+; Remove firewall rules, the earlier names' too
+Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#DMBName} server"""; Flags: runhidden; Check: IsAdmin; RunOnceId: "RemoveFirewallDMBServer"
+Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#DMBName} client"""; Flags: runhidden; Check: IsAdmin; RunOnceId: "RemoveFirewallDMBClient"
+Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=dmb_server program=""{app}\vcmi_server.exe"""; Flags: runhidden; Check: IsAdmin; RunOnceId: "RemoveFirewallEarlierDMBServer"
+Filename: "netsh.exe"; Parameters: "advfirewall firewall delete rule name=dmb_client program=""{app}\vcmi_client.exe"""; Flags: runhidden; Check: IsAdmin; RunOnceId: "RemoveFirewallEarlierDMBClient"
+
+
+[CustomMessages]
+; DMB: what an install over an earlier DMB moves, shown only when it moves something (K, September 27th)
+DMBMovingCaption=New folder names
+DMBMovingDescription=Earlier versions used the short name "DMB" on disk. This install moves them to "Dead Man's Boots".
+DMBMovingText=This install moves:%n%n%1%nYour saves, settings and mods come along unchanged.
+DMBMovingUserFolder=your saves, settings and mods%n    from %1%n    to %2%n%n
+DMBMovingProgramFolder=the program%n    from %1%n    to %2%n    (the old program folder is deleted once the new one is installed)%n%n
+DMBMovedUserFolder=Your saves, settings and mods are now in %1.
+DMBNotMovedUserFolder=Your saves, settings and mods are still in %1: a file in it was in use. Dead Man's Boots moves them to %2 the next time it starts.
 
 
 [InstallDelete]
@@ -230,7 +261,12 @@ var
 
   VCMIMapsFolder, VCMIDataFolder, VCMIMp3Folder: String;
   Heroes3MapsFolder, Heroes3DataFolder, Heroes3Mp3Folder: String;
-  
+
+  // DMB: an earlier DMB's folders this install moves, found before anything is installed, and what
+  // became of the user folder
+  EarlierUserFolder, EarlierProgramFolder: String;
+  EarlierKeyIsDmb, UserFolderMoved, UserFolderNotMoved: Boolean;
+
 function RegistryQueryPath(Key, ValueName: String): String;
 begin
   if RegQueryStringValue(HKLM, Key, ValueName, Result) then
@@ -277,6 +313,157 @@ function IsFolderValid(FolderPath: String): Boolean;
 begin
   Result := DirExists(FolderPath) and (FolderSize(FolderPath) > 1024 * 1024);
 end;
+
+
+/// DMB: whether a file holds a piece of text
+function FileHolds(const FileName, Text: String): Boolean;
+var
+  Content: AnsiString;
+begin
+  Result := False;
+  if FileExists(FileName) and LoadStringFromFile(FileName, Content) then
+    Result := Pos(Text, String(Content)) > 0;
+end;
+
+
+/// DMB: whether a user folder was made by DMB. It holds what no other program leaves there, the traces
+/// the game looks for too (lib/VCMIDirs.cpp): the catalog's pins, a map generator's log, a build
+/// approved for testing, or a line only DMB logs. K: an upgrade checks a folder's contents, not its name.
+function UserFolderMadeByDmb(const Dir: String): Boolean;
+begin
+  Result := DirExists(Dir) and (FileExists(Dir + '\cache\downloads\dmbCodePins.json') or
+    FileExists(Dir + '\logs\extmapgen_log.txt') or FileExists(Dir + '\config\dmbTestedCode.json') or
+    FileHolds(Dir + '\logs\VCMI_Launcher_log.txt', 'DMB''s mod catalog') or
+    FileHolds(Dir + '\logs\VCMI_Launcher_log.txt', 'Launcher look:') or
+    FileHolds(Dir + '\logs\VCMI_Client_log.txt', 'OmniAI''s folder:'));
+end;
+
+
+/// DMB: whether a folder holds DMB's programs: the launcher, the game, and the settings schema naming
+/// DMB's catalog, which every DMB since 0.1.0-rc.1 has
+function DmbProgramsIn(const Dir: String): Boolean;
+begin
+  Result := FileExists(Dir + '\VCMI_launcher.exe') and FileExists(Dir + '\VCMI_client.exe') and
+    FileHolds(Dir + '\config\schemas\settings.json', 'DeadMansBoots');
+end;
+
+
+/// DMB: the earlier user folder this install renames, or '': one DMB made, while the current one does
+/// not exist yet. With both, the game decides on its first start.
+function EarlierUserFolderIn(const Docs: String): String;
+begin
+  Result := '';
+  if UserFolderMadeByDmb(Docs + '\{#EarlierFilesFolder}') and not DirExists(Docs + '\{#FilesFolderPas}') then
+    Result := Docs + '\{#EarlierFilesFolder}';
+end;
+
+
+/// DMB: renames the earlier user folder, in one step on the same drive. Nothing moves when it fails (a
+/// file in it still open), and the game tries again on its first start.
+function MoveEarlierUserFolder(const Docs: String): Boolean;
+begin
+  Result := RenameFile(Docs + '\{#EarlierFilesFolder}', Docs + '\{#FilesFolderPas}');
+end;
+
+
+/// DMB: an earlier install folder that moves, or '': one named DMB that holds DMB's programs and no
+/// config\dirs.json (which keeps the player's own files in the install folder)
+function EarlierProgramFolderOf(const Dir: String): String;
+var
+  Folder: String;
+begin
+  Result := '';
+  Folder := RemoveBackslashUnlessRoot(Dir);
+  if (CompareText(ExtractFileName(Folder), '{#EarlierName}') = 0) and DmbProgramsIn(Folder) and
+     not FileExists(Folder + '\config\dirs.json') then
+    Result := Folder;
+end;
+
+
+/// DMB: where an earlier install folder moves: the new name, beside it
+function RelocatedProgramFolder(const Earlier: String): String;
+begin
+  Result := AddBackslash(ExtractFileDir(RemoveBackslashUnlessRoot(Earlier))) + '{#DMBNamePas}';
+end;
+
+
+/// DMB: deletes the earlier install folder once the new one is installed, checking again first that it
+/// is DMB's and is not where this install went
+function RemoveEarlierProgramFolder(const Earlier, App: String): Boolean;
+begin
+  Result := False;
+  if (Earlier = '') or (EarlierProgramFolderOf(Earlier) = '') or
+     (CompareText(RemoveBackslashUnlessRoot(Earlier), RemoveBackslashUnlessRoot(App)) = 0) then
+    Exit;
+  Result := DelTree(Earlier, True, True, True);
+end;
+
+
+/// DMB: the install folder the earlier firewall rules name: the earlier one, when it moved
+function EarlierAppDir(Param: String): String;
+begin
+  if EarlierProgramFolder <> '' then
+    Result := EarlierProgramFolder
+  else
+    Result := ExpandConstant('{app}');
+end;
+
+
+/// DMB: where Heroes III's files are looked for and copied: the earlier user folder until it is renamed
+procedure SetUserFilesFolder(const Root: String);
+begin
+  VCMIMapsFolder := Root + '\Maps';
+  VCMIDataFolder := Root + '\Data';
+  VCMIMp3Folder := Root + '\Mp3';
+end;
+
+
+#ifdef DMBSelfTest
+function BoolText(Value: Boolean): String;
+begin
+  if Value then
+    Result := 'true'
+  else
+    Result := 'false';
+end;
+
+
+/// DMB: a build for tests only (make_installer.py --self-test): runs the functions above on the scratch
+/// folders test_installer_moves.py made, writes what they returned into results.txt there, and ends
+/// before the wizard opens, so nothing is installed
+procedure SelfTest(const Root: String);
+var
+  Results: TStringList;
+begin
+  Results := TStringList.Create;
+  try
+    Results.Add('user-genuine.earlier=' + EarlierUserFolderIn(Root + '\docs-genuine'));
+    Results.Add('user-genuine.moved=' + BoolText(MoveEarlierUserFolder(Root + '\docs-genuine')));
+    Results.Add('user-logs.earlier=' + EarlierUserFolderIn(Root + '\docs-logs'));
+    Results.Add('user-logs.moved=' + BoolText(MoveEarlierUserFolder(Root + '\docs-logs')));
+    Results.Add('user-other.earlier=' + EarlierUserFolderIn(Root + '\docs-other'));
+    Results.Add('user-both.earlier=' + EarlierUserFolderIn(Root + '\docs-both'));
+    Results.Add('user-none.earlier=' + EarlierUserFolderIn(Root + '\docs-none'));
+    Results.Add('user-held.earlier=' + EarlierUserFolderIn(Root + '\docs-held'));
+    Results.Add('user-held.moved=' + BoolText(MoveEarlierUserFolder(Root + '\docs-held')));
+    Results.Add('programs.earlier=' + EarlierProgramFolderOf(Root + '\progs\DMB\'));
+    Results.Add('programs.relocated=' + RelocatedProgramFolder(Root + '\progs\DMB'));
+    Results.Add('programs.removed-when-same=' + BoolText(RemoveEarlierProgramFolder(Root + '\progs\DMB', Root + '\progs\DMB\')));
+    Results.Add('programs.removed=' + BoolText(RemoveEarlierProgramFolder(Root + '\progs\DMB', RelocatedProgramFolder(Root + '\progs\DMB'))));
+    Results.Add('programs-portable.earlier=' + EarlierProgramFolderOf(Root + '\progs-portable\DMB'));
+    Results.Add('programs-other.earlier=' + EarlierProgramFolderOf(Root + '\progs-other\DMB'));
+    Results.Add('programs-other.removed=' + BoolText(RemoveEarlierProgramFolder(Root + '\progs-other\DMB', Root + '\elsewhere')));
+    Results.Add('programs-custom.earlier=' + EarlierProgramFolderOf(Root + '\progs-custom\Heroes'));
+    Results.Add('programs-none.removed=' + BoolText(RemoveEarlierProgramFolder('', Root + '\elsewhere')));
+    Results.Add('message.user=' + FmtMessage(CustomMessage('DMBMovingUserFolder'), ['A', 'B']));
+    Results.Add('message.moved=' + FmtMessage(CustomMessage('DMBMovedUserFolder'), [Root + '\{#FilesFolderPas}']));
+    Results.Add('name={#DMBNamePas}');
+    Results.SaveToFile(Root + '\results.txt');
+  finally
+    Results.Free;
+  end;
+end;
+#endif
 
 
 procedure CopyFolderContents(SourceDir, DestDir: String; Overwrite: Boolean);
@@ -419,10 +606,10 @@ function GetDefaultDir(Default: String): String;
 begin
   if IsAdmin then
     // Default to Program Files for admins
-    Result := GetCommonProgramFilesDir + '\{#VCMIFolder}'
+    Result := GetCommonProgramFilesDir + '\{#DMBNamePas}'
   else
     // DMB: the user's own programs folder for non-admin users
-    Result := GetUserProgramsFolder + '\{#VCMIFolder}';
+    Result := GetUserProgramsFolder + '\{#DMBNamePas}';
 end;
 
 
@@ -553,19 +740,30 @@ function InitializeSetup(): Boolean;
 var
   InstallPath: String;
 begin
+#ifdef DMBSelfTest
+  SelfTest(ExpandConstant('{%DMB_SELFTEST|}'));
+  Result := False;
+  Exit;
+#endif
+  // DMB: the earlier registry key counts only when it names an install folder of DMB's, since a key of
+  // that name could be another program's
+  EarlierKeyIsDmb := RegQueryStringValue(HKCU, 'Software\{#EarlierName}', 'InstallPath', InstallPath) and DmbProgramsIn(InstallPath);
+
   // Check if the application is already installed
-  IsUpgrade := RegQueryStringValue(HKCU, 'Software\{#VCMIFolder}', 'InstallPath', InstallPath);
- 
+  IsUpgrade := RegQueryStringValue(HKCU, 'Software\{#DMBNamePas}', 'InstallPath', InstallPath) or EarlierKeyIsDmb;
+
   // Initialize the global variable during setup
   GlobalUserName := GetCurrentSessionUserName();
   GlobalUserDocsFolder := GetUserDocsFolder();
   GlobalUserAppdataFolder := GetUserAppdataFolder();
 
-  // Define paths for VCMI
-  VCMIMapsFolder := GlobalUserDocsFolder + '\' + '{#VCMIFilesFolder}' + '\Maps';
-  VCMIDataFolder := GlobalUserDocsFolder + '\' + '{#VCMIFilesFolder}' + '\Data';
-  VCMIMp3Folder := GlobalUserDocsFolder + '\' + '{#VCMIFilesFolder}' + '\Mp3';
-  
+  // Define paths for VCMI: DMB, in the earlier user folder while it waits to be renamed
+  EarlierUserFolder := EarlierUserFolderIn(GlobalUserDocsFolder);
+  if EarlierUserFolder <> '' then
+    SetUserFilesFolder(EarlierUserFolder)
+  else
+    SetUserFilesFolder(GlobalUserDocsFolder + '\{#FilesFolderPas}');
+
   // Check for Heroes 3 installation paths
   Heroes3Path := RegistryQueryPath('SOFTWARE\GOG.com\Games\1207658787', 'path');
   if Heroes3Path = '' then
@@ -602,7 +800,23 @@ end;
 
 
 procedure InitializeWizard();
+var
+  Moves: String;
 begin
+  // DMB: an earlier install folder named DMB moves to the new name beside it. The player is told what
+  // moves before anything does, and told nothing when nothing moves.
+  EarlierProgramFolder := EarlierProgramFolderOf(WizardForm.DirEdit.Text);
+  if EarlierProgramFolder <> '' then
+    WizardForm.DirEdit.Text := RelocatedProgramFolder(EarlierProgramFolder);
+  Moves := '';
+  if EarlierUserFolder <> '' then
+    Moves := Moves + FmtMessage(CustomMessage('DMBMovingUserFolder'), [EarlierUserFolder, GlobalUserDocsFolder + '\{#FilesFolderPas}']);
+  if EarlierProgramFolder <> '' then
+    Moves := Moves + FmtMessage(CustomMessage('DMBMovingProgramFolder'), [EarlierProgramFolder, WizardForm.DirEdit.Text]);
+  if Moves <> '' then
+    CreateOutputMsgPage(wpWelcome, CustomMessage('DMBMovingCaption'), CustomMessage('DMBMovingDescription'),
+      FmtMessage(CustomMessage('DMBMovingText'), [Moves]));
+
   // Check if the application is already installed
   if not IsUpgrade then
   begin
@@ -693,6 +907,42 @@ procedure CurPageChanged(CurPageID: Integer);
 begin
   // Ensure the footer message is visible on every page
   FooterLabel.Visible := True;
+
+  // DMB: what became of the earlier user folder, when there was one to move
+  if (CurPageID = wpFinished) and (UserFolderMoved or UserFolderNotMoved) then
+  begin
+    if UserFolderMoved then
+      WizardForm.FinishedLabel.Caption := WizardForm.FinishedLabel.Caption + #13#10#13#10 +
+        FmtMessage(CustomMessage('DMBMovedUserFolder'), [GlobalUserDocsFolder + '\{#FilesFolderPas}'])
+    else
+      WizardForm.FinishedLabel.Caption := WizardForm.FinishedLabel.Caption + #13#10#13#10 +
+        FmtMessage(CustomMessage('DMBNotMovedUserFolder'), [EarlierUserFolder, GlobalUserDocsFolder + '\{#FilesFolderPas}']);
+    WizardForm.FinishedLabel.AdjustHeight;
+  end;
+end;
+
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  // DMB: the earlier user folder takes the new name before any file lands in it (RunPreInstallTasks
+  // copies Heroes III's files after this step)
+  if (CurStep = ssInstall) and (EarlierUserFolder <> '') then
+  begin
+    UserFolderMoved := MoveEarlierUserFolder(GlobalUserDocsFolder);
+    UserFolderNotMoved := not UserFolderMoved;
+    if UserFolderMoved then
+      SetUserFilesFolder(GlobalUserDocsFolder + '\{#FilesFolderPas}');
+    Log('DMB: renaming ' + EarlierUserFolder + ': ' + IntToStr(Ord(UserFolderMoved)));
+  end;
+
+  // DMB: once the new install is in place, the earlier install folder and registry key go
+  if CurStep = ssPostInstall then
+  begin
+    if EarlierProgramFolder <> '' then
+      Log('DMB: deleting ' + EarlierProgramFolder + ': ' + IntToStr(Ord(RemoveEarlierProgramFolder(EarlierProgramFolder, ExpandConstant('{app}')))));
+    if EarlierKeyIsDmb then
+      RegDeleteKeyIncludingSubkeys(HKCU, 'Software\{#EarlierName}');
+  end;
 end;
 
 
@@ -715,9 +965,9 @@ begin
     end;
 
     if InstallModePage.SelectedValueIndex = 0 then
-      WizardForm.DirEdit.Text := GetCommonProgramFilesDir + '\{#VCMIFolder}'
+      WizardForm.DirEdit.Text := GetCommonProgramFilesDir + '\{#DMBNamePas}'
     else
-      WizardForm.DirEdit.Text := GetUserProgramsFolder + '\{#VCMIFolder}';
+      WizardForm.DirEdit.Text := GetUserProgramsFolder + '\{#DMBNamePas}';
   end;
 
   Result := True;
@@ -767,7 +1017,7 @@ procedure CreateDefaultSettingsFile();
 var
   ConfigDir, SettingsFile, Language, JSONContent: String;
 begin
-  ConfigDir := GlobalUserDocsFolder + '\' + '{#VCMIFilesFolder}' + '\config';
+  ConfigDir := GlobalUserDocsFolder + '\' + '{#FilesFolderPas}' + '\config';
   SettingsFile := ConfigDir + '\settings.json';
 
   if not FileExists(SettingsFile) then
@@ -855,24 +1105,29 @@ begin
 end;
 
 
+procedure DeleteUserFolder(const UserDataFolder: String);
+begin
+  if DirExists(UserDataFolder) then
+  begin
+    if DeleteFolderContents(UserDataFolder) then
+    begin
+      if not RemoveDir(UserDataFolder) then
+      begin
+        // Log or handle failed root directory removal if necessary
+      end;
+    end;
+  end;
+end;
+
+
 procedure PerformFileDeletion;
-var
-  UserDataFolder: String;
 begin
   if (DeleteUserDataCheckbox <> nil) and DeleteUserDataCheckbox.Checked then
   begin
-    UserDataFolder := GlobalUserDocsFolder + '\' + '{#VCMIFilesFolder}';
-
-    if DirExists(UserDataFolder) then
-    begin
-      if DeleteFolderContents(UserDataFolder) then
-      begin
-        if not RemoveDir(UserDataFolder) then
-        begin
-          // Log or handle failed root directory removal if necessary
-        end;
-      end;
-    end;
+    DeleteUserFolder(GlobalUserDocsFolder + '\' + '{#FilesFolderPas}');
+    // DMB: the earlier user folder too, when it is still there (its rename failed) and DMB made it
+    if UserFolderMadeByDmb(GlobalUserDocsFolder + '\' + '{#EarlierFilesFolder}') then
+      DeleteUserFolder(GlobalUserDocsFolder + '\' + '{#EarlierFilesFolder}');
   end;
 end;
 
@@ -964,7 +1219,9 @@ begin
       Top := DeleteUserDataCheckbox.Top + ScaleY(20); // Position below the checkbox
       Left := DeleteUserDataCheckbox.Left + ScaleX(20); // Indent slightly to align with the text
       Width := ScaleX(400);
-      Caption := GlobalUserDocsFolder + '\' + '{#VCMIFilesFolder}';
+      Caption := GlobalUserDocsFolder + '\' + '{#FilesFolderPas}';
+      if UserFolderMadeByDmb(GlobalUserDocsFolder + '\' + '{#EarlierFilesFolder}') then
+        Caption := Caption + #13#10 + GlobalUserDocsFolder + '\' + '{#EarlierFilesFolder}';
     end;
 
     // -- Activate the first page

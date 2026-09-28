@@ -184,7 +184,7 @@ Configuration is loaded by handlers in `lib/entities/` (creature handler, spell 
 
 After building, configure game data:
 
-1. Copy Heroes III `Data`, `Maps`, `Mp3` folders to `%USERPROFILE%\Documents\My Games\DMB\` (Dead Man's Boots keeps its own user folder beside stock VCMI's `vcmi`)
+1. Copy Heroes III `Data`, `Maps`, `Mp3` folders to `%USERPROFILE%\Documents\My Games\Dead Man's Boots\` (Dead Man's Boots keeps its own user folder beside stock VCMI's `vcmi`; earlier versions used `My Games\DMB`)
 2. On Windows, run `build/bin/RelWithDebInfo/VCMI_launcher.bat`
 3. On Linux, run `build/bin/vcmiclient` or use launcher if built
 

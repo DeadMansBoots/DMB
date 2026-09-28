@@ -71,11 +71,43 @@ public:
 	// Updates directories what change name/path between versions.
 	// Function called automatically.
 	virtual void init();
+
+	// DMB: what this start did to an earlier DMB's user folders, for the launcher to tell the player:
+	// renamed them to the current name, or could not, and then this run keeps the earlier name. Empty
+	// when there was nothing to move, and then the player hears nothing (K, September 27th).
+	const std::vector<std::string> & earlierFolderSteps() const { return renameSteps; }
+	bool keptEarlierFolders() const { return keptEarlierNames; }
+
+protected:
+	std::vector<std::string> renameSteps;
+	bool keptEarlierNames = false;
+
+	// DMB: the name of the user folders this run uses: the current one ("Dead Man's Boots", Linux
+	// "dead-mans-boots"), or the earlier one when renaming the earlier folders failed this start
+	const char * userDirName() const;
+	const char * userDirNameXdg() const;
+
+	// DMB: the user folders named after DMB where this platform puts them by default. None where the
+	// platform names the folders itself (Android, iOS) or where config/dirs.json moves them.
+	virtual std::vector<boost::filesystem::path> namedUserFolders() const;
+
+	// DMB: an earlier DMB's user folders, named "DMB" (Linux "dmb"), take the current name before
+	// anything reads them, when they hold DMB's own traces; a folder of that name that DMB did not make
+	// is left alone. A rename that fails leaves this run on the earlier name, and the next start tries
+	// again. The steps go to rename_log.txt in the logs folder.
+	void renameEarlierFolders();
 };
 
 namespace VCMIDirs
 {
 	extern DLL_LINKAGE const IVCMIDirs & get();
+
+	/// DMB: renames each earlier user folder (first) to its current name (second) when DMB made them,
+	/// all or nothing, as IVCMIDirs::init() does on every start. False when this run has to keep the
+	/// earlier names. What it did goes to `steps`, and what every start finds again (a folder left
+	/// alone) to `standing`. Its own function so tests can run it on scratch folders.
+	DLL_LINKAGE bool renameEarlierUserFolders(const std::vector<std::pair<boost::filesystem::path, boost::filesystem::path>> & folders,
+		std::vector<std::string> & steps, std::vector<std::string> & standing);
 }
 
 VCMI_LIB_NAMESPACE_END
