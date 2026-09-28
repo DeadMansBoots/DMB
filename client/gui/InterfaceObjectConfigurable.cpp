@@ -937,7 +937,32 @@ std::shared_ptr<CTextInput> InterfaceObjectConfigurable::buildTextInput(const Js
 		result->setFont(readFont(config["font"]));
 	if(!config["color"].isNull())
 		result->setColor(readColor(config["color"]));
-	if(!config["text"].isNull() && config["text"].isString())
+	if(!config["setting"].isNull())
+	{
+		// DMB: a whole number, written to the setting as it's typed, kept within valueMin..valueMax on
+		// the way in (K, September 27th/28th: "custom size should just be a type entry box", no popup).
+		// The box's own live filter (CTextInput::numberFilter) is given 0 as its floor regardless of
+		// valueMin: it snaps an out-of-range value to the floor on every keystroke, so a real floor
+		// above 0 (a map's real minimum width) turns typing a multi-digit number from empty into a
+		// cascade (typing 1 of "150" snaps to 36, then a further digit overshoots past 999). The real
+		// floor is applied only when the typed number is written to the setting, same as the box's own
+		// ceiling; a value typed below it is clamped in storage, even where the box still shows less.
+		const auto path = settingPath(config["setting"]);
+		const std::string spec = config["setting"].String();
+		const int vmin = config["valueMin"].isNull() ? 0 : static_cast<int>(config["valueMin"].Integer());
+		const int vmax = config["valueMax"].isNull() ? 999 : static_cast<int>(config["valueMax"].Integer());
+		const int vdefault = std::clamp(config["valueDefault"].isNull() ? vmin : static_cast<int>(config["valueDefault"].Integer()), vmin, vmax);
+		result->setFilterNumber(0, vmax);
+		result->setText(std::to_string(std::clamp(static_cast<int>(settingNumber(path, vdefault)), vmin, vmax)));
+		result->setCallback([this, path, spec, vmin, vmax, vdefault](const std::string & text)
+		{
+			const int typed = text.empty() ? vdefault : std::stoi(text);
+			writeSetting(path, JsonNode(static_cast<double>(std::clamp(typed, vmin, vmax))));
+			if(onSettingChanged)
+				onSettingChanged(spec);
+		});
+	}
+	else if(!config["text"].isNull() && config["text"].isString())
 		result->setText(config["text"].String()); //for input field raw string is taken
 	if(!config["callback"].isNull())
 		result->setCallback(callbacks_string.at(config["callback"].String()));

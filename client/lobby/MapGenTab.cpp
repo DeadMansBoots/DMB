@@ -165,6 +165,13 @@ MapGenTab::MapGenTab(const MapGeneratorInfo & info)
 	{
 		if(setting == "persistent:mapGen/map/size")
 			clearCustomSize(); // a standard size picked after a custom one replaces it
+		if(setting == "persistent:mapGen/map/width" || setting == "persistent:mapGen/map/height")
+		{
+			// a custom size typed (an inline "textInput" bound to these, K's "just a type entry box")
+			// replaces any standard size picked, the same as the popup this replaces used to
+			Settings size = persistentStorage.write["mapGen"]["map"]["size"];
+			size->Integer() = 0;
+		}
 		if(boost::algorithm::starts_with(setting, "persistent:mapGen/"))
 			updateMapInfoByHost();
 	};
