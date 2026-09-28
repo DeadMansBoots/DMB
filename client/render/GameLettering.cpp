@@ -630,11 +630,11 @@ Pixels part(const Glyph & glyph, const std::function<bool(int x, int y)> & keep)
 	return result;
 }
 
-Pixels shifted(const Pixels & pixels, int dx)
+Pixels shifted(const Pixels & pixels, int dx, int dy = 0)
 {
 	Pixels result;
 	for(const auto & [cell, share] : pixels)
-		result[{cell.first + dx, cell.second}] = share;
+		result[{cell.first + dx, cell.second + dy}] = share;
 	return result;
 }
 
@@ -888,11 +888,22 @@ const ButtonLettering & buttonLettering()
 			}
 			if(result.band == 0)
 				result.band = band;
-			// letters of another height are another lettering
-			if(band != result.band)
+			// letters of another height are another lettering; a row more or less is one letter's serif
+			// reaching past the rest (RESTART's R stands a row higher than its other letters)
+			if(std::abs(band - result.band) > 1)
 				continue;
 			for(auto & [letter, glyph] : found)
 			{
+				// such a button's letters stand on the lettering's baseline by their own feet
+				if(band != result.band)
+				{
+					int foot = std::numeric_limits<int>::min();
+					for(const auto & [cell, share] : glyph.pixels)
+						if(share.black >= DARK)
+							foot = std::max(foot, cell.second);
+					if(foot != std::numeric_limits<int>::min())
+						glyph.pixels = shifted(glyph.pixels, 0, result.band - 1 - foot);
+				}
 				const auto known = result.glyphs.find(letter);
 				if(known != result.glyphs.end())
 				{
@@ -911,6 +922,10 @@ const ButtonLettering & buttonLettering()
 		if(result.band == 0)
 			return ButtonLettering();
 		buildMissing(result.glyphs, result.band);
+		std::string found;
+		for(const auto & glyph : result.glyphs)
+			found += glyph.first;
+		logGlobal->info("Gold button lettering: %d rows tall, letters %s", result.band, found);
 		return result;
 	}();
 	return lettering;

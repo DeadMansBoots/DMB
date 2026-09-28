@@ -394,6 +394,8 @@ void CEngravedLabel::showAll(Canvas & to)
 				carvedSize = words.letters.dimensions();
 				carvedOrigin = words.letters.topLeft();
 			}
+			logGlobal->debug("Engraved label '%s': %s", shown, carving ? "in the gold buttons' lettering"
+				: words.image ? "the font: no room for the lettering on its button" : "the font: a letter the lettering lacks");
 		}
 		if(!carving)
 		{
