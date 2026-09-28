@@ -320,11 +320,18 @@ void CLobbyScreen::updateModeBar()
 	// dynamically with the text of whatever menu name is being displayed." The name is already centered
 	// on MODE_NAME_CENTRE (CENTER alignment centers on its own x); only the arrows, fixed before, move
 	// to the name's own rendered width so they sit the same close gap from it at any length.
+	// moveTo takes screen-absolute coordinates (CIntObject::moveTo's own doc comment), but
+	// MODE_NAME_CENTRE/MODE_ARROW_TOP are the local offsets given at construction, inside whatever was on
+	// the construction stack then; moveTo'ing straight to those local numbers landed the arrows at the
+	// screen's own top-left corner instead (K, September 28th, live testing: "THE ARROWS GOT
+	// SIGNIFICANTLY WORSE"). modeName is never moved, so its own pos is still the correct absolute
+	// placement from construction; anchor the arrows on that instead of re-deriving the parent offset.
 	constexpr int nameArrowGap = 8;
 	constexpr int arrowWidth = 16;
 	const int halfName = static_cast<int>(modeName->getWidth() + 1) / 2;
-	modePrevious->moveTo(Point(MODE_NAME_CENTRE - halfName - nameArrowGap - arrowWidth, MODE_ARROW_TOP));
-	modeNext->moveTo(Point(MODE_NAME_CENTRE + halfName + nameArrowGap, MODE_ARROW_TOP));
+	const Point namePos = modeName->pos.topLeft();
+	modePrevious->moveTo(namePos + Point(-halfName - nameArrowGap - arrowWidth, -8));
+	modeNext->moveTo(namePos + Point(halfName + nameArrowGap, -8));
 	// VCMI's random map window names itself in the headline where the mode's name goes; the mode's
 	// name takes its place while the arrows show
 	tabRand->showHeadline(!shown);
