@@ -61,8 +61,17 @@ CHoverableArea::~CHoverableArea()
 
 void LRClickableAreaWText::clickPressed(const Point & cursorPosition)
 {
-	if(!text.empty())
+	if(text.empty())
+		return;
+	// DMB: a "hoverHelp" widget (InterfaceObjectConfigurable::buildHoverHelp) can sit on a lobby tab's
+	// layout (a map generator's settings page), where no adventure map interface exists yet and
+	// GAME->interface() is null; showInfoDialog needs one. K, September 27th, reproduced: hover then
+	// click on a Biomes tab setting crashed the game. showPopupWindow already handles this without one
+	// (CRClickPopup, on right-click), so a left click without an interface shows the text the same way.
+	if(GAME->interface())
 		GAME->interface()->showInfoDialog(text);
+	else
+		CRClickPopup::createAndPush(text);
 }
 void LRClickableAreaWText::showPopupWindow(const Point & cursorPosition)
 {
