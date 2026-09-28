@@ -520,7 +520,11 @@ QString gameButtonStyle(bool silver)
 		"QPushButton { color: black; background: transparent; border-radius: 0; border-width: 4px %1px; padding: 1px 2px; %2 }"
 		"QPushButton:hover { %3 }"
 		"QPushButton:pressed { %4 }"
-		"QPushButton:disabled { color: #2a1c0c; %5 }"
+		// Gemini's read of K's launcher screenshot, relayed by K overnight into September 28th: "Import
+		// from Clipboard" grayed out was dark text on the dimmed bar's own dark gold, hard to read. A
+		// light parchment tone (the same one the dark look already uses in gold's place) reads clearly
+		// against the dimmed bar in either look, where the near-black original barely stood out from it.
+		"QPushButton:disabled { color: #f3e7c9; %5 }"
 		// the Settings page's categories: the same bars, the open one pressed in
 		"#dmbSettingsCategories QPushButton { color: black; background: transparent; border-radius: 0; border-width: 4px %1px;"
 		" padding: 3px 6px; text-align: center; font-weight: bold; %2 }"
