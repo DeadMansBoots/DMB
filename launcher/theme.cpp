@@ -12,13 +12,17 @@
 #include "gamefont.h"
 
 #include "../lib/CConfigHandler.h"
+#include "../lib/GameButtonLettering.h"
 #include "../lib/VCMIDirs.h"
 #include "../lib/filesystem/Filesystem.h"
+#include "../lib/texts/CGeneralTextHandler.h"
 #include "../lib/vcmi_endian.h"
 
 #include <QApplication>
+#include <QIcon>
 #include <QPalette>
 #include <QPixmap>
+#include <QPushButton>
 #include <QStyleFactory>
 
 #ifdef VCMI_WINDOWS
@@ -29,6 +33,11 @@ namespace
 {
 /// whether windows get Windows' dark title bar: in the leather and dark looks
 bool darkFrames = false;
+
+/// the height every launcher button's gold bar is drawn at (wordlessBar), the game's own 40 px bars
+/// scaled down to the launcher's own, smaller buttons; a carved word is scaled the same amount, so its
+/// letters stay in the bar's own proportion instead of standing oversized on a shrunk bar
+constexpr int BAR_HEIGHT = 28;
 
 /// A window's title bar in Windows' dark frame (Windows 10 1809 and later), or back in its light one;
 /// elsewhere the title bar is the window manager's
@@ -50,7 +59,13 @@ void frameWindow(QWidget * window)
 #endif
 }
 
-/// frames every window as it first shows, dialogs included
+/// DMB: carves every QPushButton under `window` into the game's gold-button lettering, or plain if the
+/// look is not leather or dark; defined with the rest of that work, further down this file
+void carveEveryButtonUnder(QWidget * window, bool active);
+
+/// frames every window as it first shows, dialogs included; the same moment its own buttons' layout is
+/// first real (widths of 0 or a Qt placeholder before this), so their lettering is carved here too, on
+/// whichever look was last chosen (darkFrames, the same flag the framing above already keeps current)
 class FrameEveryWindow : public QObject
 {
 public:
@@ -58,7 +73,10 @@ public:
 	{
 		if(event->type() == QEvent::Show)
 			if(auto * widget = qobject_cast<QWidget *>(watched); widget && widget->isWindow())
+			{
 				frameWindow(widget);
+				carveEveryButtonUnder(widget, darkFrames);
+			}
 		return false;
 	}
 };
@@ -222,7 +240,7 @@ QImage wordlessBar(const QImage & frame)
 		painter.drawImage(x, 0, frame, 110, 0, 1, frame.height());
 	painter.drawImage(bar.width() - 21, 0, frame, frame.width() - 21, 0, 21, frame.height());
 	painter.end();
-	return bar.scaledToHeight(28, Qt::SmoothTransformation);
+	return bar.scaledToHeight(BAR_HEIGHT, Qt::SmoothTransformation);
 }
 
 /// Heroes III's blue marbled choice button, the Random Map Setup's (RANWEAK), without its words as
@@ -258,6 +276,191 @@ QImage silvered(const QImage & image)
 		}
 	}
 	return result;
+}
+
+/// a button's frame, through the launcher's own resource access (CResourceHandler, readH3DefFrame);
+/// the game engine reads the same buttons a different way (client/render/GameLettering.cpp)
+GameButtonLettering::Picture qtButtonPicture(const std::string & name)
+{
+	const AnimationPath path = AnimationPath::builtin("SPRITES/" + name);
+	if(!CResourceHandler::get()->existsResource(path))
+		return {};
+	const auto data = CResourceHandler::get()->load(path)->readAll();
+	const auto * bytes = reinterpret_cast<const ui8 *>(data.first.get());
+	const QImage frame = readH3DefFrame(bytes, data.second, 0).convertToFormat(QImage::Format_ARGB32);
+	if(frame.isNull())
+		return {};
+	GameButtonLettering::Picture picture;
+	picture.w = frame.width();
+	picture.h = frame.height();
+	picture.pixels.reserve(static_cast<size_t>(picture.w) * picture.h);
+	for(int y = 0; y < picture.h; ++y)
+	{
+		const auto * line = reinterpret_cast<const QRgb *>(frame.constScanLine(y));
+		for(int x = 0; x < picture.w; ++x)
+			picture.pixels.emplace_back(qRed(line[x]), qGreen(line[x]), qBlue(line[x]), 255);
+	}
+	return picture;
+}
+
+/// the lettering, lifted from the player's own files the first time a button's word asks for it. The
+/// harvest checks the game's own installed language (CGeneralTextHandler::getInstalledLanguage, so a
+/// non-English game's buttons, carrying other words, are not read as if they were the game's own
+/// English ones); the client always has that answer by the time a game is running (loading a mod's
+/// filesystem detects it), the launcher does not unless something has already asked for it, which
+/// showing its own buttons does not. Asked for here, once, the same detection the client would trigger.
+const GameButtonLettering::Lettering & qtButtonLettering()
+{
+	static const GameButtonLettering::Lettering lettering = []()
+	{
+		CGeneralTextHandler::detectInstallParameters();
+		return GameButtonLettering::harvest(qtButtonPicture);
+	}();
+	return lettering;
+}
+
+/// `text` in the game's own gold-button lettering (K, overnight into September 28th, after seeing the
+/// in-game carved words: "i want to get that exact look in the DMB launcher"): a transparent image, the
+/// black or white share of each pixel from the harvest painted on. Null when the lettering could not be
+/// read (the language is not English, or the buttons it is read from are missing) or `text` needs a
+/// letter the harvest lacks (J, Q, Z, digits, punctuation): the button's own plain text stays, unchanged.
+QImage carvedButtonWord(const QString & text)
+{
+	const GameButtonLettering::Lettering & lettering = qtButtonLettering();
+	if(lettering.band == 0)
+		return {};
+	const QByteArray upper = text.trimmed().toUpper().toLatin1();
+	const std::string capitals(upper.constData(), static_cast<size_t>(upper.size()));
+	if(capitals.empty())
+		return {};
+	for(const char c : capitals)
+		if(c != ' ' && !lettering.glyphs.count(c))
+			return {};
+
+	using Glyph = GameButtonLettering::Glyph;
+	constexpr double dark = 0.45; // GameButtonLettering's own DARK: a letter's own pixels, at least this black
+	constexpr int letterGap = 1;  // the game's own spacing (GameLettering.cpp): a pixel between letters
+	constexpr int wordGap = 6;    // eight between words, so six added to the letter gap already crossed
+	constexpr int closest = 1;
+	constexpr int farthest = 5;
+	struct Placed
+	{
+		const Glyph * glyph;
+		int x;
+	};
+	std::vector<Placed> placed;
+	std::map<int, int> previous; // the letter before's last black column in each row, at its place
+	int x = 0;
+	for(const char c : capitals)
+	{
+		if(c == ' ')
+		{
+			x += wordGap;
+			previous.clear();
+			continue;
+		}
+		const Glyph & glyph = lettering.glyphs.at(c);
+		std::map<int, std::pair<int, int>> rows;
+		for(const auto & [cell, share] : glyph.pixels)
+			if(share.black >= dark)
+			{
+				const int row = cell.second;
+				const auto it = rows.find(row);
+				if(it == rows.end())
+					rows[row] = {cell.first, cell.first};
+				else
+					it->second = {std::min(it->second.first, cell.first), std::max(it->second.second, cell.first)};
+			}
+		int at = x;
+		std::optional<int> nearest;
+		for(const auto & [row, span] : rows)
+			if(previous.count(row))
+			{
+				const int gap = at + span.first - previous.at(row) - 1;
+				nearest = nearest ? std::min(*nearest, gap) : gap;
+			}
+		if(nearest && *nearest < closest)
+			at += closest - *nearest;
+		else if(nearest && *nearest > farthest)
+			at -= std::min(*nearest - farthest, 2);
+		placed.push_back({&glyph, at});
+		previous.clear();
+		for(const auto & [row, span] : rows)
+			previous[row] = at + span.second;
+		x = at + glyph.width + letterGap;
+	}
+	const int width = x - letterGap;
+	if(width <= 0)
+		return {};
+
+	QImage image(width, lettering.band, QImage::Format_ARGB32);
+	image.fill(qRgba(0, 0, 0, 0));
+	for(const auto & p : placed)
+		for(const auto & [cell, share] : p.glyph->pixels)
+		{
+			const double a = share.black + share.white;
+			if(a <= 0)
+				continue;
+			const int px = p.x + cell.first;
+			const int py = cell.second;
+			if(px < 0 || px >= width || py < 0 || py >= lettering.band)
+				continue;
+			const auto value = static_cast<int>(std::lround(std::clamp(255.0 * share.white / a, 0.0, 255.0)));
+			const auto opacity = static_cast<int>(std::lround(std::clamp(a, 0.0, 1.0) * 255));
+			image.setPixelColor(px, py, QColor(value, value, value, opacity));
+		}
+	// the letters, at the height the buttons they were read from are (40, RANSHOW's own, confirmed
+	// against every button the harvest reads from), scaled the same amount the bar itself is
+	// (BAR_HEIGHT / 40, wordlessBar), so they stand in its own proportion, not oversized on a shrunk bar
+	const int scaledHeight = std::max(1, static_cast<int>(std::lround(image.height() * BAR_HEIGHT / 40.0)));
+	return image.scaledToHeight(scaledHeight, Qt::SmoothTransformation);
+}
+
+/// `button` in the exact carved-gold lettering (K, overnight into September 28th: "i want to get that
+/// exact look in the DMB launcher") where `active` (the look is leather or dark, not "system") and its
+/// own word fits and every letter of it is there; back to its own plain text otherwise, whether that is
+/// because the look is "system" now, the button's own size shrank past fitting, or its word needs a
+/// letter the harvest lacks (J, Q, Z, digits, punctuation: "Install HD Edition (Steam)", any "?" help
+/// button). Idempotent: safe to call again for a button already carved, or already plain.
+void applyCarvedButtonWord(QPushButton * button, bool active)
+{
+	const QVariant stored = button->property("dmbCarvedFrom");
+	const QString original = stored.isValid() ? stored.toString() : button->text();
+	if(!stored.isValid())
+		button->setProperty("dmbCarvedFrom", original);
+	const QImage carved = active ? carvedButtonWord(original) : QImage();
+	// the bar's own scrollwork ends, kept clear on each side (gameButtonStyle's own 21 px at RANSHOW's
+	// native size, scaled the same amount the carved word already is), and a little headroom the
+	// button's own frame needs top and bottom
+	const int barEnds = std::max(1, static_cast<int>(std::lround(21 * BAR_HEIGHT / 40.0)));
+	constexpr int clear = 2;
+	const bool fits = !carved.isNull() && carved.width() + 2 * (barEnds + clear) <= button->width()
+		&& carved.height() + clear <= button->height();
+	if(fits)
+	{
+		button->setIcon(QIcon(QPixmap::fromImage(carved)));
+		button->setIconSize(carved.size());
+		button->setText(QString());
+	}
+	else if(button->text().isEmpty() && !button->icon().isNull())
+	{
+		button->setIcon(QIcon());
+		button->setText(original);
+	}
+}
+
+void carveEveryButtonUnder(QWidget * window, bool active)
+{
+	for(QPushButton * button : window->findChildren<QPushButton *>())
+		applyCarvedButtonWord(button, active);
+}
+
+/// `applyCarvedButtonWord` on every button of every open window (a theme switch: a widget's own layout,
+/// and so its width, is already real by then, every window having shown at least once already)
+void carveEveryButton(bool active)
+{
+	for(QWidget * top : QApplication::topLevelWidgets())
+		carveEveryButtonUnder(top, active);
 }
 
 /// The launcher's buttons as the game's own gold bars (K, September 26th: "these buttons need to
@@ -524,6 +727,7 @@ void LauncherTheme::apply()
 		for(const auto & [kind, font] : systemFonts)
 			QApplication::setFont(font, kind.c_str());
 		qApp->setStyleSheet(QString());
+		carveEveryButton(false);
 		logGlobal->info("Launcher look: system");
 		return;
 	}
@@ -553,4 +757,5 @@ void LauncherTheme::apply()
 		logGlobal->info("Launcher look: dark in %s, %s", silver ? "silver" : "gold", leather.isNull()
 			? "flat (no game files to read the leather from yet)" : "the leather tinted near black");
 	}
+	carveEveryButton(true);
 }

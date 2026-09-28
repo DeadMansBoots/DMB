@@ -33,13 +33,6 @@ constexpr double SAME_LETTER = 0.5;
 
 constexpr double DARK = 0.45;  // a letter's own pixels: at least this much black
 constexpr double FAINT = 0.10; // less of black or white than this is the gold's own grain
-// the game's spacing, measured on its buttons: its letters stand a pixel apart box to box, its words
-// eight black to black; no two letters' black nearer than a pixel in any row, and a pair farther
-// apart than five in every row (T A, O A) drawn in towards it, by two at most
-constexpr int LETTER_GAP = 1;
-constexpr int WORD_GAP = 6;
-constexpr int CLOSEST = 1;
-constexpr int FARTHEST = 5;
 
 double luminance(const ColorRGBA & c)
 {
