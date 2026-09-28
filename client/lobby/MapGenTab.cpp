@@ -316,18 +316,31 @@ std::shared_ptr<CMapGenOptions> MapGenTab::lobbyOptions() const
 		humans = inLobby;
 	const bool hasCompOnly = stored["params"]["compOnly"].isNumber() || layoutDefaults["params"]["compOnly"].isNumber();
 	const int compOnly = hasCompOnly ? number("params", "compOnly", 0) : std::max(0, number("map", "players", 0) - std::max(humans, 1));
-	// A count left on Random is rolled now, not at Begin as VCMI's own random map does: the lobby then
-	// has exactly the game's players, on the first colours, where a generator places its players (a
-	// player on a later colour would have no place on the map). The lobby shows what was rolled.
-	std::mt19937 roll(std::random_device{}());
-	const auto rolled = [&roll](int low, int high)
+	if(generator.arguments.count("humanColors"))
 	{
-		return high <= low ? low : std::uniform_int_distribution<int>(low, high)(roll);
-	};
-	const int humanSlots = humans < 0 ? rolled(inLobby, PlayerColor::PLAYER_LIMIT_I) : std::clamp<int>(humans, 1, PlayerColor::PLAYER_LIMIT_I);
-	options->setHumanOrCpuPlayerCount(humanSlots);
-	const int room = PlayerColor::PLAYER_LIMIT_I - humanSlots;
-	options->setCompOnlyPlayerCount(compOnly < 0 ? rolled(humanSlots >= 2 ? 0 : 1, room) : std::clamp(compOnly, 0, room));
+		// A generator that takes the colours the seated humans chose rolls a count left on Random itself,
+		// at Begin (MapGenerators::generateForGame), so the count stays a surprise until then, as VCMI's
+		// own random map keeps it (K, September 27th), and the lobby offers every slot
+		const int humanSlots = humans < 0 ? CMapGenOptions::RANDOM_SIZE : std::clamp<int>(humans, 1, PlayerColor::PLAYER_LIMIT_I);
+		options->setHumanOrCpuPlayerCount(humanSlots);
+		const int room = PlayerColor::PLAYER_LIMIT_I - std::max(humanSlots, 1);
+		options->setCompOnlyPlayerCount(compOnly < 0 ? CMapGenOptions::RANDOM_SIZE : std::clamp(compOnly, 0, room));
+	}
+	else
+	{
+		// Any other generator is given the lobby's players on the first colours, where it places its
+		// players (a player on a later colour would have no place on the map), so a count left on Random
+		// is rolled now, and the lobby shows what was rolled
+		std::mt19937 roll(std::random_device{}());
+		const auto rolled = [&roll](int low, int high)
+		{
+			return high <= low ? low : std::uniform_int_distribution<int>(low, high)(roll);
+		};
+		const int humanSlots = humans < 0 ? rolled(inLobby, PlayerColor::PLAYER_LIMIT_I) : std::clamp<int>(humans, 1, PlayerColor::PLAYER_LIMIT_I);
+		options->setHumanOrCpuPlayerCount(humanSlots);
+		const int room = PlayerColor::PLAYER_LIMIT_I - humanSlots;
+		options->setCompOnlyPlayerCount(compOnly < 0 ? rolled(humanSlots >= 2 ? 0 : 1, room) : std::clamp(compOnly, 0, room));
+	}
 	const JsonNode & teams = stored["map"]["teams"];
 	if(teams.isVector())
 	{

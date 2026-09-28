@@ -219,7 +219,12 @@
 				},
 				"atBegin" : {
 					"type" : "boolean",
-					"description" : "The command makes the game's map when the host presses Begin, with every player's chosen town (--towns); without it, the tab's Generate button makes a map to pick (addon API 3)"
+					"description" : "The command makes the game's map when the host presses Begin, with every player's chosen town (--factions); without it, the tab's Generate button makes a map to pick (addon API 3)"
+				},
+				"arguments" : {
+					"type" : "array",
+					"items" : { "type" : "string", "enum" : [ "humanColors" ] },
+					"description" : "The optional arguments the command takes, which DMB passes only to a generator that lists them: humanColors (--humanColors red,green, the colours the seated humans took in the lobby)"
 				}
 			}
 		},

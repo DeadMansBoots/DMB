@@ -44,6 +44,9 @@ struct DLL_LINKAGE MapGeneratorInfo
 	/// mod.json "atBegin": the generator makes a game's map when the host presses Begin, with every
 	/// player's town (generateForGame). Without it, its tab's Generate button makes a map to pick.
 	bool atBegin = false;
+	/// mod.json "arguments": the optional arguments its command takes, which DMB passes only to a
+	/// generator that lists them (a command refuses an argument it does not know): "humanColors"
+	std::set<std::string> arguments;
 };
 
 namespace MapGenerators

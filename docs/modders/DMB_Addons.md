@@ -125,6 +125,25 @@ files name it (`core:castle`, or a mod's `modid:faction`), or `random` for the g
 A player count the tab leaves on Random (-1) is rolled when the lobby's random map is put together,
 so the lobby shows the players the game will have.
 
+A generator can take the colours the players chose instead, as VCMI's own random map does, keeping a
+Random count a surprise until Begin. It lists the argument in its mod.json:
+
+```json
+"mapGenerator" : { ..., "arguments" : [ "humanColors" ] }
+```
+
+Then the lobby offers every colour's slot, a count left on Random reaches the command as -1 for it to
+roll (`--players`, `--humans`, `--bio.compOnly`), and it gets:
+
+```text
+--humanColors red,green               the colours the seated humans took, in colour order
+```
+
+Those are the map's seats for humans or the computer; its other players take the first colours left,
+for the computer only. `--factions` then has an entry for each colour from red, by colour: the third
+is tan's town, whether or not tan plays. A command that does not list an argument never gets it, as
+a command refuses arguments it does not know.
+
 While it works, a generator can tell the players what it is doing. Each stage it enters, it writes
 a line to its output:
 

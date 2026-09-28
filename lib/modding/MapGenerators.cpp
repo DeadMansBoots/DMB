@@ -122,6 +122,8 @@ std::optional<MapGeneratorInfo> MapGenerators::read(const ModDescription & mod)
 	info.name = section["name"].String();
 	info.tab = section["tab"].String();
 	info.atBegin = section["atBegin"].Bool();
+	for(const auto & argument : section["arguments"].Vector())
+		info.arguments.insert(argument.String());
 	const std::string command = boost::filesystem::path(section["command"].String()).lexically_normal().generic_string();
 
 	const auto folder = AddonCode::modFolder(info.modID);
@@ -199,13 +201,17 @@ boost::filesystem::path MapGenerators::generateForGame(const CMapGenOptions & op
 	int players = 0;
 	int seated = 0;
 	std::vector<std::string> factions;
+	std::vector<std::string> humanColors;
 	std::map<TeamID, std::vector<std::string>> teams;
 	for(const auto & [color, player] : start.playerInfos)
 	{
 		players++;
-		if(player.isControlledByHuman())
-			seated++;
 		const std::string colorName = color.toString();
+		if(player.isControlledByHuman())
+		{
+			seated++;
+			humanColors.push_back(colorName);
+		}
 		factions.push_back(player.castle == FactionID::RANDOM || !player.castle.hasValue() ? "random" : FactionID::encode(player.castle.getNum()));
 		const auto & settings = options.getPlayersSettings();
 		if(const auto found = settings.find(color); found != settings.end() && found->second.getTeam() != TeamID::NO_TEAM)
@@ -220,23 +226,38 @@ boost::filesystem::path MapGenerators::generateForGame(const CMapGenOptions & op
 	// it runs. Never fewer human slots than the humans seated.
 	const int compOnlyCount = options.getCompOnlyPlayerCount() == CMapGenOptions::RANDOM_SIZE ? 0 : options.getCompOnlyPlayerCount();
 	const int humans = std::max(players - std::clamp(compOnlyCount, 0, players), seated);
+	int playersGiven = players;
+	int humansGiven = humans;
+	int compOnlyGiven = players - humans;
+	const bool takesColours = generator->arguments.count("humanColors") != 0;
+	if(takesColours)
+	{
+		// the lobby left a count on Random unrolled (MapGenTab::lobbyOptions): the generator rolls it, and
+		// the seated humans keep the colours they took (--humanColors); -1 is Random
+		const int optionsHumans = options.getHumanOrCpuPlayerCount();
+		const int optionsCompOnly = options.getCompOnlyPlayerCount();
+		humansGiven = optionsHumans == CMapGenOptions::RANDOM_SIZE ? -1 : std::max(optionsHumans, seated);
+		compOnlyGiven = optionsCompOnly == CMapGenOptions::RANDOM_SIZE ? -1 : optionsCompOnly;
+		playersGiven = humansGiven < 0 || compOnlyGiven < 0 ? -1 : humansGiven + compOnlyGiven;
+	}
 
 	const auto outDir = VCMIDirs::get().userDataPath() / "Maps" / "RandomMaps";
 	boost::filesystem::create_directories(outDir);
 	const auto outPath = outDir / ("mapgen_" + std::to_string(options.getWidth()) + "x" + std::to_string(options.getHeight())
-		+ "_p" + std::to_string(players) + "_s" + std::to_string(seed) + ".vmap");
+		+ "_p" + (playersGiven < 0 ? std::string("R") : std::to_string(playersGiven)) + "_s" + std::to_string(seed) + ".vmap");
 
 	std::vector<std::string> args {
 		"--w", std::to_string(options.getWidth()),
 		"--h", std::to_string(options.getHeight()),
-		"--players", std::to_string(players),
-		"--humans", std::to_string(humans),
+		"--players", std::to_string(playersGiven),
+		"--humans", std::to_string(humansGiven),
 		"--seed", std::to_string(seed),
 		"--out", outPath.string(),
 		// each player's town, in colour order, and the players only the computer takes (MapGen's flags,
-		// September 27th)
+		// September 27th). With --humanColors the lobby's slots are every colour from red, so each entry
+		// is that colour's town.
 		"--factions", boost::algorithm::join(factions, ","),
-		"--bio.compOnly", std::to_string(players - humans),
+		"--bio.compOnly", std::to_string(compOnlyGiven),
 	};
 	if(options.getLevels() > 1)
 	{
@@ -247,6 +268,13 @@ boost::filesystem::path MapGenerators::generateForGame(const CMapGenOptions & op
 	{
 		args.push_back("--teams");
 		args.push_back(teamList);
+	}
+	// the colours the seated humans took in the lobby, for a generator that takes them: the player count
+	// stays a surprise until Begin, as in VCMI, so the humans are not always the first colours (K)
+	if(takesColours && !humanColors.empty())
+	{
+		args.push_back("--humanColors");
+		args.push_back(boost::algorithm::join(humanColors, ","));
 	}
 	args.push_back("--declaremods");
 	args.push_back(mapSetting("declareMods").isNumber() && mapSetting("declareMods").Integer() ? "1" : "0");
