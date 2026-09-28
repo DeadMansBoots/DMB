@@ -126,6 +126,11 @@ CLobbyScreen::CLobbyScreen(ESelectionScreen screenType, bool hideScreen)
 			modeNext = std::make_shared<CButton>(Point(MODE_ARROW_RIGHT, MODE_ARROW_TOP), AnimationPath::builtin("SCNRBRT"), help, [this]() { stepRandomMode(1); });
 			modeName = std::make_shared<CLabel>(MODE_NAME_CENTRE, MODE_ARROW_TOP + 8, FONT_BIG, ETextAlignment::CENTER, Colors::YELLOW, "");
 			updateModeBar();
+			// a tab that repaints itself whole (a generator's page opened) would paint its background over
+			// the bar: the lobby repaints instead, the bar last
+			tabRand->setRedrawParent(true);
+			for(const auto & tab : generatorTabs)
+				tab->setRedrawParent(true);
 		}
 
 		card->iconDifficulty->addCallback(std::bind(&IServerAPI::setDifficulty, &GAME->server(), _1));
