@@ -931,6 +931,13 @@ std::shared_ptr<CTextInput> InterfaceObjectConfigurable::buildTextInput(const Js
 	auto offset = readPosition(config["backgroundOffset"]);
 	auto bgName = ImagePath::fromJson(config["background"]);
 	auto result = std::make_shared<CTextInput>(rect, offset, bgName);
+	// DMB: this constructor always grabs keyboard focus on creation (CTextInput::createLabel); a page
+	// with more than one, or any single-key lobby shortcut (Begin, Advanced Options), stops working the
+	// moment the page opens, silently, since a digit-only field just swallows a non-digit key and does
+	// nothing visible. Found building the custom-size fields (K, September 27th/28th): the width field's
+	// own focus alone stopped "B" for Begin. A player still gets it by clicking into the field, same as
+	// any other text box.
+	result->removeFocus();
 	if(!config["alignment"].isNull())
 		result->setAlignment(readTextAlignment(config["alignment"]));
 	if(!config["font"].isNull())
