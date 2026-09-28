@@ -339,6 +339,7 @@ set(lib_MAIN_SRCS
 	TerrainHandler.cpp
 	TurnTimerInfo.cpp
 	GameLibrary.cpp
+	GameButtonLettering.cpp
 )
 
 if (NOT ENABLE_MINIMAL_LIB)
@@ -803,6 +804,7 @@ set(lib_MAIN_HEADERS
 	CCreatureHandler.h
 	ConditionalWait.h
 	Color.h
+	GameButtonLettering.h
 	CPlayerState.h
 	CRandomGenerator.h
 	CScriptingModule.h
