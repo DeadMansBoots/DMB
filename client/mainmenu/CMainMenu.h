@@ -221,13 +221,17 @@ class CLoadingScreen : virtual public CWindowObject, virtual public Load::Progre
 	std::vector<std::shared_ptr<CPicture>> images;
 	std::shared_ptr<CPicture> loadFrame;
 	std::vector<std::shared_ptr<CAnimImage>> progressBlocks;
+	std::shared_ptr<CLabel> phaseLabel;
 
 	ImagePath getBackground();
 
-public:	
+public:
 	CLoadingScreen();
 	CLoadingScreen(ImagePath background);
 	~CLoadingScreen();
 
 	void tick(uint32_t msPassed) override;
+
+	/// DMB: what the map generator making the game's map is doing, over the load bar; empty hides it
+	void setPhase(const std::string & text);
 };

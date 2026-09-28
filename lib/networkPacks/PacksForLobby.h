@@ -105,12 +105,18 @@ struct DLL_LINKAGE LobbyGuiAction : public CLobbyPackToPropagate
 struct DLL_LINKAGE LobbyLoadProgress : public CLobbyPackToPropagate
 {
 	unsigned char progress;
-	
+	/// DMB: what the map generator making the game's map is doing now, in the host's language (the
+	/// generator mod's own text, which a guest without the mod could not look up); empty when nothing
+	/// is being said (MapGenerators::currentPhase)
+	std::string phase;
+
 	void visitTyped(ICPackVisitor & visitor) override;
 
 	template <typename Handler> void serialize(Handler &h)
 	{
 		h & progress;
+		if(h.version >= Handler::Version::DMB_LOAD_PHASES)
+			h & phase;
 	}
 };
 

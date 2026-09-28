@@ -15,7 +15,10 @@
 #include "ModDescription.h"
 
 #include "../GameLibrary.h"
+#include "../LoadProgress.h"
+#include "../ScopeGuard.h"
 #include "../StartInfo.h"
+#include "../texts/CGeneralTextHandler.h"
 #include "../VCMIDirs.h"
 #include "../filesystem/Filesystem.h"
 #include "../json/JsonNode.h"
@@ -55,6 +58,57 @@ std::unique_ptr<boost::process::child> startChild(Properties &&... properties)
 	return std::make_unique<boost::process::child>(std::forward<Properties>(properties)...);
 #endif
 }
+
+std::mutex phaseMutex;
+MapGenerators::Phase phaseNow;
+
+void setPhase(const MapGenerators::Phase & phase)
+{
+	std::scoped_lock lock(phaseMutex);
+	phaseNow = phase;
+}
+
+/// The stages a generator announced in its log since `offset`, whole lines only (a line still being
+/// written is read next time): the last one becomes the current phase and sets `progress`
+void readPhases(const MapGeneratorInfo & generator, const boost::filesystem::path & logPath, std::streamoff & offset, Load::Progress * progress)
+{
+	std::ifstream log(logPath.c_str(), std::ios::binary);
+	if(!log || !log.seekg(offset))
+		return;
+	std::string line;
+	std::optional<MapGenerators::Phase> latest;
+	while(std::getline(log, line))
+	{
+		if(log.eof())
+			break;
+		offset = log.tellg();
+		boost::algorithm::trim_right(line);
+		if(!boost::algorithm::starts_with(line, "[phase] "))
+			continue;
+		std::istringstream fields(line.substr(8));
+		MapGenerators::Phase phase;
+		char slash = 0;
+		std::string id;
+		if(!(fields >> phase.step >> slash >> phase.total >> id) || slash != '/' || phase.step < 1 || phase.total < phase.step)
+			continue;
+		const TextIdentifier textID("vcmi.mapGen.phase." + id);
+		if(LIBRARY && LIBRARY->generaltexth && LIBRARY->generaltexth->identifierExists(textID))
+			phase.text = LIBRARY->generaltexth->translate(textID.get());
+		latest = phase;
+	}
+	if(!latest)
+		return;
+	logGlobal->debug("Map generator %s: stage %d of %d, %s", generator.name, latest->step, latest->total, latest->text);
+	setPhase(*latest);
+	if(progress)
+		progress->set(static_cast<Load::Type>(std::numeric_limits<Load::Type>::max() * (latest->step - 1) / latest->total));
+}
+}
+
+MapGenerators::Phase MapGenerators::currentPhase()
+{
+	std::scoped_lock lock(phaseMutex);
+	return phaseNow;
 }
 
 std::optional<MapGeneratorInfo> MapGenerators::read(const ModDescription & mod)
@@ -116,7 +170,7 @@ std::vector<MapGeneratorInfo> MapGenerators::active()
 	return result;
 }
 
-boost::filesystem::path MapGenerators::generateForGame(const CMapGenOptions & options, const StartInfo & start, int seed)
+boost::filesystem::path MapGenerators::generateForGame(const CMapGenOptions & options, const StartInfo & start, int seed, Load::Progress * progress)
 {
 	std::optional<MapGeneratorInfo> generator;
 	for(const auto & found : active())
@@ -236,7 +290,7 @@ boost::filesystem::path MapGenerators::generateForGame(const CMapGenOptions & op
 	const auto logPath = VCMIDirs::get().userLogsPath() / "extmapgen_log.txt";
 	logGlobal->info("Map generator %s (mod %s) makes the game's map: %s -> %s", generator->name, generator->modID, generator->command.string(), outPath.string());
 	// a big map takes a minute or two; a generator still running after ten has hung
-	const int exitCode = run(*generator, args, logPath, std::chrono::minutes(10));
+	const int exitCode = run(*generator, args, logPath, std::chrono::minutes(10), progress);
 	if(exitCode != 0 || !boost::filesystem::exists(outPath))
 	{
 		const std::string reason = errorLine(logPath);
@@ -246,8 +300,13 @@ boost::filesystem::path MapGenerators::generateForGame(const CMapGenOptions & op
 }
 
 int MapGenerators::run(const MapGeneratorInfo & generator, const std::vector<std::string> & args,
-	const boost::filesystem::path & logPath, std::chrono::seconds timeout)
+	const boost::filesystem::path & logPath, std::chrono::seconds timeout, Load::Progress * progress)
 {
+	// the stages this run announces; none once it ends, however it ends
+	setPhase({});
+	auto clearPhase = vstd::makeScopeGuard([]() { setPhase({}); });
+	std::streamoff logRead = 0;
+
 	const std::string command = generator.command.string();
 	const std::string ext = boost::algorithm::to_lower_copy(generator.command.extension().string());
 	std::error_code ec;
@@ -270,7 +329,8 @@ int MapGenerators::run(const MapGeneratorInfo & generator, const std::vector<std
 	if(ec)
 		throw std::runtime_error(generator.name + " could not start: " + ec.message());
 
-	// Boost's wait_for is deprecated as unreliable, so the child is looked at twice a second instead
+	// Boost's wait_for is deprecated as unreliable, so the child is looked at five times a second
+	// instead, reading the stages it announced meanwhile
 	const auto deadline = std::chrono::steady_clock::now() + timeout;
 	while(child->running())
 	{
@@ -279,7 +339,8 @@ int MapGenerators::run(const MapGeneratorInfo & generator, const std::vector<std
 			child->terminate();
 			throw std::runtime_error(generator.name + " did not finish in " + std::to_string(timeout.count() / 60) + " minutes");
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		readPhases(generator, logPath, logRead, progress);
 	}
 	child->wait();
 	return child->exit_code();

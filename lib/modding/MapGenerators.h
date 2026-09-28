@@ -9,6 +9,11 @@
  */
 #pragma once
 
+namespace Load
+{
+class Progress;
+}
+
 VCMI_LIB_NAMESPACE_BEGIN
 
 class ModDescription;
@@ -59,13 +64,32 @@ namespace MapGenerators
 	/// (teams of two or more).
 	/// Throws std::runtime_error with the reason when the generator is missing, not vouched for by
 	/// DMB's mod catalog, or fails; the server shows it and the lobby stays open.
-	DLL_LINKAGE boost::filesystem::path generateForGame(const CMapGenOptions & options, const StartInfo & start, int seed);
+	/// `progress`, when given, follows the generator's stages (Phase), for the players' load screens.
+	DLL_LINKAGE boost::filesystem::path generateForGame(const CMapGenOptions & options, const StartInfo & start, int seed,
+		Load::Progress * progress = nullptr);
 
 	/// Runs a generator's command with these arguments and waits for it, at most `timeout`, after which
 	/// it is ended. Both its output streams go to `logPath`, and it opens no console window over the
 	/// game. Returns its exit code; throws std::runtime_error when it cannot start or runs too long.
+	/// While it runs, the stages it announces set currentPhase() and `progress`.
 	DLL_LINKAGE int run(const MapGeneratorInfo & generator, const std::vector<std::string> & args,
-		const boost::filesystem::path & logPath, std::chrono::seconds timeout);
+		const boost::filesystem::path & logPath, std::chrono::seconds timeout, Load::Progress * progress = nullptr);
+
+	/// A stage of the generator's work. A generator announces each stage it enters with a line
+	///     [phase] <n>/<total> <id>
+	/// in its output (OmniMapGen writes 23; K, September 27th: the load screen should say what the
+	/// generator is doing while the bar waits). The text is the generator mod's translation of
+	/// vcmi.mapGen.phase.<id>, empty when the mod has none.
+	struct DLL_LINKAGE Phase
+	{
+		int step = 0;
+		int total = 0;
+		std::string text;
+	};
+
+	/// The stage of the generator running now; step 0 while none runs or it has announced none. Other
+	/// threads may ask (the server's load progress, CVCMIServer::prepareToStartGame).
+	DLL_LINKAGE Phase currentPhase();
 
 	/// What a generator that failed said: its last line starting "Error: " in `logPath`, without that
 	/// prefix; empty when it said nothing

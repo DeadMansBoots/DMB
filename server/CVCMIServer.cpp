@@ -25,6 +25,7 @@
 #include "../lib/gameState/CGameState.h"
 #include "../lib/mapping/CMapInfo.h"
 #include "../lib/mapping/CMapHeader.h"
+#include "../lib/modding/MapGenerators.h"
 #include "../lib/modding/ModIncompatibility.h"
 #include "../lib/rmg/CMapGenOptions.h"
 #include "../lib/serializer/CMemorySerializer.h"
@@ -267,15 +268,20 @@ bool CVCMIServer::prepareToStartGame()
 	{
 		setThreadName("progressTrackingThread");
 		auto currentProgress = std::numeric_limits<Load::Type>::max();
+		std::string currentPhase;
 
 		while(!progressTracking.finished())
 		{
-			if(progressTracking.get() != currentProgress)
+			// DMB: and what a map generator making the map says it is doing (MapGenerators::Phase)
+			const std::string phase = MapGenerators::currentPhase().text;
+			if(progressTracking.get() != currentProgress || phase != currentPhase)
 			{
 				//FIXME: UNGUARDED MULTITHREADED ACCESS!!!
 				currentProgress = progressTracking.get();
+				currentPhase = phase;
 				LobbyLoadProgress loadProgress;
 				loadProgress.progress = currentProgress;
+				loadProgress.phase = currentPhase;
 				announcePack(loadProgress);
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));

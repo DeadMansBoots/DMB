@@ -61,6 +61,7 @@
 #include "../modding/IdentifierStorage.h"
 #include "../modding/MapGenerators.h"
 #include "../modding/ModScope.h"
+#include "../ScopeGuard.h"
 #include "../networkPacks/NetPacksBase.h"
 #include "../pathfinder/CPathfinder.h"
 #include "../pathfinder/PathfinderOptions.h"
@@ -320,7 +321,16 @@ void CGameState::initNewGame(const IMapService * mapService, vstd::RNG & randomG
 		// every player has made their choices at Begin, towns included (lib/modding/MapGenerators.h).
 		// The map it writes stays in Maps/RandomMaps, and the game starts on it as on any map.
 		CStopWatch sw;
-		const auto file = MapGenerators::generateForGame(*scenarioOps->mapGenOptions, *scenarioOps, randomGenerator.nextInt());
+		// the players' load screens follow the stages the generator announces (MapGenerators::Phase); the
+		// tracker lets go of it however generation ends, a throw included
+		Load::Progress generation;
+		progressTracking.include(generation);
+		auto letGo = vstd::makeScopeGuard([&progressTracking, &generation]()
+		{
+			generation.finish();
+			progressTracking.exclude(generation);
+		});
+		const auto file = MapGenerators::generateForGame(*scenarioOps->mapGenOptions, *scenarioOps, randomGenerator.nextInt(), &generation);
 		std::ifstream in(file.string(), std::ios::binary);
 		const std::vector<char> bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 		if(bytes.empty())

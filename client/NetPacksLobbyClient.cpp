@@ -197,9 +197,15 @@ void ApplyOnLobbyScreenNetPackVisitor::visitLobbyStartGame(LobbyStartGame & pack
 
 void ApplyOnLobbyScreenNetPackVisitor::visitLobbyLoadProgress(LobbyLoadProgress & pack)
 {
+	// DMB: a player who joined waits in the lobby while the host's server prepares the game, in VCMI;
+	// when a map generator says what it is doing, they get the load screen too, to see it
+	if(!pack.phase.empty() && !ENGINE->windows().topWindow<CLoadingScreen>())
+		ENGINE->windows().createAndPushWindow<CLoadingScreen>();
+
 	if(auto w = ENGINE->windows().topWindow<CLoadingScreen>())
 	{
 		w->set(pack.progress);
+		w->setPhase(pack.phase); // DMB: the map generator's stage, when one is making the map
 		w->tick(0);
 		w->redraw();
 	}

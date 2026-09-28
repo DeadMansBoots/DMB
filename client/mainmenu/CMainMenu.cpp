@@ -824,13 +824,31 @@ CLoadingScreen::CLoadingScreen(ImagePath background)
 		const int posy = loadbarConfig["y"].Integer();
 		const int blockSize = loadbarConfig["size"].Integer();
 		const int blocksAmount = loadbarConfig["amount"].Integer();
-		for (int i = 0; i < blocksAmount; ++i) 
+		for (int i = 0; i < blocksAmount; ++i)
 		{
 			progressBlocks.push_back(std::make_shared<CAnimImage>(loadbarPath, i, 0, posx + i * blockSize, posy));
 			progressBlocks.back()->deactivate();
 			progressBlocks.back()->visible = false;
 		}
 	}
+
+	// DMB: a map generator's current stage (setPhase), centred over the load bar, unless the config
+	// places it: "loading" : { "phase" : { "x" : 575, "y" : 536 } }
+	Point phasePos(400, 536);
+	if(conf["phase"].isStruct())
+		phasePos = Point(conf["phase"]["x"].Integer(), conf["phase"]["y"].Integer());
+	else if(loadbarConfig.isStruct())
+		phasePos = Point(loadbarConfig["x"].Integer() + loadbarConfig["size"].Integer() * loadbarConfig["amount"].Integer() / 2, loadbarConfig["y"].Integer() - 12);
+	phaseLabel = std::make_shared<CLabel>(phasePos.x, phasePos.y, FONT_MEDIUM, ETextAlignment::CENTER, Colors::YELLOW, "");
+}
+
+void CLoadingScreen::setPhase(const std::string & text)
+{
+	if(!phaseLabel || phaseLabel->getText() == text)
+		return;
+	phaseLabel->setText(text);
+	if(!text.empty())
+		logGlobal->info("Load screen: %s", text);
 }
 
 CLoadingScreen::~CLoadingScreen()

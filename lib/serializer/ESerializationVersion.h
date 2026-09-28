@@ -64,10 +64,11 @@ enum class ESerializationVersion : int32_t
 	BONUS_TRIGGER, // bonus that allows triggered effects in combat
 	CUSTOM_GARRISON_TITLE, // GarrisonDialog pack now has custom title parameter
 	DMB_EXTERNAL_MAP_GENERATOR, // DMB: a random map's options can name a map generator mod that makes it
+	DMB_LOAD_PHASES, // DMB: the load screen's progress carries the stage a map generator has reached
 
 	RELEASE_170 = HOTA_MAP_STACK_COUNT,
 	RELEASE_174 = CUSTOM_GARRISON_TITLE,
-	CURRENT = DMB_EXTERNAL_MAP_GENERATOR,
+	CURRENT = DMB_LOAD_PHASES,
 };
 
 static_assert(ESerializationVersion::MINIMAL <= ESerializationVersion::CURRENT, "Invalid serialization version definition!");

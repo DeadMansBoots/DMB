@@ -125,6 +125,18 @@ files name it (`core:castle`, or a mod's `modid:faction`), or `random` for the g
 A player count the tab leaves on Random (-1) is rolled when the lobby's random map is put together,
 so the lobby shows the players the game will have.
 
+While it works, a generator can tell the players what it is doing. Each stage it enters, it writes
+a line to its output:
+
+```text
+[phase] <n>/<total> <id>
+```
+
+with `n` counting from 1 up to `total`, and `id` a word naming the stage. The load screen's bar
+moves to that stage, and above it every player sees the mod's text `vcmi.mapGen.phase.<id>` in the
+host's language, guests without the mod included. A stage without a text moves the bar and shows
+nothing. OmniMapGen writes 23 stages, "Sculpting Erathia" among them.
+
 The tab's settings travel to the server inside the game's options, since the server can run in a
 process of its own. A player who left their town on Random gets the town the map's header names for
 them. When the generator fails, every player is told "Failed to load game" with its `Error:` line,
