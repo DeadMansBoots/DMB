@@ -242,6 +242,64 @@ QImage readH3DefFrame(const ui8 * def, size_t size, size_t wanted)
 	return image.convertToFormat(QImage::Format_ARGB32);
 }
 
+/// Fills a rectangular hole with a bilinear Coons patch built from its own four edges (each a 7-wide
+/// smoothed running average), the same construction as AssetGenerator's letterSizeButton, ported from
+/// Canvas/ColorRGBA to QImage/QRgb: the surrounding art's own colours interpolate across the hole
+/// instead of a flat fill, reading as continuous where the true content behind the hole was smooth (no
+/// hard internal edges). Used to remove text baked into a real game asset's own pixels, DMB's standing
+/// rule for this class of problem (K, September 28th; this file's own CLAUDE.md).
+void coonsPatchInpaint(QImage & image, int l, int t, int r, int b)
+{
+	struct Colour { double r, g, b; };
+	const auto smooth = [](const std::vector<QRgb> & colours)
+	{
+		std::vector<Colour> out;
+		for(size_t i = 0; i < colours.size(); ++i)
+		{
+			double sum[3] = {0, 0, 0};
+			int count = 0;
+			for(size_t j = i >= 3 ? i - 3 : 0; j <= std::min(colours.size() - 1, i + 3); ++j, ++count)
+			{
+				sum[0] += qRed(colours[j]);
+				sum[1] += qGreen(colours[j]);
+				sum[2] += qBlue(colours[j]);
+			}
+			out.push_back({sum[0] / count, sum[1] / count, sum[2] / count});
+		}
+		return out;
+	};
+	std::vector<QRgb> leftPts, rightPts, topPts, bottomPts;
+	for(int y = t; y < b; ++y)
+	{
+		leftPts.push_back(image.pixel(l, y));
+		rightPts.push_back(image.pixel(r - 1, y));
+	}
+	for(int x = l; x < r; ++x)
+	{
+		topPts.push_back(image.pixel(x, t));
+		bottomPts.push_back(image.pixel(x, b - 1));
+	}
+	const auto leftEdge = smooth(leftPts), rightEdge = smooth(rightPts), topEdge = smooth(topPts), bottomEdge = smooth(bottomPts);
+	const double w = r - l - 1, h = b - t - 1;
+	for(int y = t + 1; y < b - 1; ++y)
+	{
+		const double v = (y - t) / h;
+		for(int x = l + 1; x < r - 1; ++x)
+		{
+			const double u = (x - l) / w;
+			const auto channel = [&](double Colour::* member)
+			{
+				const double sides = (1 - u) * (leftEdge[y - t].*member) + u * (rightEdge[y - t].*member);
+				const double ends = (1 - v) * (topEdge[x - l].*member) + v * (bottomEdge[x - l].*member);
+				const double corners = (1 - u) * (1 - v) * (topEdge.front().*member) + u * (1 - v) * (topEdge.back().*member)
+					+ (1 - u) * v * (bottomEdge.front().*member) + u * v * (bottomEdge.back().*member);
+				return std::clamp(static_cast<int>(std::lround(sides + ends - corners)), 0, 255);
+			};
+			image.setPixel(x, y, qRgba(channel(&Colour::r), channel(&Colour::g), channel(&Colour::b), qAlpha(image.pixel(x, y))));
+		}
+	}
+}
+
 /// Heroes III's gold bar, the Random Map Setup's "Show random maps" button (RANSHOW) with its words
 /// taken out as DMB's RanShowButton pieces are (AssetGenerator): the 21-pixel scrollwork ends, and one
 /// column of the brushed middle (110) repeated, at the launcher's button height
@@ -721,7 +779,7 @@ static QString gameFontStyle()
 	return style;
 }
 
-void LauncherTheme::applySidebarIcon(QToolButton * button, const std::string & defName, int cropX, int cropY, int cropW, int cropH)
+void LauncherTheme::applySidebarIcon(QToolButton * button, const std::string & defName, int holeX, int holeY, int holeW, int holeH)
 {
 	const AnimationPath path = AnimationPath::builtin("SPRITES/" + defName);
 	if(!CResourceHandler::get()->existsResource(path))
@@ -731,12 +789,15 @@ void LauncherTheme::applySidebarIcon(QToolButton * button, const std::string & d
 	// frame 3, the button's own "lit" colouring (wordlessBar reads the same frame for the gold bar
 	// itself): the most saturated of the four, closest to what a hovered main-menu button looks like
 	QImage frame = readH3DefFrame(bytes, data.second, 3).convertToFormat(QImage::Format_ARGB32);
-	if(frame.isNull() || cropX + cropW > frame.width() || cropY + cropH > frame.height())
+	if(frame.isNull() || holeX + holeW > frame.width() || holeY + holeH > frame.height())
 		return;
-	frame = frame.copy(cropX, cropY, cropW, cropH);
-	// the source is full painterly game art, cropped from a button several times a sidebar icon's own
-	// size; a straight crop reads as a soft, low-contrast blob at 40-48px, so push contrast and
-	// saturation before it ships this small (K's own screenshot review, September 28th)
+	// the whole button face, kept (never a crop that loses part of the image, K's standing rule this
+	// file records above coonsPatchInpaint): its own baked-in word sits in (holeX, holeY, holeW, holeH)
+	// and gets filled in from the real art surrounding it instead
+	coonsPatchInpaint(frame, holeX, holeY, holeX + holeW, holeY + holeH);
+	// the source is full painterly game art, several times a sidebar icon's own size; it reads as a
+	// soft, low-contrast blob at 40-48px, so push contrast and saturation before it ships this small
+	// (K's own screenshot review, September 28th)
 	constexpr double contrast = 1.35;
 	constexpr double saturation = 1.3;
 	for(int y = 0; y < frame.height(); ++y)

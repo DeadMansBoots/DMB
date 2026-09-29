@@ -40,5 +40,7 @@ namespace LauncherTheme
 	/// icons clash with the fantasy look). Left alone (keeping whatever icon MainWindow's own .ui gave
 	/// it) when there is nothing to read yet: DMB ships no game art of its own, so a player who has not
 	/// imported their files sees the same stock icon as before, same fallback leather/dark already use.
-	void applySidebarIcon(QToolButton * button, const std::string & defName, int cropX, int cropY, int cropW, int cropH);
+	/// The button's own baked-in word sits at (holeX, holeY, holeW, holeH); it is inpainted out rather
+	/// than cropped around, so the icon keeps the whole image (K's standing rule for this, same day).
+	void applySidebarIcon(QToolButton * button, const std::string & defName, int holeX, int holeY, int holeW, int holeH);
 }

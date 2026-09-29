@@ -104,11 +104,18 @@ MainWindow::MainWindow(QWidget * parent)
 	ui->startGameButton->setIcon(QIcon{":/icons/menu-game.png"});
 	// DMB: real game art in place of the stock icons above, where there is a game to read one from
 	// (Gemini's launcher feedback via K, September 28th: the stock icons clash with the fantasy
-	// look). "Game" keeps its own boots icon, already on-theme. Left for the Help sidebar icon:
-	// K's third source (a torn map with an X) hasn't been confirmed yet, none of the candidates
-	// checked so far (GTCAMPN, the campaign sub-menu's own buttons) show it.
-	LauncherTheme::applySidebarIcon(ui->modslistButton, "GTBACK", 15, 62, 97, 38);
-	LauncherTheme::applySidebarIcon(ui->settingsButton, "GTTUTOR", 48, 5, 110, 28);
+	// look). "Game" keeps its own boots icon, already on-theme. First tried as half-crops around
+	// GTBACK/GTTUTOR's own baked-in word; K rejected them on sight ("CUT IN HALF") and gave the
+	// standing rule now in this file's own CLAUDE.md: inpaint the word out, never crop around it.
+	// Mods (GTBACK, "BACK" at roughly (10,33) to (115,70)): ships. The word disappears into the
+	// skull pile and flames cleanly enough at 48-64px to read as a plain icon, no visible seam.
+	LauncherTheme::applySidebarIcon(ui->modslistButton, "GTBACK", 10, 33, 105, 37);
+	// Settings (GTTUTOR, "TUTORIAL") held back rather than shipped either inpainted or as-is: the
+	// word spans nearly the button's whole width, crossing both crossed scrolls and the bottle at
+	// once, so the same technique that reads fine on Mods leaves a much more obvious blur here, and
+	// the un-inpainted fallback would show the word "TUTORIAL" under a button labelled "Settings",
+	// its own separate problem regardless of image quality. Keeps the stock icon this function set
+	// for it above until a better source turns up.
 
 #ifndef VCMI_MOBILE
 	//load window settings
