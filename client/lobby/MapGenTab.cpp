@@ -183,7 +183,19 @@ MapGenTab::MapGenTab(const MapGeneratorInfo & info)
 			{
 				Settings coverage = persistentStorage.write["mapGen"]["params"]["waterCoverage"];
 				if(coverage->Float() == 0)
+				{
 					coverage->Float() = 0.2;
+					// DMB: writing the setting alone is not enough (K, live-testing, September 28th
+					// into 29th: "literally did nothing"). buildSlider (InterfaceObjectConfigurable.cpp)
+					// reads its bound setting only once, at construction, into its own fixed "start"
+					// position; nothing makes a CSlider notice a later external write to the same JSON
+					// path, only its own drag handler writes back out. Needs the same rebuild every
+					// other settings-driven mutation in this function already uses to make a changed
+					// value visible again. Proven against the real packaged build, September 29th: the
+					// slider and its own "20%" label move the moment content becomes Normal or Islands.
+					refreshPages();
+					updateMapInfoByHost();
+				}
 			}
 		}
 		if(boost::algorithm::starts_with(setting, "persistent:mapGen/"))
