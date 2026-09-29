@@ -1772,8 +1772,11 @@ void CObjectListWindow::init(std::shared_ptr<CIntObject> titleWidget_, std::stri
 	// but DMB's saved-preset dialog does not, and the text ran off both edges of the window (K,
 	// September 28th, live testing). Wrapped and bounded within the space above the list (which
 	// starts at y=151) instead; a _descr short enough to fit one line renders exactly as before,
-	// centered the same way.
-	descr = std::make_shared<CMultiLineLabel>(Rect(20, 106, pos.w - 40, 44), FONT_SMALL, ETextAlignment::CENTER, Colors::WHITE, _descr);
+	// centered the same way. The list's own slider sits at x=14+262=276 (its Rect below, `Point(14,
+	// ...)` for the list itself and `Rect(262, ...)` for the slider within it), overlapping a box
+	// that only cleared the window's own edges: the first found run still clipped under the
+	// scrollbar (K, same day, second look). 270 clears the slider with a couple of pixels to spare.
+	descr = std::make_shared<CMultiLineLabel>(Rect(20, 106, std::min(pos.w - 40, 270 - 20), 44), FONT_SMALL, ETextAlignment::CENTER, Colors::WHITE, _descr);
 	exit = std::make_shared<CButton>( Point(228, 402), AnimationPath::builtin(blue ? "MuBcanc" : "ICANCEL.DEF"), CButton::tooltip(), std::bind(&CObjectListWindow::exitPressed, this), EShortcut::GLOBAL_CANCEL);
 
 	if(titleWidget)
