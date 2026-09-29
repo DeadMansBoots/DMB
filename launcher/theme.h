@@ -9,7 +9,11 @@
  */
 #pragma once
 
+#include <string>
+
 class QString;
+class QIcon;
+class QToolButton;
 
 /// DMB: the launcher's look (K, September 26th), the setting launcher.theme:
 ///  - "leather": the leather Heroes III fills its windows with, read from the player's own game files
@@ -29,4 +33,12 @@ namespace LauncherTheme
 	/// (CSettingsView's category bar): reserve this now, rather than fight a layout already computed
 	/// to Qt's own narrower default once carving turns on.
 	int minimumCarvedButtonWidth(const QString & text);
+
+	/// `button`'s icon replaced with a crop of the game's own main-menu button art (SPRITES/<defName>,
+	/// its lit frame), for a sidebar icon that matches Heroes' own identity instead of a generic Qt
+	/// stock icon (Gemini's launcher feedback, K, September 28th: the puzzle-piece/wrench/question-mark
+	/// icons clash with the fantasy look). Left alone (keeping whatever icon MainWindow's own .ui gave
+	/// it) when there is nothing to read yet: DMB ships no game art of its own, so a player who has not
+	/// imported their files sees the same stock icon as before, same fallback leather/dark already use.
+	void applySidebarIcon(QToolButton * button, const std::string & defName, int cropX, int cropY, int cropW, int cropH);
 }

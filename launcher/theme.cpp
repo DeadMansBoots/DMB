@@ -26,6 +26,7 @@
 #include <QPushButton>
 #include <QStyleFactory>
 #include <QTimer>
+#include <QToolButton>
 
 #ifdef VCMI_WINDOWS
 #include <windows.h>
@@ -718,6 +719,42 @@ static QString gameFontStyle()
 	if(!title.family.isEmpty())
 		style += QString("QLabel[dmbSettingsTitle=\"true\"] { font-family: \"%1\"; font-size: %2px; }").arg(title.family).arg(title.height);
 	return style;
+}
+
+void LauncherTheme::applySidebarIcon(QToolButton * button, const std::string & defName, int cropX, int cropY, int cropW, int cropH)
+{
+	const AnimationPath path = AnimationPath::builtin("SPRITES/" + defName);
+	if(!CResourceHandler::get()->existsResource(path))
+		return;
+	const auto data = CResourceHandler::get()->load(path)->readAll();
+	const auto * bytes = reinterpret_cast<const ui8 *>(data.first.get());
+	// frame 3, the button's own "lit" colouring (wordlessBar reads the same frame for the gold bar
+	// itself): the most saturated of the four, closest to what a hovered main-menu button looks like
+	QImage frame = readH3DefFrame(bytes, data.second, 3).convertToFormat(QImage::Format_ARGB32);
+	if(frame.isNull() || cropX + cropW > frame.width() || cropY + cropH > frame.height())
+		return;
+	frame = frame.copy(cropX, cropY, cropW, cropH);
+	// the source is full painterly game art, cropped from a button several times a sidebar icon's own
+	// size; a straight crop reads as a soft, low-contrast blob at 40-48px, so push contrast and
+	// saturation before it ships this small (K's own screenshot review, September 28th)
+	constexpr double contrast = 1.35;
+	constexpr double saturation = 1.3;
+	for(int y = 0; y < frame.height(); ++y)
+	{
+		auto * line = reinterpret_cast<QRgb *>(frame.scanLine(y));
+		for(int x = 0; x < frame.width(); ++x)
+		{
+			const QRgb px = line[x];
+			const double gray = (qRed(px) + qGreen(px) + qBlue(px)) / 3.0;
+			const auto push = [&](int channel)
+			{
+				const double saturated = gray + (channel - gray) * saturation;
+				return std::clamp(static_cast<int>(std::lround((saturated - 128.0) * contrast + 128.0)), 0, 255);
+			};
+			line[x] = qRgba(push(qRed(px)), push(qGreen(px)), push(qBlue(px)), qAlpha(px));
+		}
+	}
+	button->setIcon(QIcon(QPixmap::fromImage(frame)));
 }
 
 int LauncherTheme::minimumCarvedButtonWidth(const QString & text)

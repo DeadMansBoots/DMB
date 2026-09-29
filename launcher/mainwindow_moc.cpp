@@ -102,6 +102,13 @@ MainWindow::MainWindow(QWidget * parent)
 	ui->settingsButton->setIcon(QIcon{":/icons/menu-settings.png"});
 	ui->aboutButton->setIcon(QIcon{":/icons/about-project.png"});
 	ui->startGameButton->setIcon(QIcon{":/icons/menu-game.png"});
+	// DMB: real game art in place of the stock icons above, where there is a game to read one from
+	// (Gemini's launcher feedback via K, September 28th: the stock icons clash with the fantasy
+	// look). "Game" keeps its own boots icon, already on-theme. Left for the Help sidebar icon:
+	// K's third source (a torn map with an X) hasn't been confirmed yet, none of the candidates
+	// checked so far (GTCAMPN, the campaign sub-menu's own buttons) show it.
+	LauncherTheme::applySidebarIcon(ui->modslistButton, "GTBACK", 15, 62, 97, 38);
+	LauncherTheme::applySidebarIcon(ui->settingsButton, "GTTUTOR", 48, 5, 110, 28);
 
 #ifndef VCMI_MOBILE
 	//load window settings
