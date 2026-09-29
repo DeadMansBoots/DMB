@@ -495,7 +495,7 @@ void MapGenTab::loadPreset()
 		ENGINE->statusbar()->write(tabText("presets.none"));
 		return;
 	}
-	ENGINE->windows().createAndPushWindow<CObjectListWindow>(names, nullptr, tabText("presets.loadTitle"), tabText("presets.loadHelp"),
+	auto window = std::make_shared<CObjectListWindow>(names, nullptr, tabText("presets.loadTitle"), tabText("presets.loadHelp"),
 		[this, names](int index)
 		{
 			if(index < 0 || index >= static_cast<int>(names.size()))
@@ -521,7 +521,26 @@ void MapGenTab::loadPreset()
 			loaded.replaceRawString(names[index]);
 			ENGINE->statusbar()->write(loaded.toString());
 			logGlobal->info("Map generator %s: settings loaded from %s", generator.name, path.string());
-		}, 0, std::vector<std::shared_ptr<IImage>>(), true);
+		}, 0, std::vector<std::shared_ptr<IImage>>(), true, false, true);
+	// DMB: "Delete Profile" (K, September 28th), the "remove" button CObjectListWindow builds when
+	// asked to; erases the saved file and reopens this same dialog so the list shows without it,
+	// the simplest correct refresh (this window has no public way to drop one of its own rows)
+	window->onDelete = [this, names](int index)
+	{
+		if(index < 0 || index >= static_cast<int>(names.size()))
+			return;
+		const auto path = presetFolder() / (names[index] + ".json");
+		boost::system::error_code ec;
+		boost::filesystem::remove(path, ec);
+
+		MetaString deleted;
+		deleted.appendRawString(tabText(ec ? "presets.deleteFailed" : "presets.deleted"));
+		deleted.replaceRawString(names[index]);
+		ENGINE->statusbar()->write(deleted.toString());
+		logGlobal->info("Map generator %s: settings %s from %s", generator.name, ec ? "not deleted" : "deleted", path.string());
+		loadPreset();
+	};
+	ENGINE->windows().pushWindow(window);
 }
 
 void MapGenTab::clearCustomSize()

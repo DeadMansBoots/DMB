@@ -1715,7 +1715,7 @@ void CObjectListWindow::CItem::showPopupWindow(const Point & cursorPosition)
 		parent->onPopup(where);
 }
 
-CObjectListWindow::CObjectListWindow(const std::vector<int> & _items, std::shared_ptr<CIntObject> titleWidget_, std::string _title, std::string _descr, std::function<void(int)> Callback, size_t initialSelection, std::vector<std::shared_ptr<IImage>> images, bool searchBoxEnabled, bool blue)
+CObjectListWindow::CObjectListWindow(const std::vector<int> & _items, std::shared_ptr<CIntObject> titleWidget_, std::string _title, std::string _descr, std::function<void(int)> Callback, size_t initialSelection, std::vector<std::shared_ptr<IImage>> images, bool searchBoxEnabled, bool blue, bool deletable)
 	: CWindowObject(PLAYER_COLORED, ImagePath::builtin(blue ? "TownPortalBackgroundBlue" : "TPGATE")),
 	onSelect(Callback),
 	selected(initialSelection),
@@ -1735,11 +1735,11 @@ CObjectListWindow::CObjectListWindow(const std::vector<int> & _items, std::share
 	}
 	itemsVisible = items;
 
-	init(titleWidget_, _title, _descr, searchBoxEnabled, blue);
+	init(titleWidget_, _title, _descr, searchBoxEnabled, blue, deletable);
 	list->scrollTo(std::min(static_cast<int>(initialSelection + 4), static_cast<int>(items.size() - 1))); // 4 is for centering (list have 9 elements)
 }
 
-CObjectListWindow::CObjectListWindow(const std::vector<std::string> & _items, std::shared_ptr<CIntObject> titleWidget_, std::string _title, std::string _descr, std::function<void(int)> Callback, size_t initialSelection, std::vector<std::shared_ptr<IImage>> images, bool searchBoxEnabled, bool blue)
+CObjectListWindow::CObjectListWindow(const std::vector<std::string> & _items, std::shared_ptr<CIntObject> titleWidget_, std::string _title, std::string _descr, std::function<void(int)> Callback, size_t initialSelection, std::vector<std::shared_ptr<IImage>> images, bool searchBoxEnabled, bool blue, bool deletable)
 	: CWindowObject(PLAYER_COLORED, ImagePath::builtin(blue ? "TownPortalBackgroundBlue" : "TPGATE")),
 	onSelect(Callback),
 	selected(initialSelection),
@@ -1759,11 +1759,11 @@ CObjectListWindow::CObjectListWindow(const std::vector<std::string> & _items, st
 	}
 	itemsVisible = items;
 
-	init(titleWidget_, _title, _descr, searchBoxEnabled, blue);
+	init(titleWidget_, _title, _descr, searchBoxEnabled, blue, deletable);
 	list->scrollTo(std::min(static_cast<int>(initialSelection + 4), static_cast<int>(items.size() - 1))); // 4 is for centering (list have 9 elements)
 }
 
-void CObjectListWindow::init(std::shared_ptr<CIntObject> titleWidget_, std::string _title, std::string _descr, bool searchBoxEnabled, bool blue)
+void CObjectListWindow::init(std::shared_ptr<CIntObject> titleWidget_, std::string _title, std::string _descr, bool searchBoxEnabled, bool blue, bool deletable)
 {
 	titleWidget = titleWidget_;
 
@@ -1793,6 +1793,15 @@ void CObjectListWindow::init(std::shared_ptr<CIntObject> titleWidget_, std::stri
 
 	ok = std::make_shared<CButton>(Point(15, 402), AnimationPath::builtin(blue ? "MuBchck" : "IOKAY.DEF"), CButton::tooltip(), std::bind(&CObjectListWindow::elementSelected, this), EShortcut::GLOBAL_ACCEPT);
 	ok->block(!list->size());
+
+	// DMB: an optional third button between ok and exit, for a caller a player can delete an entry
+	// from (K, September 28th: "Delete Profile" for the saved map-generator presets)
+	if(deletable)
+	{
+		remove = std::make_shared<CButton>(Point(121, 409), AnimationPath::builtin("SPRITES/MapGenButton80"), CButton::tooltip(), std::bind(&CObjectListWindow::deletePressed, this));
+		remove->setTextOverlay(LIBRARY->generaltexth->translate("vcmi.dmb.objectList.delete"), FONT_SMALL, Colors::WHITE);
+		remove->block(!list->size());
+	}
 
 	if(!searchBoxEnabled)
 		return;
@@ -1912,9 +1921,20 @@ void CObjectListWindow::exitPressed()
 		toCall();
 }
 
+void CObjectListWindow::deletePressed()
+{
+	std::function<void(int)> toCall = onDelete;//save
+	int where = itemsVisible[selected].first;      //required variables
+	close();//then destroy window
+	if(toCall)
+		toCall(where);
+}
+
 void CObjectListWindow::changeSelection(size_t which)
 {
 	ok->block(false);
+	if(remove)
+		remove->block(false);
 	if(selected == which)
 		return;
 

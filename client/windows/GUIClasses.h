@@ -199,6 +199,7 @@ class CObjectListWindow : public CWindowObject
 	std::shared_ptr<CListBox> list;
 	std::shared_ptr<CButton> ok;
 	std::shared_ptr<CButton> exit;
+	std::shared_ptr<CButton> remove; // DMB: optional third button, "deletable"; "delete" is a keyword
 
 	std::shared_ptr<CTextInput> searchBox;
 	std::shared_ptr<TransparentFilledRectangle> searchBoxRectangle;
@@ -207,22 +208,24 @@ class CObjectListWindow : public CWindowObject
 	std::vector< std::pair<int, std::string> > items; //all items present in list
 	std::vector< std::pair<int, std::string> > itemsVisible; //visible items present in list
 
-	void init(std::shared_ptr<CIntObject> titleWidget_, std::string _title, std::string _descr, bool searchBoxEnabled, bool blue);
+	void init(std::shared_ptr<CIntObject> titleWidget_, std::string _title, std::string _descr, bool searchBoxEnabled, bool blue, bool deletable);
 	void trimTextIfTooWide(std::string & text, bool preserveCountSuffix) const; // trim item's text to fit within window's width
 	void itemsSearchCallback(const std::string & text);
 	void exitPressed();
+	void deletePressed(); // DMB: "remove" button pressed, closes the window like exitPressed does
 public:
 	size_t selected;//index of currently selected item
 
 	std::function<void()> onExit;//optional exit callback
 	std::function<void(int)> onPopup;//optional popup callback
 	std::function<void(int)> onClicked;//optional if clicked on item callback
+	std::function<void(int)> onDelete;//DMB: optional "remove" button callback, returns id of selected item; only asked for when "deletable" is set, since it is otherwise never built
 
 	/// Callback will be called when OK button is pressed, returns id of selected item. initState = initially selected item
 	/// Image can be nullptr
 	///item names will be taken from map objects
-	CObjectListWindow(const std::vector<int> &_items, std::shared_ptr<CIntObject> titleWidget_, std::string _title, std::string _descr, std::function<void(int)> Callback, size_t initialSelection = 0, std::vector<std::shared_ptr<IImage>> images = {}, bool searchBoxEnabled = false, bool blue = false);
-	CObjectListWindow(const std::vector<std::string> &_items, std::shared_ptr<CIntObject> titleWidget_, std::string _title, std::string _descr, std::function<void(int)> Callback, size_t initialSelection = 0, std::vector<std::shared_ptr<IImage>> images = {}, bool searchBoxEnabled = false, bool blue = false);
+	CObjectListWindow(const std::vector<int> &_items, std::shared_ptr<CIntObject> titleWidget_, std::string _title, std::string _descr, std::function<void(int)> Callback, size_t initialSelection = 0, std::vector<std::shared_ptr<IImage>> images = {}, bool searchBoxEnabled = false, bool blue = false, bool deletable = false);
+	CObjectListWindow(const std::vector<std::string> &_items, std::shared_ptr<CIntObject> titleWidget_, std::string _title, std::string _descr, std::function<void(int)> Callback, size_t initialSelection = 0, std::vector<std::shared_ptr<IImage>> images = {}, bool searchBoxEnabled = false, bool blue = false, bool deletable = false);
 
 	std::shared_ptr<CIntObject> genItem(size_t index);
 	void elementSelected();//call callback and close this window
