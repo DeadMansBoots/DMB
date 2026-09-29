@@ -46,7 +46,13 @@ private:
 	// own headline sits (its first row of settings is lower: config/widgets/randomMapTab.json)
 	static constexpr int MODE_ARROW_LEFT = 66;
 	static constexpr int MODE_ARROW_RIGHT = 362;
-	static constexpr int MODE_ARROW_TOP = 30;
+	// K, September 29th: "arrows and omni map gen text still sitting on the bottom of their box". Measured at
+	// his screen (3440x1440, UI 200%), in this layout's pixels: the box is 22 to 47 (centre 34.5); the arrows'
+	// gold glyph stood 33.5 to 41.5 and the name's capitals 35.5 to 45.5, both low, the descender of the "p"
+	// below the box's edge. The arrows now stand with their glyph centred at 34.5, and the name's centre line
+	// sits where its capitals centre there too (they stand 2.5 below it)
+	static constexpr int MODE_ARROW_TOP = 27;
+	static constexpr int MODE_NAME_MIDDLE = 32;
 	static constexpr int MODE_NAME_CENTRE = 222;
 	std::shared_ptr<CButton> modePrevious;
 	std::shared_ptr<CButton> modeNext;

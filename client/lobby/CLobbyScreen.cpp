@@ -124,7 +124,7 @@ CLobbyScreen::CLobbyScreen(ESelectionScreen screenType, bool hideScreen)
 			const auto help = CButton::tooltipLocalized("vcmi.dmb.randomMode");
 			modePrevious = std::make_shared<CButton>(Point(MODE_ARROW_LEFT, MODE_ARROW_TOP), AnimationPath::builtin("SCNRBLF"), help, [this]() { stepRandomMode(-1); });
 			modeNext = std::make_shared<CButton>(Point(MODE_ARROW_RIGHT, MODE_ARROW_TOP), AnimationPath::builtin("SCNRBRT"), help, [this]() { stepRandomMode(1); });
-			modeName = std::make_shared<CLabel>(MODE_NAME_CENTRE, MODE_ARROW_TOP + 8, FONT_BIG, ETextAlignment::CENTER, Colors::YELLOW, "");
+			modeName = std::make_shared<CLabel>(MODE_NAME_CENTRE, MODE_NAME_MIDDLE, FONT_BIG, ETextAlignment::CENTER, Colors::YELLOW, "");
 			updateModeBar();
 			// a tab that repaints itself whole (a generator's page opened) would paint its background over
 			// the bar: the lobby repaints instead, the bar last
@@ -330,8 +330,8 @@ void CLobbyScreen::updateModeBar()
 	constexpr int arrowWidth = 16;
 	const int halfName = static_cast<int>(modeName->getWidth() + 1) / 2;
 	const Point namePos = modeName->pos.topLeft();
-	modePrevious->moveTo(namePos + Point(-halfName - nameArrowGap - arrowWidth, -8));
-	modeNext->moveTo(namePos + Point(halfName + nameArrowGap, -8));
+	modePrevious->moveTo(namePos + Point(-halfName - nameArrowGap - arrowWidth, MODE_ARROW_TOP - MODE_NAME_MIDDLE));
+	modeNext->moveTo(namePos + Point(halfName + nameArrowGap, MODE_ARROW_TOP - MODE_NAME_MIDDLE));
 	// VCMI's random map window names itself in the headline where the mode's name goes; the mode's
 	// name takes its place while the arrows show
 	tabRand->showHeadline(!shown);
