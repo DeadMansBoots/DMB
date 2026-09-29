@@ -171,6 +171,17 @@ CModListView::CModListView(QWidget * parent)
 	ui->updateButton->setIcon(QIcon{":/icons/mod-update.png"});
 	ui->installButton->setIcon(QIcon{":/icons/mod-download.png"});
 
+	// K, September 29th: "On the mod settings pages, the disable and uninstall button need to be the same
+	// standard vertical size". A button that carves its word (DMB's look) is shorter than one that shows its
+	// plain word beside its icon (Uninstall's does not fit carved), so each stood as high as its own content.
+	// All five stand as high as the tallest, taken now, before any look has carved a word.
+	const QList<QPushButton *> actionButtons = {ui->updateButton, ui->uninstallButton, ui->enableButton, ui->disableButton, ui->installButton};
+	int actionHeight = 0;
+	for(QPushButton * button : actionButtons)
+		actionHeight = std::max(actionHeight, button->sizeHint().height());
+	for(QPushButton * button : actionButtons)
+		button->setFixedHeight(actionHeight);
+
 	ui->splitter->setStyleSheet("QSplitter::handle {background: palette('window');}");
 
 	disableModInfo();

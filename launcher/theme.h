@@ -14,6 +14,7 @@
 class QString;
 class QIcon;
 class QToolButton;
+class QPushButton;
 
 /// DMB: the launcher's look (K, September 26th), the setting launcher.theme:
 ///  - "leather": the leather Heroes III fills its windows with, read from the player's own game files
@@ -33,6 +34,13 @@ namespace LauncherTheme
 	/// (CSettingsView's category bar): reserve this now, rather than fight a layout already computed
 	/// to Qt's own narrower default once carving turns on.
 	int minimumCarvedButtonWidth(const QString & text);
+
+	/// `button`'s text, for a button the look may carve. A carved button shows its word as its icon and keeps its
+	/// text empty; a plain setText puts the plain text back beside the carving (K, September 29th, the Settings
+	/// page's category buttons: "as soon as you hit a button, the buttons all get wider, and the system font
+	/// text comes back"). Here it stays carved, the word replaced if it changed; a button that is not carved
+	/// takes the text as setText does.
+	void setButtonText(QPushButton * button, const QString & text);
 
 	/// `button`'s icon replaced with a crop of the game's own main-menu button art (SPRITES/<defName>,
 	/// its lit frame), for a sidebar icon that matches Heroes' own identity instead of a generic Qt

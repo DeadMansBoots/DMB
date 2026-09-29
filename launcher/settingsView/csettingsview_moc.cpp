@@ -681,7 +681,7 @@ void CSettingsView::updateCategoryButtons()
 	{
 		const bool shown = std::any_of(category.widgets.begin(), category.widgets.end(), [](QWidget * widget) { return !widget->isHidden(); });
 		category.button->setVisible(shown);
-		category.button->setText(category.header->text());
+		LauncherTheme::setButtonText(category.button, category.header->text());
 	}
 	if(current < 0 || current >= static_cast<int>(categories.size()) || categories[current].button->isHidden())
 	{
@@ -898,13 +898,13 @@ void CSettingsView::loadTranslation()
 	if (translationStatus == ETranslationStatus::DISABLED)
 	{
 		ui->labelTranslationStatus->setText(tr("Disabled"));
-		ui->pushButtonTranslation->setText(tr("Enable"));
+		LauncherTheme::setButtonText(ui->pushButtonTranslation, tr("Enable"));
 	}
 
 	if (translationStatus == ETranslationStatus::NOT_INSTALLLED)
 	{
 		ui->labelTranslationStatus->setText(tr("Not Installed"));
-		ui->pushButtonTranslation->setText(tr("Install"));
+		LauncherTheme::setButtonText(ui->pushButtonTranslation, tr("Install"));
 	}
 }
 

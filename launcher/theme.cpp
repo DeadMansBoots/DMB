@@ -820,6 +820,23 @@ void LauncherTheme::applySidebarIcon(QToolButton * button, const std::string & d
 	button->setIcon(QIcon(QPixmap::fromImage(frame)));
 }
 
+void LauncherTheme::setButtonText(QPushButton * button, const QString & text)
+{
+	const QVariant stored = button->property("dmbCarvedFrom");
+	if(!stored.isValid())
+	{
+		button->setText(text); // never seen by the carving: a plain button
+		return;
+	}
+	const bool carved = button->text().isEmpty() && !button->icon().isNull();
+	if(carved && stored.toString() == text)
+		return; // the word it already carries
+	button->setProperty("dmbCarvedFrom", text);
+	if(!carved)
+		button->setText(text);
+	applyCarvedButtonWord(button, darkFrames);
+}
+
 int LauncherTheme::minimumCarvedButtonWidth(const QString & text)
 {
 	const QImage carved = carvedButtonWord(text);
