@@ -18,6 +18,7 @@
 
 #include "../modManager/cmodlistview_moc.h"
 #include "../modManager/hdextractor.h"
+#include "../theme.h"
 
 #include "../../lib/filesystem/Filesystem.h"
 #include "../../lib/VCMIDirs.h"
@@ -43,6 +44,24 @@ StartGameTab::StartGameTab(QWidget * parent)
 	ui->buttonGameResume->setIcon(QIcon{":/icons/menu-game.png"}); //TODO: different icon?
 	ui->buttonGameStart->setIcon(QIcon{":/icons/menu-game.png"});
 	ui->buttonGameEditor->setIcon(QIcon{":/icons/menu-editor.png"});
+
+	// DMB: same shape of gap the Settings category bar had, flagged but not chased down during that
+	// fix (September 28th): "Rename Current Preset" never carved, unlike "Export to Clipboard"/
+	// "Create New Preset" right above it in the same column. Qt sizes the grid column to the widest
+	// button in its OWN compact font, and the carved (game bitmap) font is wider per letter, so a
+	// shorter Qt label can still lose its own carved word to a narrower column than a longer one gave
+	// it. Reserve the widest CARVED requirement across the whole preset-button group as each one's
+	// own minimum width.
+	{
+		QPushButton * const presetButtons[] = {ui->buttonPresetExport, ui->buttonPresetNew,
+			ui->buttonPresetDelete, ui->buttonPresetImport, ui->buttonPresetRename};
+		int widestCarved = 0;
+		for(QPushButton * button : presetButtons)
+			widestCarved = std::max(widestCarved, LauncherTheme::minimumCarvedButtonWidth(button->text()));
+		if(widestCarved > 0)
+			for(QPushButton * button : presetButtons)
+				button->setMinimumWidth(widestCarved);
+	}
 
 	refreshState();
 
