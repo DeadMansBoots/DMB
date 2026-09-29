@@ -6,7 +6,9 @@ doing something similar. It grows: each time a mod needs a hook nobody planned f
 added to DMB and written down here, with the addon API level that brings it.
 
 Layouts are VCMI's configurable widgets ([Configurable_Widgets.md](Configurable_Widgets.md)). Mods
-that bring code, AI plugins and map generators, are in [DMB_Addons.md](DMB_Addons.md).
+that bring code, AI plugins and map generators, are in [DMB_Addons.md](DMB_Addons.md). A map
+generator mod's own tab, and the golden arrows that switch between it and VCMI's own random map, are
+a separate contract: [DMB_Map_Generation_Modes.md](DMB_Map_Generation_Modes.md).
 
 ## The addon API level
 
