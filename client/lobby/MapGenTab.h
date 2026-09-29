@@ -55,10 +55,17 @@ class MapGenTab : public InterfaceObjectConfigurable
 	/// re-entry guard for the generator child, shared with its completion
 	/// dispatch so it clears even if the tab is gone
 	std::shared_ptr<bool> generating;
+	/// lives as long as the tab does: a rebuild of the pages that waits for the click that asked for
+	/// it to end (refreshPagesAfterClick) holds a weak reference to it, to know the tab is still there
+	std::shared_ptr<bool> alive = std::make_shared<bool>(true);
+	bool refreshQueued = false;
 
 	std::shared_ptr<CIntObject> createPage(size_t index);
 	void openPage(size_t index);
 	void refreshPages();
+	/// refreshPages() for a change made by a widget on the page itself, which it cannot free while
+	/// that widget's own handlers run
+	void refreshPagesAfterClick();
 	void resetToDefaults();
 	void chooseTemplate();
 	/// VCMI's team grid (callback chooseMapGenTeams), stored as map/teams

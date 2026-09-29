@@ -193,8 +193,12 @@ MapGenTab::MapGenTab(const MapGeneratorInfo & info)
 					// other settings-driven mutation in this function already uses to make a changed
 					// value visible again. Proven against the real packaged build, September 29th: the
 					// slider and its own "20%" label move the moment content becomes Normal or Islands.
-					refreshPages();
-					updateMapInfoByHost();
+					// Not from inside this call, though: the toggle that made it is on the page being
+					// rebuilt, and this closure is a copy held by that page, so rebuilding here frees
+					// them while they still run. It crashed the game the same day at 150% scale (an access
+					// violation reading 0xFFFFFFFFFFFFFFFF right after the rebuild); at 100% the freed
+					// memory happened to hold. The map info goes out below, as for every setting.
+					refreshPagesAfterClick();
 				}
 			}
 		}
@@ -301,6 +305,24 @@ void MapGenTab::refreshPages()
 	if(layoutPages)
 		layoutPages->refresh();
 	CIntObject::redraw();
+}
+
+void MapGenTab::refreshPagesAfterClick()
+{
+	// for a change a widget of the page itself made: the engine runs this once the click has finished
+	// (an SDL user event queued behind it), when nothing of the page is still executing; the tab may be
+	// gone by then (the lobby closed), which `alive` tells
+	if(refreshQueued)
+		return;
+	refreshQueued = true;
+	const std::weak_ptr<bool> tabAlive = alive;
+	ENGINE->dispatchMainThread([this, tabAlive]()
+	{
+		if(tabAlive.expired())
+			return;
+		refreshQueued = false;
+		refreshPages();
+	});
 }
 
 const MapGeneratorInfo & MapGenTab::getGenerator() const
