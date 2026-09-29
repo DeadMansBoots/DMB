@@ -740,7 +740,7 @@ Exkluzív teljes képernyő - a játék teljes képernyős módban fut, és az �
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1275"/>
-        <source>Input - Touchscreen</source>
+        <source>Touchscreen Input</source>
         <translation>Bemenet - Érintőképernyő</translation>
     </message>
     <message>
@@ -790,7 +790,7 @@ Exkluzív teljes képernyő - a játék teljes képernyős módban fut, és az �
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1260"/>
-        <source>Input - Mouse</source>
+        <source>Mouse Input</source>
         <translation>Bemenet - Egér</translation>
     </message>
     <message>
@@ -810,7 +810,7 @@ Exkluzív teljes képernyő - a játék teljes képernyős módban fut, és az �
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1205"/>
-        <source>Input - Controller</source>
+        <source>Controller Input</source>
         <translation>Bemenet - Vezérlő</translation>
     </message>
     <message>

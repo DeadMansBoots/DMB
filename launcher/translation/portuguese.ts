@@ -741,7 +741,7 @@ Modo de tela cheia exclusivo - o jogo cobrirá toda a sua tela e usará a resolu
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1275"/>
-        <source>Input - Touchscreen</source>
+        <source>Touchscreen Input</source>
         <translation>Entrada - tela de toque</translation>
     </message>
     <message>
@@ -791,7 +791,7 @@ Modo de tela cheia exclusivo - o jogo cobrirá toda a sua tela e usará a resolu
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1260"/>
-        <source>Input - Mouse</source>
+        <source>Mouse Input</source>
         <translation>Entrada - mouse</translation>
     </message>
     <message>
@@ -811,7 +811,7 @@ Modo de tela cheia exclusivo - o jogo cobrirá toda a sua tela e usará a resolu
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1205"/>
-        <source>Input - Controller</source>
+        <source>Controller Input</source>
         <translation>Entrada - controle</translation>
     </message>
     <message>

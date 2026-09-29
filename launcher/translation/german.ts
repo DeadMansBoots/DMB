@@ -748,7 +748,7 @@ Exklusiver Vollbildmodus - das Spiel nimmt den gesamten Bildschirm ein und verwe
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1275"/>
-        <source>Input - Touchscreen</source>
+        <source>Touchscreen Input</source>
         <translation>Eingabe - Touchscreen</translation>
     </message>
     <message>
@@ -798,7 +798,7 @@ Exklusiver Vollbildmodus - das Spiel nimmt den gesamten Bildschirm ein und verwe
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1260"/>
-        <source>Input - Mouse</source>
+        <source>Mouse Input</source>
         <translation>Eingabe - Maus</translation>
     </message>
     <message>
@@ -818,7 +818,7 @@ Exklusiver Vollbildmodus - das Spiel nimmt den gesamten Bildschirm ein und verwe
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1205"/>
-        <source>Input - Controller</source>
+        <source>Controller Input</source>
         <translation>Eingabe - Controller</translation>
     </message>
     <message>

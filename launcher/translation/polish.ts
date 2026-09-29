@@ -749,7 +749,7 @@ Tryb pełnoekranowy - gra zajmie cały ekran i będzie korzystać z wybranej roz
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1275"/>
-        <source>Input - Touchscreen</source>
+        <source>Touchscreen Input</source>
         <translation>Sterowanie - Ekran dotykowy</translation>
     </message>
     <message>
@@ -799,7 +799,7 @@ Tryb pełnoekranowy - gra zajmie cały ekran i będzie korzystać z wybranej roz
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1260"/>
-        <source>Input - Mouse</source>
+        <source>Mouse Input</source>
         <translation>Sterowanie - Mysz</translation>
     </message>
     <message>
@@ -819,7 +819,7 @@ Tryb pełnoekranowy - gra zajmie cały ekran i będzie korzystać z wybranej roz
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1205"/>
-        <source>Input - Controller</source>
+        <source>Controller Input</source>
         <translation>Sterowanie - Kontroler</translation>
     </message>
     <message>

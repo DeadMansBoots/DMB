@@ -743,7 +743,7 @@ Exklusivt helskärmsläge - spelet täcker hela skärmen och använder den valda
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1275"/>
-        <source>Input - Touchscreen</source>
+        <source>Touchscreen Input</source>
         <translation>Ingång/indata - Pekskärm</translation>
     </message>
     <message>
@@ -793,7 +793,7 @@ Exklusivt helskärmsläge - spelet täcker hela skärmen och använder den valda
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1260"/>
-        <source>Input - Mouse</source>
+        <source>Mouse Input</source>
         <translation>Ingång/indata - Mus</translation>
     </message>
     <message>
@@ -813,7 +813,7 @@ Exklusivt helskärmsläge - spelet täcker hela skärmen och använder den valda
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1205"/>
-        <source>Input - Controller</source>
+        <source>Controller Input</source>
         <translation>Ingång/indata - Kontroll</translation>
     </message>
     <message>

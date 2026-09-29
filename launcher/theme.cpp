@@ -399,9 +399,11 @@ const GameButtonLettering::Lettering & qtButtonLettering()
 /// black or white share of each pixel from the harvest painted on. Null when the lettering could not be
 /// read (the language is not English, or the buttons it is read from are missing) or `text` needs a
 /// letter the harvest lacks (J, Q, Z, digits, punctuation): the button's own plain text stays, unchanged.
-/// A hyphen is the one punctuation mark this drops rather than refuses on ("Input - Mouse" carves as
-/// "INPUT MOUSE"; the harvest has no glyph for it and Settings' own category names are the only
-/// launcher text that uses one), since losing a hyphen reads fine where losing carving altogether does not.
+/// A hyphen is the one punctuation mark this drops rather than refuses on: the harvest has no glyph for it,
+/// and a translated Settings header such as German "Eingabe - Maus" still carves, as "EINGABE MAUS", where
+/// losing carving altogether would read worse. The English headers carry none since K's correction of
+/// September 29th ("there is no hyphen 'MOUSE INPUT'"): they are "Mouse Input", "Controller Input" and
+/// "Touchscreen Input".
 QImage carvedButtonWord(const QString & text)
 {
 	const GameButtonLettering::Lettering & lettering = qtButtonLettering();

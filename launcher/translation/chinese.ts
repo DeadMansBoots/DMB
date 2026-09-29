@@ -747,7 +747,7 @@ Fullscreen Exclusive Mode - the game will cover the entirety of your screen and 
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1275"/>
-        <source>Input - Touchscreen</source>
+        <source>Touchscreen Input</source>
         <translation>输入 - 触屏</translation>
     </message>
     <message>
@@ -797,7 +797,7 @@ Fullscreen Exclusive Mode - the game will cover the entirety of your screen and 
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1260"/>
-        <source>Input - Mouse</source>
+        <source>Mouse Input</source>
         <translation>输入 - 鼠标</translation>
     </message>
     <message>
@@ -817,7 +817,7 @@ Fullscreen Exclusive Mode - the game will cover the entirety of your screen and 
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1205"/>
-        <source>Input - Controller</source>
+        <source>Controller Input</source>
         <translation>输入 - 控制器</translation>
     </message>
     <message>

@@ -739,7 +739,7 @@ Toàn màn hình riêng biệt - Sử dụng kích thước màn hình do bạn 
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1275"/>
-        <source>Input - Touchscreen</source>
+        <source>Touchscreen Input</source>
         <translation>Ngõ vào - Cảm ứng</translation>
     </message>
     <message>
@@ -789,7 +789,7 @@ Toàn màn hình riêng biệt - Sử dụng kích thước màn hình do bạn 
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1260"/>
-        <source>Input - Mouse</source>
+        <source>Mouse Input</source>
         <translation>Ngõ vào - Chuột</translation>
     </message>
     <message>
@@ -809,7 +809,7 @@ Toàn màn hình riêng biệt - Sử dụng kích thước màn hình do bạn 
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1205"/>
-        <source>Input - Controller</source>
+        <source>Controller Input</source>
         <translation>Ngõ vào - Điều khiển</translation>
     </message>
     <message>

@@ -744,7 +744,7 @@ Režim celé obrazovky - hra pokryje celou vaši obrazovku a použije vybrané r
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1275"/>
-        <source>Input - Touchscreen</source>
+        <source>Touchscreen Input</source>
         <translation>Vstup - dotyková obrazovka</translation>
     </message>
     <message>
@@ -794,7 +794,7 @@ Režim celé obrazovky - hra pokryje celou vaši obrazovku a použije vybrané r
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1260"/>
-        <source>Input - Mouse</source>
+        <source>Mouse Input</source>
         <translation>Vstup - Myš</translation>
     </message>
     <message>
@@ -814,7 +814,7 @@ Režim celé obrazovky - hra pokryje celou vaši obrazovku a použije vybrané r
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1205"/>
-        <source>Input - Controller</source>
+        <source>Controller Input</source>
         <translation>Vstup - ovladač</translation>
     </message>
     <message>

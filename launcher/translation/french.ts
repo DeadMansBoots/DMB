@@ -737,7 +737,7 @@ Mode Plein Écran Exclusif - le jeu couvrira entièrement votre écran et utilis
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1275"/>
-        <source>Input - Touchscreen</source>
+        <source>Touchscreen Input</source>
         <translation>Entrée - Écran tactile</translation>
     </message>
     <message>
@@ -787,7 +787,7 @@ Mode Plein Écran Exclusif - le jeu couvrira entièrement votre écran et utilis
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1260"/>
-        <source>Input - Mouse</source>
+        <source>Mouse Input</source>
         <translation>Entrée - Sourie</translation>
     </message>
     <message>
@@ -807,7 +807,7 @@ Mode Plein Écran Exclusif - le jeu couvrira entièrement votre écran et utilis
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1205"/>
-        <source>Input - Controller</source>
+        <source>Controller Input</source>
         <translation>Entrée - Contrôleur</translation>
     </message>
     <message>

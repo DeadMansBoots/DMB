@@ -737,8 +737,8 @@ Modalità Schermo Intero Esclusiva - il gioco coprirà l&apos;intero schermo e u
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1275"/>
-        <source>Input - Touchscreen</source>
-        <translation>Input - Touchscreen</translation>
+        <source>Touchscreen Input</source>
+        <translation>Touchscreen Input</translation>
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1543"/>
@@ -787,8 +787,8 @@ Modalità Schermo Intero Esclusiva - il gioco coprirà l&apos;intero schermo e u
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1260"/>
-        <source>Input - Mouse</source>
-        <translation>Input - Mouse</translation>
+        <source>Mouse Input</source>
+        <translation>Mouse Input</translation>
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="313"/>
@@ -807,8 +807,8 @@ Modalità Schermo Intero Esclusiva - il gioco coprirà l&apos;intero schermo e u
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1205"/>
-        <source>Input - Controller</source>
-        <translation>Input - Controller</translation>
+        <source>Controller Input</source>
+        <translation>Controller Input</translation>
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1301"/>

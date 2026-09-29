@@ -748,7 +748,7 @@ Modo Exclusivo de Pantalla Completa - el juego cubrir√° toda tu pantalla y usar√
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1275"/>
-        <source>Input - Touchscreen</source>
+        <source>Touchscreen Input</source>
         <translation>Entrada - Pantalla t√°ctil</translation>
     </message>
     <message>
@@ -798,7 +798,7 @@ Modo Exclusivo de Pantalla Completa - el juego cubrir√° toda tu pantalla y usar√
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1260"/>
-        <source>Input - Mouse</source>
+        <source>Mouse Input</source>
         <translation>Entrada - Rat√≥n</translation>
     </message>
     <message>
@@ -818,7 +818,7 @@ Modo Exclusivo de Pantalla Completa - el juego cubrir√° toda tu pantalla y usar√
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1205"/>
-        <source>Input - Controller</source>
+        <source>Controller Input</source>
         <translation>Entrada - Controlador</translation>
     </message>
     <message>

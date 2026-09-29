@@ -742,7 +742,7 @@ Ecran complet exclusiv - jocul va acoperi întregul ecran și va folosi rezoluț
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1275"/>
-        <source>Input - Touchscreen</source>
+        <source>Touchscreen Input</source>
         <translation>Input - Ecran tactil</translation>
     </message>
     <message>
@@ -792,8 +792,8 @@ Ecran complet exclusiv - jocul va acoperi întregul ecran și va folosi rezoluț
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1260"/>
-        <source>Input - Mouse</source>
-        <translation>Input - Mouse</translation>
+        <source>Mouse Input</source>
+        <translation>Mouse Input</translation>
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="313"/>
@@ -812,8 +812,8 @@ Ecran complet exclusiv - jocul va acoperi întregul ecran și va folosi rezoluț
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1205"/>
-        <source>Input - Controller</source>
-        <translation>Input - Controller</translation>
+        <source>Controller Input</source>
+        <translation>Controller Input</translation>
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1301"/>

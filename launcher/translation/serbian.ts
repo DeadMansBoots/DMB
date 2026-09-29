@@ -728,7 +728,7 @@ Fullscreen Exclusive Mode - the game will cover the entirety of your screen and 
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1275"/>
-        <source>Input - Touchscreen</source>
+        <source>Touchscreen Input</source>
         <translation type="unfinished">Унос - екран осетљив на додир</translation>
     </message>
     <message>
@@ -778,7 +778,7 @@ Fullscreen Exclusive Mode - the game will cover the entirety of your screen and 
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1260"/>
-        <source>Input - Mouse</source>
+        <source>Mouse Input</source>
         <translation type="unfinished">Унос - миш</translation>
     </message>
     <message>
@@ -798,7 +798,7 @@ Fullscreen Exclusive Mode - the game will cover the entirety of your screen and 
     </message>
     <message>
         <location filename="../settingsView/csettingsview_moc.ui" line="1205"/>
-        <source>Input - Controller</source>
+        <source>Controller Input</source>
         <translation type="unfinished">Улаз - Контролер</translation>
     </message>
     <message>
