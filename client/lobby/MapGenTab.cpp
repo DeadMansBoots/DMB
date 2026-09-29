@@ -89,6 +89,15 @@ public:
 /// the template a generator picks for itself from those that fit (OmniMapGen reads "random" so)
 static const std::string RANDOM_TEMPLATE = "random";
 
+/// OmniMapGen's Water page, as its own files number it (params/waterContent's stops, and its stockChoices.js
+/// applyWaterContent): None, Normal and Islands each stand for a level of the amount of water and, for
+/// Islands, a layout (params/waterShape stop 5, "Islands"); the amount is 20% for both Normal and Islands
+const int WATER_NONE = 0;
+const int WATER_NORMAL = 1;
+const int WATER_ISLANDS = 2;
+const double WATER_LEVEL = 0.2;
+const int WATER_SHAPE_ISLANDS = 5;
+
 /// One of the texts the tab itself shows: the mod's own wording ("vcmi.mapGen.<name>", from its
 /// translation) when it brings one, else DMB's generic text ("vcmi.dmb.mapGenerator.<name>"). The
 /// two never share a key, so the mod's wording wins whatever the mods' load order.
@@ -174,32 +183,40 @@ MapGenTab::MapGenTab(const MapGeneratorInfo & info)
 		}
 		if(setting == "persistent:mapGen/params/waterContent")
 		{
-			// stockChoices.js's applyWaterContent silently substitutes 20% coverage at generation
-			// time when Normal or Islands is picked and the slider is still at its own 0% default,
-			// but never tells the UI (MapGen Dev, September 28th); write the same substitution here
-			// so the slider shows what will actually be used, matching "only when still at 0" exactly
-			const int content = static_cast<int>(persistentStorage["mapGen"]["params"]["waterContent"].Integer());
-			if(content == 1 || content == 2)
+			// K, September 28th, and again on the 29th after two fixes that did not move it: "the old 'none'
+			// 'Normal' 'Islands' should automatically move the slider to where the correlatory original game
+			// water content level was". Each choice sets the levels the generator itself takes for it
+			// (stockChoices.js applyWaterContent, and the choice's own help text): None a dry map, Normal and
+			// Islands 20% water, Islands laid out as islands. Every time it is picked, whatever the slider was:
+			// a saved preset comes back with its own amount, so a rule that waited for 0% never fired for K, and
+			// None did nothing at all. Random leaves both as they are.
+			const JsonNode & params = persistentStorage["mapGen"]["params"];
+			const int content = static_cast<int>(params["waterContent"].Integer());
+			const double coverage = params["waterCoverage"].isNumber() ? params["waterCoverage"].Float() : 0;
+			const int shape = params["waterShape"].isNumber() ? static_cast<int>(params["waterShape"].Float()) : 0;
+			double wantedCoverage = coverage;
+			int wantedShape = shape;
+			if(content == WATER_NONE)
+				wantedCoverage = 0;
+			else if(content == WATER_NORMAL || content == WATER_ISLANDS)
+				wantedCoverage = WATER_LEVEL;
+			if(content == WATER_ISLANDS)
+				wantedShape = WATER_SHAPE_ISLANDS;
+			if(wantedCoverage != coverage || wantedShape != shape)
 			{
-				Settings coverage = persistentStorage.write["mapGen"]["params"]["waterCoverage"];
-				if(coverage->Float() == 0)
-				{
-					coverage->Float() = 0.2;
-					// DMB: writing the setting alone is not enough (K, live-testing, September 28th
-					// into 29th: "literally did nothing"). buildSlider (InterfaceObjectConfigurable.cpp)
-					// reads its bound setting only once, at construction, into its own fixed "start"
-					// position; nothing makes a CSlider notice a later external write to the same JSON
-					// path, only its own drag handler writes back out. Needs the same rebuild every
-					// other settings-driven mutation in this function already uses to make a changed
-					// value visible again. Proven against the real packaged build, September 29th: the
-					// slider and its own "20%" label move the moment content becomes Normal or Islands.
-					// Not from inside this call, though: the toggle that made it is on the page being
-					// rebuilt, and this closure is a copy held by that page, so rebuilding here frees
-					// them while they still run. It crashed the game the same day at 150% scale (an access
-					// violation reading 0xFFFFFFFFFFFFFFFF right after the rebuild); at 100% the freed
-					// memory happened to hold. The map info goes out below, as for every setting.
-					refreshPagesAfterClick();
-				}
+				Settings coverageSetting = persistentStorage.write["mapGen"]["params"]["waterCoverage"];
+				coverageSetting->Float() = wantedCoverage;
+				Settings shapeSetting = persistentStorage.write["mapGen"]["params"]["waterShape"];
+				shapeSetting->Integer() = wantedShape;
+				// Writing the settings is not enough: buildSlider (InterfaceObjectConfigurable.cpp) reads its
+				// bound setting once, at construction, into its own fixed "start" position, and nothing makes
+				// a CSlider notice a later write to the same JSON path (K, September 28th: "literally did
+				// nothing"). The page is built again to show them. Not from inside this call: the toggle that
+				// made it is on the page being rebuilt, and this closure is a copy held by that page, so
+				// rebuilding here frees them while they still run. That crashed the game at 150% scale (an
+				// access violation reading 0xFFFFFFFFFFFFFFFF right after the rebuild); at 100% the freed memory
+				// happened to hold. The map info goes out below, as for every setting.
+				refreshPagesAfterClick();
 			}
 		}
 		if(boost::algorithm::starts_with(setting, "persistent:mapGen/"))
