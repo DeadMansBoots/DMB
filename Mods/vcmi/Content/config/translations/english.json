@@ -1022,7 +1022,7 @@
 	"vcmi.dmb.mapGenerator.presets.saved" : "Settings saved as %s.",
 	"vcmi.dmb.mapGenerator.presets.failed" : "The settings could not be saved as %s.",
 	"vcmi.dmb.mapGenerator.presets.loadTitle" : "Saved settings",
-	"vcmi.dmb.mapGenerator.presets.loadHelp" : "Settings you saved before. The one you pick takes the place of the tab's.",
+	"vcmi.dmb.mapGenerator.presets.loadHelp" : "Pick the settings to load.",
 	"vcmi.dmb.mapGenerator.presets.loaded" : "Settings %s loaded.",
 	"vcmi.dmb.mapGenerator.presets.none" : "No saved settings yet: save some first.",
 	"vcmi.dmb.mapGenerator.presets.deleted" : "Settings %s deleted.",

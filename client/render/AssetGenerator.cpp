@@ -147,24 +147,25 @@ void AssetGenerator::initialize()
 		const std::string name = "RanButton" + std::to_string(width);
 		animationFiles[AnimationPath::builtin("SPRITES/" + name)] = createBlankButton(name, "RANWEAK", width, 6, {6, 15}, {70, 77});
 	}
-	for(int width : {337, 166})
+	// 120: the saved settings dialog's Delete button (K, September 29th: black lettering on gold, like the
+	// rest of the menus)
+	for(int width : {337, 166, 120})
 	{
 		const std::string name = "RanShowButton" + std::to_string(width);
 		animationFiles[AnimationPath::builtin("SPRITES/" + name)] = createBlankButton(name, "RANSHOW", width, 21, {110, 111}, {110, 111});
 	}
 	animationFiles[AnimationPath::builtin("SPRITES/MapGenButton190")] = createMapGenButton(190);
 	// DMB: map size buttons for generators with sizes past XL (K, September 27th: lettered to match the
-	// game's own). S to XL are the game's own buttons under the same set of names, so a layout names one
-	// set and needs no other mod's art.
-	// K, September 28th, comparing the row to H/XH/G/C: "surely we can do a better job of emulating
-	// the base text on those buttons" - these four keep their own real letter (enhanceOnly), which
-	// H/XH/G/C never had to begin with, but read flatter next to the synthesized four's deliberate
-	// shadow/highlight passes; the same passes now go over the real letter already there too, so
-	// nothing is erased or redrawn, just given the same dimensional look
-	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeS")] = createSizeButton("DmbSizeS", "RANSIZS", "S", 0, true);
-	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeM")] = createSizeButton("DmbSizeM", "RANSIZM", "M", 0, true);
-	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeL")] = createSizeButton("DmbSizeL", "RANSIZL", "L", 0, true);
-	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeXL")] = createSizeButton("DmbSizeXL", "RANSIZX", "XL", 0, true);
+	// game's own), every size from the one XL frame with its letters drawn in the game's own lettering.
+	// K, September 29th, looking at S, M, L and XL in the row: "the icons for the map sized under H look like
+	// trash. AGAIN, WE GENERATED H AND ABOVE, IT SHOULD BE FUCKING SIMPLE TO GENERATE THE ONES BELOW IT BASED
+	// ON THE SAME PROCEDURE". The first cuts kept the game's own S, M and L frames (stripes and corner marks
+	// behind the letter) and gave the real letter shadow passes, which doubled it; all eight are now the one
+	// procedure.
+	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeS")] = createSizeButton("DmbSizeS", "RANSIZX", "S");
+	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeM")] = createSizeButton("DmbSizeM", "RANSIZX", "M");
+	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeL")] = createSizeButton("DmbSizeL", "RANSIZX", "L");
+	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeXL")] = createSizeButton("DmbSizeXL", "RANSIZX", "XL");
 	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeH")] = createSizeButton("DmbSizeH", "RANSIZX", "H");
 	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeXH")] = createSizeButton("DmbSizeXH", "RANSIZX", "XH");
 	animationFiles[AnimationPath::builtin("SPRITES/DmbSizeG")] = createSizeButton("DmbSizeG", "RANSIZX", "G");
@@ -1309,10 +1310,9 @@ std::vector<std::vector<bool>> sizeLetters(const std::string & text, int widest)
 /// The XL button's frame on `canvas` with `text` lettered in place of XL: the gold area filled from its
 /// own edges (their colours blended across it, the dotted border's dots smoothed out), then the letters
 /// embossed as the game's are; a pressed frame's letters sit a pixel lower and to the right. `narrower`:
-/// how many columns the frame lost out of its middle. `enhanceOnly`: S/M/L/XL already carry their own
-/// real letter, correctly placed; skip erasing and redrawing it and only add the same shadow/highlight
-/// passes on top, so the real pixels stay but read as dimensional as H/XH/G/C's synthesized ones (K,
-/// September 28th: "surely we can do a better job of emulating the base text on those buttons").
+/// how many columns the frame lost out of its middle. `enhanceOnly`: keep the frame's own real letter and
+/// only add the shadow/highlight passes on top. Nothing asks for it now: S/M/L/XL were made so and K
+/// rejected them (September 29th: "IT SHOULD BE FUCKING SIMPLE"), and are lettered like H/XH/G/C.
 void letterSizeButton(Canvas & canvas, const std::string & text, bool pressed, int narrower = 0, bool enhanceOnly = false)
 {
 	// the pressed frame moves the whole face: find the dotted border, the brightest row near its place

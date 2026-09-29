@@ -90,8 +90,8 @@ private:
 	/// DMB: a map size button in the Random Map Setup's own style (RANSIZS..RANSIZX): `source`'s frames as
 	/// they are when `text` is empty, else the XL button with `text` lettered in place of its letters;
 	/// `width` other than 0 narrows the button to it, columns taken out of the middle of its gold face.
-	/// `enhanceOnly`: `source` already carries `text` as its own real letter (S/M/L/XL on their own
-	/// buttons); add the same shadow and highlight passes without erasing and redrawing the face.
+	/// `enhanceOnly`: `source` already carries `text` as its own real letter; add the same shadow and
+	/// highlight passes without erasing and redrawing the face (nothing asks for it now).
 	AnimationLayoutMap createSizeButton(const std::string & name, const std::string & source, const std::string & text, int width = 0, bool enhanceOnly = false);
 	CanvasPtr createGateListColored(PlayerColor color, PlayerColor backColor) const;
 	CanvasPtr createHeroSlotsColored(PlayerColor backColor) const;

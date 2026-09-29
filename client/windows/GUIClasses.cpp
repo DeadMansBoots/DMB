@@ -1798,8 +1798,11 @@ void CObjectListWindow::init(std::shared_ptr<CIntObject> titleWidget_, std::stri
 	// from (K, September 28th: "Delete Profile" for the saved map-generator presets)
 	if(deletable)
 	{
-		remove = std::make_shared<CButton>(Point(121, 409), AnimationPath::builtin("SPRITES/MapGenButton80"), CButton::tooltip(), std::bind(&CObjectListWindow::deletePressed, this));
-		remove->setTextOverlay(LIBRARY->generaltexth->translate("vcmi.dmb.objectList.delete"), FONT_SMALL, Colors::WHITE);
+		// K, September 29th: "the 'Delete' button should not be blue leather/marble on brown. that's hideos.
+		// Should be the black font on gold like the rest of the menus": the gold bar the tab's own buttons are
+		// (RANSHOW, generated at this width), the word engraved in the game's lettering
+		remove = std::make_shared<CButton>(Point(94, 398), AnimationPath::builtin("SPRITES/RanShowButton120"), CButton::tooltip(), std::bind(&CObjectListWindow::deletePressed, this));
+		remove->setOverlay(std::make_shared<CEngravedLabel>(0, 0, FONT_BIG, ETextAlignment::CENTER, LIBRARY->generaltexth->translate("vcmi.dmb.objectList.delete")));
 		remove->block(!list->size());
 	}
 
