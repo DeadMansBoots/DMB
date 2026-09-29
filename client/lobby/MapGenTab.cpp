@@ -172,6 +172,20 @@ MapGenTab::MapGenTab(const MapGeneratorInfo & info)
 			Settings size = persistentStorage.write["mapGen"]["map"]["size"];
 			size->Integer() = 0;
 		}
+		if(setting == "persistent:mapGen/params/waterContent")
+		{
+			// stockChoices.js's applyWaterContent silently substitutes 20% coverage at generation
+			// time when Normal or Islands is picked and the slider is still at its own 0% default,
+			// but never tells the UI (MapGen Dev, September 28th); write the same substitution here
+			// so the slider shows what will actually be used, matching "only when still at 0" exactly
+			const int content = static_cast<int>(persistentStorage["mapGen"]["params"]["waterContent"].Integer());
+			if(content == 1 || content == 2)
+			{
+				Settings coverage = persistentStorage.write["mapGen"]["params"]["waterCoverage"];
+				if(coverage->Float() == 0)
+					coverage->Float() = 0.2;
+			}
+		}
 		if(boost::algorithm::starts_with(setting, "persistent:mapGen/"))
 			updateMapInfoByHost();
 	};
