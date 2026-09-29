@@ -816,10 +816,18 @@ CLoadingScreen::CLoadingScreen(ImagePath background)
 			);
 	}
 
-	const auto& loadbarConfig = conf["loadbar"];
+	// DMB: the bar's settings sit under "loadbar" in the game's mainmenu.json, and straight under "loading" in
+	// the older form, with "name" one word. Tides of War's main menu mod has only that, and its file stands in
+	// for the game's whole (the file system gives the last mod's copy, no merge): the bar drew no block and
+	// the phase text sat at the window's centre (K, September 29th: "load screen text font is still not
+	// centered, and there was no load bar action")
+	const JsonNode & loadbarConfig = (!conf["loadbar"].isStruct() && conf["amount"].isNumber()) ? conf : conf["loadbar"];
 	if (loadbarConfig.isStruct())
 	{
-		AnimationPath loadbarPath = AnimationPath::fromJson(*RandomGeneratorUtil::nextItem(loadbarConfig["name"].Vector(), CRandomGenerator::getDefault()));
+		const JsonNode & loadbarNames = loadbarConfig["name"];
+		AnimationPath loadbarPath = loadbarNames.isVector()
+			? AnimationPath::fromJson(*RandomGeneratorUtil::nextItem(loadbarNames.Vector(), CRandomGenerator::getDefault()))
+			: AnimationPath::fromJson(loadbarNames);
 		const int posx = loadbarConfig["x"].Integer();
 		const int posy = loadbarConfig["y"].Integer();
 		const int blockSize = loadbarConfig["size"].Integer();
