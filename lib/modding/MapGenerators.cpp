@@ -25,9 +25,6 @@
 #include "../rmg/CMapGenOptions.h"
 
 #include <fstream>
-#include <map>
-#include <numeric>
-#include <sstream>
 
 #include <boost/algorithm/string.hpp>
 
@@ -71,157 +68,9 @@ void setPhase(const MapGenerators::Phase & phase)
 	phaseNow = phase;
 }
 
-/// Where the load bar stands during a generator's run. The bar has 20 blocks and a generator 23 stages, and the
-/// stages take very different times (on a big map two of them are most of the run), so a bar that moves one step
-/// per stage stands still for most of it. This one moves with the clock instead: each stage owns a share of the
-/// bar and the bar fills that share over the time the stage is expected to take. The shares are, in order of
-/// preference, what the generator announces ("[weights] 1 1 2 ..." before its first stage, one per stage), then
-/// what the last run on this machine measured (MapGenTimings\<mod>.json in the user folder), then equal; the bar
-/// never goes back and never reaches the next stage's start before it begins.
-class StageClock
-{
-	using Clock = std::chrono::steady_clock;
-
-	std::vector<double> shares; // one per stage, summing to 1; empty: equal
-	double expectedSeconds = 0; // the whole run on a map this size, from the last one; 0 when unknown
-	int step = 0;
-	int total = 0;
-	Clock::time_point stageStart = Clock::now();
-	std::map<int, double> finished; // seconds each finished stage took, by its step (a generator may skip a number)
-	Load::Type shown = 0;
-
-	double shareOf(int s) const
-	{
-		return static_cast<int>(shares.size()) == total && total > 0 ? shares[s - 1] : 1.0 / std::max(1, total);
-	}
-
-public:
-	void setShares(std::vector<double> given, double expected)
-	{
-		const double sum = std::accumulate(given.begin(), given.end(), 0.0);
-		if(sum > 0)
-		{
-			for(auto & s : given)
-				s /= sum;
-			shares = std::move(given);
-			expectedSeconds = expected;
-		}
-	}
-
-	bool hasShares() const
-	{
-		return !shares.empty();
-	}
-
-	void stageBegan(int newStep, int newTotal)
-	{
-		const auto now = Clock::now();
-		if(step > 0 && newStep > step)
-			finished[step] = std::chrono::duration<double>(now - stageStart).count();
-		step = newStep;
-		total = newTotal;
-		stageStart = now;
-	}
-
-	Load::Type value()
-	{
-		if(step < 1)
-			return shown;
-		double before = 0;
-		for(int s = 1; s < step; ++s)
-			before += shareOf(s);
-		const double elapsed = std::chrono::duration<double>(Clock::now() - stageStart).count();
-		double expected;
-		if(hasShares() && expectedSeconds > 0)
-			expected = shareOf(step) * expectedSeconds;
-		else if(!finished.empty())
-		{
-			double sum = 0;
-			for(const auto & [number, seconds] : finished)
-				sum += seconds;
-			expected = sum / finished.size();
-		}
-		else
-			expected = 2.0;
-		expected = std::max(expected, 0.2);
-		const double x = elapsed / expected;
-		// on schedule it is linear; late, it slows and keeps creeping without ever reaching the next stage
-		const double within = x < 0.9 ? x : 0.9 + 0.08 * (1 - std::exp(-(x - 0.9)));
-		const double position = before + shareOf(step) * std::min(within, 0.98);
-		const int scaled = static_cast<int>(std::numeric_limits<Load::Type>::max() * std::clamp(position, 0.0, 0.98));
-		shown = std::max<Load::Type>(shown, static_cast<Load::Type>(scaled));
-		return shown;
-	}
-
-	/// the seconds each stage took, the last one up to now; only a run that reached its last stage says anything
-	std::vector<double> measured() const
-	{
-		if(step < 1 || step != total || finished.size() < 2)
-			return {};
-		std::vector<double> result(total, 0.0); // a step the generator never announced took no time
-		for(const auto & [number, seconds] : finished)
-			result[number - 1] = seconds;
-		result[total - 1] = std::chrono::duration<double>(Clock::now() - stageStart).count();
-		return result;
-	}
-};
-
-boost::filesystem::path timingsFile(const MapGeneratorInfo & generator)
-{
-	return VCMIDirs::get().userDataPath() / "MapGenTimings" / (generator.modID + ".json");
-}
-
-/// the generator's shares as the last run measured them, with the map area and seconds that run took
-bool readTimings(const MapGeneratorInfo & generator, std::vector<double> & shares, double & area, double & seconds)
-{
-	std::ifstream in(timingsFile(generator).string(), std::ios::binary);
-	if(!in)
-		return false;
-	const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-	try
-	{
-		const JsonNode node(reinterpret_cast<const std::byte *>(text.data()), text.size(), "timings");
-		shares.clear();
-		for(const auto & s : node["shares"].Vector())
-			shares.push_back(s.Float());
-		area = node["area"].Float();
-		seconds = node["seconds"].Float();
-		return !shares.empty() && area > 0 && seconds > 0;
-	}
-	catch(const std::exception &)
-	{
-		return false;
-	}
-}
-
-void writeTimings(const MapGeneratorInfo & generator, const std::vector<double> & stageSeconds, double area, const std::vector<double> & before)
-{
-	const double sum = std::accumulate(stageSeconds.begin(), stageSeconds.end(), 0.0);
-	if(sum <= 0 || area <= 0)
-		return;
-	JsonNode node;
-	node["area"].Float() = area;
-	node["seconds"].Float() = sum;
-	node["shares"].Vector().clear();
-	for(size_t i = 0; i < stageSeconds.size(); ++i)
-	{
-		double share = stageSeconds[i] / sum;
-		if(before.size() == stageSeconds.size())
-			share = (share + before[i]) / 2; // a long map and a short one both count
-		JsonNode entry;
-		entry.Float() = share;
-		node["shares"].Vector().push_back(entry);
-	}
-	boost::system::error_code ec;
-	boost::filesystem::create_directories(timingsFile(generator).parent_path(), ec);
-	std::ofstream out(timingsFile(generator).string(), std::ios::binary | std::ios::trunc);
-	out << node.toString();
-}
-
 /// The stages a generator announced in its log since `offset`, whole lines only (a line still being
-/// written is read next time): the last one becomes the current phase and starts its stage in `clock`; a
-/// "[weights]" line gives the stages' shares of the run
-void readPhases(const MapGeneratorInfo & generator, const boost::filesystem::path & logPath, std::streamoff & offset, StageClock & clock, double expectedSeconds)
+/// written is read next time): the last one becomes the current phase and sets `progress`
+void readPhases(const MapGeneratorInfo & generator, const boost::filesystem::path & logPath, std::streamoff & offset, Load::Progress * progress)
 {
 	std::ifstream log(logPath.c_str(), std::ios::binary);
 	if(!log || !log.seekg(offset))
@@ -234,15 +83,6 @@ void readPhases(const MapGeneratorInfo & generator, const boost::filesystem::pat
 			break;
 		offset = log.tellg();
 		boost::algorithm::trim_right(line);
-		if(boost::algorithm::starts_with(line, "[weights] "))
-		{
-			std::istringstream numbers(boost::algorithm::replace_all_copy(line.substr(10), ",", " "));
-			std::vector<double> given;
-			for(double w; numbers >> w;)
-				given.push_back(std::max(0.0, w));
-			clock.setShares(std::move(given), expectedSeconds);
-			continue;
-		}
 		if(!boost::algorithm::starts_with(line, "[phase] "))
 			continue;
 		std::istringstream fields(line.substr(8));
@@ -260,7 +100,8 @@ void readPhases(const MapGeneratorInfo & generator, const boost::filesystem::pat
 		return;
 	logGlobal->debug("Map generator %s: stage %d of %d, %s", generator.name, latest->step, latest->total, latest->text);
 	setPhase(*latest);
-	clock.stageBegan(latest->step, latest->total);
+	if(progress)
+		progress->set(static_cast<Load::Type>(std::numeric_limits<Load::Type>::max() * (latest->step - 1) / latest->total));
 }
 }
 
@@ -494,26 +335,6 @@ int MapGenerators::run(const MapGeneratorInfo & generator, const std::vector<std
 	auto clearPhase = vstd::makeScopeGuard([]() { setPhase({}); });
 	std::streamoff logRead = 0;
 
-	// the bar's clock: the last run's shares of the time, scaled to this map's area from --w and --h
-	StageClock clock;
-	double area = 0;
-	for(size_t i = 0; i + 1 < args.size(); ++i)
-	{
-		if(args[i] == "--w")
-			area = std::atof(args[i + 1].c_str());
-		if(args[i] == "--h" && area > 0)
-			area *= std::atof(args[i + 1].c_str());
-	}
-	std::vector<double> lastShares;
-	double lastArea = 0;
-	double lastSeconds = 0;
-	double expectedSeconds = 0;
-	if(readTimings(generator, lastShares, lastArea, lastSeconds) && area > 0)
-	{
-		expectedSeconds = lastSeconds * area / lastArea;
-		clock.setShares(lastShares, expectedSeconds);
-	}
-
 	const std::string command = generator.command.string();
 	const std::string ext = boost::algorithm::to_lower_copy(generator.command.extension().string());
 	std::error_code ec;
@@ -547,21 +368,10 @@ int MapGenerators::run(const MapGeneratorInfo & generator, const std::vector<std
 			throw std::runtime_error(generator.name + " did not finish in " + std::to_string(timeout.count() / 60) + " minutes");
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(200));
-		readPhases(generator, logPath, logRead, clock, expectedSeconds);
-		if(progress)
-			progress->set(clock.value());
+		readPhases(generator, logPath, logRead, progress);
 	}
 	child->wait();
-	const int exitCode = child->exit_code();
-	// what this run measured, for the next one's bar (a run that failed or skipped a stage says nothing)
-	if(exitCode == 0)
-	{
-		readPhases(generator, logPath, logRead, clock, expectedSeconds);
-		const auto seconds = clock.measured();
-		if(!seconds.empty())
-			writeTimings(generator, seconds, area, lastShares.size() == seconds.size() ? lastShares : std::vector<double>());
-	}
-	return exitCode;
+	return child->exit_code();
 }
 
 std::string MapGenerators::errorLine(const boost::filesystem::path & logPath)
