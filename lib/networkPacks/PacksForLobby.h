@@ -410,6 +410,22 @@ struct DLL_LINKAGE LobbyPvPAction : public CLobbyPackToServer
 	}
 };
 
+/// DMB: the host renames a generated map from the scenario list: `name` is the map's file URI, `newName` what
+/// the list is to show (the name in the map's header)
+struct DLL_LINKAGE LobbyRename : public CLobbyPackToServer
+{
+	std::string name;
+	std::string newName;
+
+	void visitTyped(ICPackVisitor & visitor) override;
+
+	template <typename Handler> void serialize(Handler &h)
+	{
+		h & name;
+		h & newName;
+	}
+};
+
 struct DLL_LINKAGE LobbyDelete : public CLobbyPackToServer
 {
 	enum class EType : ui8 {

@@ -25,6 +25,10 @@
 #include "../widgets/CComponent.h"
 #include "../widgets/Buttons.h"
 #include "../widgets/CTextInput.h"
+#include "../widgets/GraphicalPrimitiveCanvas.h"
+#include "../gui/CIntObject.h"
+#include "../windows/CWindowObject.h"
+#include "../render/Colors.h"
 #include "../widgets/MiscWidgets.h"
 #include "../widgets/ObjectLists.h"
 #include "../widgets/Slider.h"
@@ -65,6 +69,29 @@ public:
 		});
 
 		build(JsonNode(JsonPath::builtin("config/widgets/scenarioTab.json")));
+
+		// K, September 29th, on the list's size filter row: "the ones for the extra map sizes" are the "vcmi
+		// characters" he keeps seeing. Those buttons (H, XH, G) are VCMI Extras' Extended Lobby art, whose layout
+		// replaces this one's, so they are swapped here once it is built: all seven take DMB's own size buttons, the
+		// set the Random Map pages use, so the row is one style, the game's lettering on the game's frame.
+		static const std::vector<std::pair<int, const char *>> sizeButtons = {
+			{36, "DmbSizeS"}, {72, "DmbSizeM"}, {108, "DmbSizeL"}, {144, "DmbSizeXL"}, {180, "DmbSizeH"}, {216, "DmbSizeXH"}, {252, "DmbSizeG"}};
+		if(const auto group = widget<CToggleGroup>("groupMapSizeFilters"))
+		{
+			for(const auto & [size, sprite] : sizeButtons)
+			{
+				const auto found = group->buttons.find(size);
+				if(found == group->buttons.end())
+					continue;
+				if(const auto button = std::dynamic_pointer_cast<CToggleButton>(found->second))
+				{
+					const Point where = button->pos.topLeft();
+					button->setImage(AnimationPath::builtin(std::string("SPRITES/") + sprite));
+					button->setImageOrder(0, 1, 1, 3);
+					button->moveTo(where);
+				}
+			}
+		}
 	}
 
 	std::shared_ptr<CLabel> mapSizeFilterLabel() const
@@ -237,11 +264,13 @@ SelectionTab::SelectionTab(ESelectionScreen Type)
 	int positionsToShow = 18;
 	std::string tabTitle;
 	std::string tabTitleDelete;
+	std::string tabTitleRename;
 	switch(tabType)
 	{
 	case ESelectionScreen::newGame:
 		tabTitle = "{" + LIBRARY->generaltexth->arraytxt[229] + "}";
 		tabTitleDelete = "{red|" + LIBRARY->generaltexth->translate("vcmi.lobby.deleteMapTitle") + "}";
+		tabTitleRename = LIBRARY->generaltexth->translate("vcmi.lobby.renameMapTitle");
 		break;
 	case ESelectionScreen::loadGame:
 		tabTitle = "{" + LIBRARY->generaltexth->arraytxt[230] + "}";
@@ -278,6 +307,7 @@ SelectionTab::SelectionTab(ESelectionScreen Type)
 			titleOutsideDeleteMode = tabTitle;
 			buttonDeleteMode = std::make_shared<CButton>(Point(367, 18), AnimationPath::builtin("lobby/deleteButton"), CButton::tooltip("", LIBRARY->generaltexth->translate("vcmi.lobby.deleteMode")), [this, tabTitle, tabTitleDelete](){
 				deleteMode = !deleteMode;
+				renameMode = false;
 				if(deleteMode)
 					labelTabTitle->setText(tabTitleDelete);
 				else
@@ -285,7 +315,16 @@ SelectionTab::SelectionTab(ESelectionScreen Type)
 			});
 
 			if(tabType == ESelectionScreen::newGame)
+			{
 				buttonDeleteMode->setEnabled(false);
+				// the header box's left edge, as the delete button sits at its right one
+				buttonRenameMode = std::make_shared<CButton>(Point(25, 18), AnimationPath::builtin("lobby/renameButton"), CButton::tooltip("", LIBRARY->generaltexth->translate("vcmi.lobby.renameMode")), [this, tabTitle, tabTitleRename](){
+					renameMode = !renameMode;
+					deleteMode = false;
+					labelTabTitle->setText(renameMode ? tabTitleRename : tabTitle);
+				});
+				buttonRenameMode->setEnabled(false);
+			}
 		}
 
 		if(tabType == ESelectionScreen::campaignList)
@@ -414,7 +453,18 @@ void SelectionTab::clickReleased(const Point & cursorPosition)
 
 	if(line != -1 && curItems.size() > line)
 	{
-		if(!deleteMode)
+		if(renameMode)
+		{
+			// DMB: a generated map only; any other row is just selected
+			int py = line + slider->getValue();
+			vstd::amax(py, 0);
+			vstd::amin(py, curItems.size() - 1);
+			if(!curItems[py]->isFolder && boost::algorithm::istarts_with(curItems[py]->fileURI, "MAPS/RANDOMMAPS/"))
+				askNewMapName(curItems[py]->fileURI, curItems[py]->getNameTranslated());
+			else
+				select(line);
+		}
+		else if(!deleteMode)
 			select(line);
 		else
 		{
@@ -451,6 +501,58 @@ void SelectionTab::clickReleased(const Point & cursorPosition)
 		inputName->giveFocus();
 #endif
 
+}
+
+namespace
+{
+/// asks for the name a generated map is to be shown under, as the saved-settings name window asks for a name
+class MapNameWindow : public CWindowObject
+{
+	std::shared_ptr<FilledTexturePlayerColored> background;
+	std::shared_ptr<CLabel> title;
+	std::shared_ptr<TransparentFilledRectangle> field;
+	std::shared_ptr<CTextInput> name;
+	std::shared_ptr<CButton> buttonOk;
+	std::shared_ptr<CButton> buttonCancel;
+
+public:
+	MapNameWindow(const std::string & heading, const std::string & current, std::function<void(const std::string &)> onOk)
+		: CWindowObject(BORDERED)
+	{
+		OBJECT_CONSTRUCTION;
+		pos.w = 300;
+		pos.h = 130;
+		updateShadow();
+		center();
+
+		background = std::make_shared<FilledTexturePlayerColored>(Rect(0, 0, pos.w, pos.h));
+		background->setPlayerColor(PlayerColor(1));
+		title = std::make_shared<CLabel>(150, 20, FONT_BIG, ETextAlignment::CENTER, Colors::YELLOW, heading);
+		field = std::make_shared<TransparentFilledRectangle>(Rect(20, 45, 260, 22), ColorRGBA(0, 0, 0, 128), ColorRGBA(64, 64, 64, 64), 1);
+		name = std::make_shared<CTextInput>(Rect(24, 47, 252, 18), FONT_SMALL, ETextAlignment::CENTERLEFT, true);
+		name->setText(current);
+		buttonOk = std::make_shared<CButton>(Point(70, 85), AnimationPath::builtin("MuBchck"), CButton::tooltip(), [this, onOk]()
+		{
+			const std::string typed = name->getText();
+			close();
+			onOk(typed);
+		}, EShortcut::GLOBAL_ACCEPT);
+		buttonCancel = std::make_shared<CButton>(Point(160, 85), AnimationPath::builtin("MuBcanc"), CButton::tooltip(), [this]() { close(); }, EShortcut::GLOBAL_CANCEL);
+	}
+};
+}
+
+void SelectionTab::askNewMapName(const std::string & fileURI, const std::string & currentName)
+{
+	ENGINE->windows().createAndPushWindow<MapNameWindow>(LIBRARY->generaltexth->translate("vcmi.lobby.renameMapPrompt"), currentName, [fileURI](const std::string & typed)
+	{
+		if(boost::algorithm::trim_copy(typed).empty())
+			return;
+		LobbyRename rename;
+		rename.name = fileURI;
+		rename.newName = typed;
+		GAME->server().sendLobbyPack(rename);
+	});
 }
 
 void SelectionTab::keyPressed(EShortcut key)
@@ -625,6 +727,15 @@ void SelectionTab::filter(int size, bool selectFirst)
 		{
 			deleteMode = false;
 			labelTabTitle->setText(titleOutsideDeleteMode);
+		}
+		if(buttonRenameMode)
+		{
+			buttonRenameMode->setEnabled(mayDelete);
+			if(!mayDelete && renameMode)
+			{
+				renameMode = false;
+				labelTabTitle->setText(titleOutsideDeleteMode);
+			}
 		}
 	}
 

@@ -285,6 +285,7 @@ void registerTypes(Serializer &s)
 	s.template registerType<SetResearchedSpells>(242);
 	s.template registerType<SaveLocalState>(243);
 	s.template registerType<LobbyDelete>(244);
+	s.template registerType<LobbyRename>(265);
 	s.template registerType<TimesHeroLevelDivideStackLevelUpdater>(245);
 	s.template registerType<DivideStackLevelUpdater>(246);
 	s.template registerType<SetHeroExperience>(247);

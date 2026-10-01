@@ -21,6 +21,13 @@
 #include "../lib/campaign/CampaignState.h"
 #include "../lib/entities/faction/CTownHandler.h"
 #include "../lib/filesystem/Filesystem.h"
+#include "../lib/filesystem/CZipLoader.h"
+#include "../lib/filesystem/CZipSaver.h"
+#include "../lib/filesystem/MinizipExtensions.h"
+#include "../lib/json/JsonNode.h"
+#include "../lib/mapping/MapFormatJson.h"
+
+#include <fstream>
 #include "../lib/gameState/CGameState.h"
 #include "../lib/mapping/CMapInfo.h"
 #include "../lib/mapping/CMapHeader.h"
@@ -415,6 +422,114 @@ void ApplyOnServerNetPackVisitor::visitLobbyPvPAction(LobbyPvPAction & pack)
 			break;
 	}
 	result = true;
+}
+
+namespace
+{
+/// DMB: a generated map's name as the scenario list shows it is the "name" of its header.json, inside the
+/// .vmap (a zip). Writes `newName` there: the map is unpacked to a scratch folder, the header changed, and a
+/// new archive of the same files written beside the map and moved over it. Returns the reason it could not,
+/// empty when it did.
+std::string renameMapHeader(const boost::filesystem::path & mapFile, const std::string & newName)
+{
+	boost::system::error_code ec;
+	const auto scratch = boost::filesystem::temp_directory_path(ec) / boost::filesystem::unique_path("dmb-rename-%%%%-%%%%", ec);
+	const auto rewritten = boost::filesystem::path(mapFile.string() + ".renaming");
+	std::string problem;
+	try
+	{
+		std::vector<std::string> names;
+		{
+			ZipArchive archive(mapFile);
+			names = archive.listFiles();
+			if(!archive.extract(scratch, names))
+				throw std::runtime_error("the map could not be unpacked");
+		}
+
+		const auto headerName = std::string(CMapFormatJson::HEADER_FILE_NAME);
+		std::ifstream headerIn((scratch / headerName).string(), std::ios::binary);
+		const std::string headerText((std::istreambuf_iterator<char>(headerIn)), std::istreambuf_iterator<char>());
+		JsonNode header(reinterpret_cast<const std::byte *>(headerText.data()), headerText.size(), headerName);
+		JsonNode & strings = header["name"]["exactStrings"];
+		if(!strings.isVector() || strings.Vector().empty())
+			throw std::runtime_error("this map keeps its name in a form the game cannot rewrite");
+		strings.Vector()[0].String() = newName;
+		const std::string headerOut = header.toString();
+
+		{
+			CZipSaver saver(std::make_shared<CDefaultIOApi>(), rewritten);
+			for(const auto & name : names)
+			{
+				if(boost::algorithm::ends_with(name, "/"))
+					continue;
+				std::string data = headerOut;
+				if(name != headerName)
+				{
+					std::ifstream in((scratch / name).string(), std::ios::binary);
+					data.assign((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+				}
+				auto stream = saver.addFile(name);
+				if(stream->write(reinterpret_cast<const ui8 *>(data.data()), data.size()) != static_cast<si64>(data.size()))
+					throw std::runtime_error("the renamed map could not be written");
+			}
+		}
+		boost::filesystem::rename(rewritten, mapFile, ec);
+		if(ec)
+			throw std::runtime_error("the renamed map could not replace the old one: " + ec.message());
+	}
+	catch(const std::exception & e)
+	{
+		problem = e.what();
+		boost::filesystem::remove(rewritten, ec);
+	}
+	boost::filesystem::remove_all(scratch, ec);
+	return problem;
+}
+}
+
+void ClientPermissionsCheckerNetPackVisitor::visitLobbyRename(LobbyRename & pack)
+{
+	result = srv.isClientHost(connection->connectionID);
+}
+
+void ApplyOnServerNetPackVisitor::visitLobbyRename(LobbyRename & pack)
+{
+	// DMB: only a generated map, only from the user's Maps/RandomMaps (as a delete of one is), and a name that
+	// is something a person typed
+	std::string newName = boost::algorithm::trim_copy(pack.newName);
+	newName.erase(std::remove_if(newName.begin(), newName.end(), [](unsigned char c) { return c < 32; }), newName.end());
+	if(newName.empty() || newName.size() > 80)
+	{
+		logGlobal->error("Not renaming '%s': the new name is empty or longer than 80 characters", pack.name);
+		return;
+	}
+	const auto res = ResourcePath(pack.name, EResType::MAP);
+	const auto name = CResourceHandler::get()->getResourceName(res);
+	if(!name)
+	{
+		logGlobal->error("Failed to find resource with name '%s'", res.getOriginalName());
+		return;
+	}
+	boost::system::error_code ec;
+	const auto file = boost::filesystem::canonical(*name, ec);
+	boost::system::error_code folderEc;
+	const auto randomMaps = boost::filesystem::canonical(VCMIDirs::get().userDataPath() / "Maps" / "RandomMaps", folderEc);
+	const auto relative = ec || folderEc ? boost::filesystem::path() : file.lexically_relative(randomMaps);
+	if(relative.empty() || *relative.begin() == "..")
+	{
+		logGlobal->error("Not renaming '%s': a random map is renamed only inside Maps/RandomMaps", res.getOriginalName());
+		return;
+	}
+	const std::string problem = renameMapHeader(file, newName);
+	if(!problem.empty())
+		logGlobal->error("Failed to rename '%s': %s", file.string(), problem);
+	else
+		logGlobal->info("Map %s renamed to '%s'", file.string(), newName);
+
+	LobbyUpdateState lus;
+	lus.state = srv;
+	lus.refreshList = true;
+	srv.announcePack(lus);
 }
 
 void ClientPermissionsCheckerNetPackVisitor::visitLobbyDelete(LobbyDelete & pack)

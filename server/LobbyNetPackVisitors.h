@@ -48,6 +48,7 @@ public:
 	void visitLobbyGuiAction(LobbyGuiAction & pack) override;
 	void visitLobbyPvPAction(LobbyPvPAction & pack) override;
 	void visitLobbyDelete(LobbyDelete & pack) override;
+	void visitLobbyRename(LobbyRename & pack) override;
 	void visitLobbySetBattleOnlyModeStartInfo(LobbySetBattleOnlyModeStartInfo & pack) override;
 };
 
@@ -112,4 +113,5 @@ public:
 	void visitLobbyForceSetPlayer(LobbyForceSetPlayer & pack) override;
 	void visitLobbyPvPAction(LobbyPvPAction & pack) override;
 	void visitLobbyDelete(LobbyDelete & pack) override;
+	void visitLobbyRename(LobbyRename & pack) override;
 };

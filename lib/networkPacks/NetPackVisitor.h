@@ -188,6 +188,7 @@ public:
 	virtual void visitLobbyShowMessage(LobbyShowMessage & pack) {}
 	virtual void visitLobbyPvPAction(LobbyPvPAction & pack) {}
 	virtual void visitLobbyDelete(LobbyDelete & pack) {}
+	virtual void visitLobbyRename(LobbyRename & pack) {}
 	virtual void visitSaveLocalState(SaveLocalState & pack) {}
 	virtual void visitBattleCancelled(BattleCancelled & pack) {}
 	virtual void visitBattleResultAccepted(BattleResultAccepted & pack) {}

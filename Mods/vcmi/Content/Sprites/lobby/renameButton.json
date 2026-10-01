@@ -1,0 +1,8 @@
+{
+	"basepath" : "lobby/",
+	"images" :
+	[
+		{ "frame" : 0, "file" : "rename-normal.png"},
+		{ "frame" : 1, "file" : "rename-pressed.png"}
+	]
+}

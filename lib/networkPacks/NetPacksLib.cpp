@@ -858,6 +858,11 @@ void LobbyPvPAction::visitTyped(ICPackVisitor & visitor)
 	visitor.visitLobbyPvPAction(*this);
 }
 
+void LobbyRename::visitTyped(ICPackVisitor & visitor)
+{
+	visitor.visitLobbyRename(*this);
+}
+
 void LobbyDelete::visitTyped(ICPackVisitor & visitor)
 {
 	visitor.visitLobbyDelete(*this);
