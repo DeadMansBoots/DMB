@@ -411,6 +411,10 @@ QImage carvedButtonWord(const QString & text)
 		return {};
 	QString withoutHyphens = text.trimmed();
 	withoutHyphens.replace(QLatin1Char('-'), QLatin1Char(' '));
+	// and a bracket: "Install HD Edition (Steam)" carves as INSTALL HD EDITION STEAM (K, September 29th: "Install
+	// hd edition (steam) button is still old style font"; the harvest has no bracket, so the whole word was refused)
+	withoutHyphens.replace(QLatin1Char('('), QLatin1Char(' '));
+	withoutHyphens.replace(QLatin1Char(')'), QLatin1Char(' '));
 	const QByteArray upper = withoutHyphens.simplified().toUpper().toLatin1();
 	const std::string capitals(upper.constData(), static_cast<size_t>(upper.size()));
 	if(capitals.empty())
@@ -519,7 +523,13 @@ void applyCarvedButtonWord(QPushButton * button, bool active)
 	const QString original = stored.isValid() ? stored.toString() : button->text();
 	if(!stored.isValid())
 		button->setProperty("dmbCarvedFrom", original);
-	const QImage carved = active ? carvedButtonWord(original) : QImage();
+	QImage carved = active ? carvedButtonWord(original) : QImage();
+	// a long word on a button too narrow for it ("Install HD Edition (Steam)", K, September 29th: "still old style
+	// font") is drawn smaller to fit, down to two thirds of its size; shorter than that it would not read, and
+	// the button keeps its plain text
+	const int room = button->width() - 2 * (carvedBarEnds() + carvedClear);
+	if(!carved.isNull() && room > 0 && carved.width() > room && carved.width() * 2 <= room * 3)
+		carved = carved.scaledToWidth(room, Qt::SmoothTransformation);
 	const bool fits = !carved.isNull() && carved.width() + 2 * (carvedBarEnds() + carvedClear) <= button->width()
 		&& carved.height() + carvedClear <= button->height();
 	if(fits)
