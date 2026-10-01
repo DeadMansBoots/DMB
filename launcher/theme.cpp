@@ -337,6 +337,25 @@ QImage wordlessChoice(const QImage & frame)
 
 /// The game's gold in silver, for the dark look (K, September 27th: "a dark-silver/grey that's still
 /// light enough to contrast the black font"): the grey of each pixel, a little lighter and cooler
+/// The harvested blue choice art in a dark red (K, September 29th: "for the dark version, we need to replace the
+/// blue with another color... i'm thinking red, but it needs to be a fairly dark shade of red so it's not too loud
+/// on the eyes"): each pixel keeps its own lightness, so the bevel and the marbling stay, and takes a muted red
+/// (about 140, 40, 38 at the art's brightest) in the blue's place.
+QImage reddened(const QImage & image)
+{
+	QImage out = image.convertToFormat(QImage::Format_ARGB32);
+	for(int y = 0; y < out.height(); ++y)
+	{
+		auto * line = reinterpret_cast<QRgb *>(out.scanLine(y));
+		for(int x = 0; x < out.width(); ++x)
+		{
+			const int lightness = qGray(line[x]);
+			line[x] = qRgba(std::min(255, lightness * 118 / 100), lightness * 30 / 100, lightness * 29 / 100, qAlpha(line[x]));
+		}
+	}
+	return out;
+}
+
 QImage silvered(const QImage & image)
 {
 	QImage result = image.convertToFormat(QImage::Format_ARGB32);
@@ -564,7 +583,7 @@ void carveEveryButton(bool active)
 /// user's cache for the style sheet to name, in silver for the dark look unless the player keeps gold.
 /// The Settings page's categories are the same bars (K, September 27th). Empty before an import: then
 /// they keep the painted gold.
-QString gameButtonStyle(bool silver)
+QString gameButtonStyle(bool silver, bool red = false)
 {
 	const AnimationPath path = AnimationPath::builtin("SPRITES/RANSHOW");
 	if(!CResourceHandler::get()->existsResource(path))
@@ -635,8 +654,9 @@ QString gameButtonStyle(bool silver)
 		return style;
 	const auto choiceData = CResourceHandler::get()->load(choicePath)->readAll();
 	const auto * choiceBytes = reinterpret_cast<const ui8 *>(choiceData.first.get());
-	const QString off = write(wordlessChoice(readH3DefFrame(choiceBytes, choiceData.second, 0)), "dmb-choice");
-	const QString on = write(wordlessChoice(readH3DefFrame(choiceBytes, choiceData.second, 3)), "dmb-choice-on");
+	const auto choice = [&](int frame) { const QImage art = wordlessChoice(readH3DefFrame(choiceBytes, choiceData.second, frame)); return red ? reddened(art) : art; };
+	const QString off = write(choice(0), std::string("dmb-choice") + (red ? "-red" : ""));
+	const QString on = write(choice(3), std::string("dmb-choice-on") + (red ? "-red" : ""));
 	if(off.isEmpty() || on.isEmpty())
 		return style;
 	return style + QString(
@@ -913,7 +933,7 @@ void LauncherTheme::apply()
 		// Its buttons and edges in silver, unless the player keeps the gold (launcher.darkAccent)
 		const bool silver = settings["launcher"]["darkAccent"].String() != "gold";
 		const QBrush window = leather.isNull() ? QBrush(QColor(24, 24, 24)) : QBrush(darkened(leather));
-		const QString style = QString(commonStyle) + gameButtonStyle(silver) +
+		const QString style = QString(commonStyle) + gameButtonStyle(silver, true) +
 			"QTabBar::tab, QHeaderView::section { color: #f3e7c9; background: #2c2c2c; }" + gameFontStyle();
 		QApplication::setPalette(themedPalette(window, QColor(16, 16, 16), QColor(30, 30, 30), QColor(44, 44, 44),
 			silver ? QColor(159, 164, 172) : gold, silver ? QColor(232, 234, 237) : parchment));
