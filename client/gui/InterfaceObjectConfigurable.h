@@ -48,6 +48,9 @@ public:
 	InterfaceObjectConfigurable(const JsonNode & config, int used=0, Point offset=Point());
 
 protected:
+	/// DMB: every widget the layout named, by its name (a map generator page widens its help areas)
+	std::vector<std::pair<std::string, std::shared_ptr<CIntObject>>> namedWidgets() const;
+
 	/// DMB: the mod whose files the layout's own file paths resolve in (a "pages" widget's page layouts);
 	/// empty for the game's own layouts. An owner that loads a mod's layout sets it before build().
 	std::string layoutScope;

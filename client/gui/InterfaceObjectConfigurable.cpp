@@ -164,6 +164,11 @@ void InterfaceObjectConfigurable::inheritFrom(const InterfaceObjectConfigurable 
 	onSettingChanged = owner.onSettingChanged;
 }
 
+std::vector<std::pair<std::string, std::shared_ptr<CIntObject>>> InterfaceObjectConfigurable::namedWidgets() const
+{
+	return {widgets.begin(), widgets.end()};
+}
+
 void InterfaceObjectConfigurable::registerBuilder(const std::string & type, BuilderFunction f)
 {
 	builders[type] = f;

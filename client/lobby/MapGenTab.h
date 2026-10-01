@@ -58,6 +58,11 @@ class MapGenTab : public InterfaceObjectConfigurable
 	/// lives as long as the tab does: a rebuild of the pages that waits for the click that asked for
 	/// it to end (refreshPagesAfterClick) holds a weak reference to it, to know the tab is still there
 	std::shared_ptr<bool> alive = std::make_shared<bool>(true);
+	/// the hover box (HoverTip, MapGenTab.cpp): the engine's status bar while the tab is shown
+	std::shared_ptr<IStatusBar> hoverTip;
+	/// a control's name, as it is written to the status bar, to what the control does
+	std::map<std::string, std::string> helpBodies;
+	void collectHelp(const JsonNode & items);
 	bool refreshQueued = false;
 
 	std::shared_ptr<CIntObject> createPage(size_t index);

@@ -19,11 +19,16 @@
 #include "../GameInstance.h"
 #include "../gui/Shortcut.h"
 #include "../gui/WindowHandler.h"
+#include "../render/Canvas.h"
 #include "../render/Colors.h"
+#include "../render/IFont.h"
+#include "../render/IRenderHandler.h"
+#include "../windows/CMessage.h"
 #include "../widgets/Buttons.h"
 #include "../widgets/CTextInput.h"
 #include "../widgets/GraphicalPrimitiveCanvas.h"
 #include "../widgets/Images.h"
+#include "../widgets/MiscWidgets.h"
 #include "../widgets/ObjectLists.h"
 #include "../widgets/TextControls.h"
 #include "../windows/GUIClasses.h"
@@ -86,6 +91,113 @@ public:
 };
 }
 
+namespace
+{
+/// DMB: the lobby has no status bar, so the hover text that every button and hover area writes to it showed
+/// nowhere, and the tab's settings had only their right-click popups (K, October 1st: "the mapgen tooltips"). This is
+/// the tab's own status bar: a box beside the pointer with the control's name and, where the tab knows one, what it
+/// does. Like CGStatusBar it is the engine's status bar while it is active, which is while the tab is shown.
+class HoverTip : public CIntObject, public IStatusBar, public std::enable_shared_from_this<HoverTip>
+{
+	static constexpr int WRAP_WIDTH = 300;
+
+	std::string title;
+	std::string body;
+	std::function<std::string(const std::string &)> bodyOf;
+
+public:
+	HoverTip(const Rect & area, std::function<std::string(const std::string &)> lookup)
+		: CIntObject(0, area.topLeft())
+		, bodyOf(std::move(lookup))
+	{
+		pos = area;
+		setRedrawParent(true);
+	}
+
+	void write(const std::string & text) override
+	{
+		logGlobal->debug("Hover box: '%s'", text);
+		if(text == title)
+			return;
+		title = text;
+		body = title.empty() ? std::string() : bodyOf(title);
+		redraw();
+	}
+
+	void clear() override
+	{
+		write({});
+	}
+
+	void clearIfMatching(const std::string & testedText) override
+	{
+		if(title == testedText)
+			clear();
+	}
+
+	void setEnteringMode(bool on) override {}
+	void setEnteredText(const std::string & text) override {}
+
+	void activate() override
+	{
+		logGlobal->debug("Hover box: the tab's status bar");
+		ENGINE->setStatusbar(shared_from_this());
+		CIntObject::activate();
+	}
+
+	void deactivate() override
+	{
+		ENGINE->setStatusbar(nullptr);
+		title.clear();
+		body.clear();
+		CIntObject::deactivate();
+	}
+
+	/// every frame, after the labels: a CLabel redraws itself each frame, which would paint its text over a box drawn once
+	void show(Canvas & to) override
+	{
+		showAll(to);
+	}
+
+	void showAll(Canvas & to) override
+	{
+		if(title.empty())
+			return;
+		const auto font = ENGINE->renderHandler().loadFont(FONT_SMALL);
+		std::vector<std::string> lines;
+		if(!body.empty())
+			lines = CMessage::breakText(body, WRAP_WIDTH, FONT_SMALL);
+		const int lineHeight = static_cast<int>(font->getLineHeight());
+		int width = static_cast<int>(font->getStringWidth(title));
+		for(const auto & line : lines)
+			width = std::max(width, static_cast<int>(font->getStringWidth(line)));
+		const int height = lineHeight * (1 + static_cast<int>(lines.size())) + (lines.empty() ? 0 : 4);
+		const Point pad(7, 5);
+		Rect box(0, 0, width + 2 * pad.x, height + 2 * pad.y);
+
+		// beside the pointer, below it, and inside the lobby window (the tab's own rectangle is empty: its parts
+		// are placed in the window's coordinates): above the pointer when there is no room below
+		const Rect window = parent && parent->parent ? parent->parent->pos : Rect(Point(0, 0), ENGINE->screenDimensions());
+		const Point cursor = ENGINE->getCursorPosition();
+		box.x = std::clamp(cursor.x + 14, window.x, std::max(window.x, window.x + window.w - box.w));
+		box.y = cursor.y + 22;
+		if(box.y + box.h > window.y + window.h)
+			box.y = std::max(window.y, cursor.y - box.h - 8);
+
+		to.drawColor(box, ColorRGBA(8, 12, 40, 255));
+		to.drawBorder(box, ColorRGBA(201, 165, 74));
+		Point at(box.x + pad.x, box.y + pad.y);
+		to.drawText(at, FONT_SMALL, Colors::YELLOW, ETextAlignment::TOPLEFT, title);
+		at.y += lineHeight + 4;
+		for(const auto & line : lines)
+		{
+			to.drawText(at, FONT_SMALL, Colors::WHITE, ETextAlignment::TOPLEFT, line);
+			at.y += lineHeight;
+		}
+	}
+};
+}
+
 /// the template a generator picks for itself from those that fit (OmniMapGen reads "random" so)
 static const std::string RANDOM_TEMPLATE = "random";
 
@@ -122,6 +234,12 @@ MapGenPage::MapGenPage(const JsonNode & layout, const std::function<void(MapGenP
 	if(setup)
 		setup(*this);
 	build(layout);
+	// a setting's help area covered only its label, 138 pixels of a 312 pixel row: hover or right-click on the slider,
+	// its arrows or its value found nothing (K, October 1st: "the mapgen tooltips"). The whole row is the area now;
+	// the controls drawn over it keep their own help
+	for(const auto & [name, object] : namedWidgets())
+		if(const auto area = std::dynamic_pointer_cast<LRClickableAreaWText>(object); area && area->pos.w < 312 && boost::algorithm::starts_with(name, "help_"))
+			area->pos.w = 312;
 	if(after)
 		after(*this);
 }
@@ -232,9 +350,30 @@ MapGenTab::MapGenTab(const MapGeneratorInfo & info)
 	};
 	build(config);
 
+	// what each control's name goes with, for the hover box: the tab's own layout and every page's
+	collectHelp(config["items"]);
+	for(const auto & file : pageFiles)
+	{
+		if(CResourceHandler::get(generator.modID)->existsResource(JsonPath::builtin(file)))
+			collectHelp(JsonNode(JsonPath::builtin(file), generator.modID)["items"]);
+	}
+	// the last thing the tab builds, so that it is drawn over everything: the older layouts' pages are built into a
+	// tabbed object created below
+	const auto makeHoverTip = [this]()
+	{
+		hoverTip = std::make_shared<HoverTip>(pos, [this](const std::string & hover)
+		{
+			const auto found = helpBodies.find(hover);
+			return found == helpBodies.end() ? std::string() : found->second;
+		});
+	};
+
 	layoutPages = widget<LayoutPages>("pages");
 	if(layoutPages || pageFiles.empty())
+	{
+		makeHoverTip();
 		return;
+	}
 
 	int first = 0;
 	if(persistentStorage["mapGen"]["lastPage"].isNumber())
@@ -247,6 +386,7 @@ MapGenTab::MapGenTab(const MapGeneratorInfo & info)
 
 	if(auto group = widget<CToggleGroup>("pageButtons"))
 		group->setSelected(first);
+	makeHoverTip();
 }
 
 std::shared_ptr<CIntObject> MapGenTab::createPage(size_t index)
@@ -313,6 +453,29 @@ void MapGenTab::resetToDefaults()
 		clearCustomSize();
 	refreshPages();
 	updateMapInfoByHost();
+}
+
+void MapGenTab::collectHelp(const JsonNode & items)
+{
+	for(const auto & item : items.Vector())
+	{
+		if(item["help"].isStruct() && !item["help"]["hover"].isNull())
+		{
+			const auto [hover, help] = readHintText(item["help"]);
+			// the help is "{Name}" and a blank line before what it says; the box has the name already
+			std::string body = help;
+			if(!body.empty() && body[0] == '{')
+			{
+				const auto close = body.find('}');
+				if(close != std::string::npos)
+					body = boost::algorithm::trim_copy(body.substr(close + 1));
+			}
+			if(!hover.empty() && !body.empty() && !helpBodies.count(hover))
+				helpBodies[hover] = body;
+		}
+		if(item["items"].isVector())
+			collectHelp(item["items"]);
+	}
 }
 
 void MapGenTab::refreshPages()
