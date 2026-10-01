@@ -134,17 +134,6 @@ public:
 		double expected;
 		if(hasShares() && expectedSeconds > 0)
 			expected = shareOf(step) * expectedSeconds;
-		else if(hasShares() && !finished.empty())
-		{
-			// shares announced and no earlier run to scale by: the stages done so far give the whole run's pace
-			double spent = 0, owned = 0;
-			for(const auto & [number, seconds] : finished)
-			{
-				spent += seconds;
-				owned += shareOf(number);
-			}
-			expected = owned > 0 ? shareOf(step) * spent / owned : 2.0;
-		}
 		else if(!finished.empty())
 		{
 			double sum = 0;
